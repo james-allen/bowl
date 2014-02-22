@@ -262,7 +262,7 @@ svg.selectAll("circle")
             }
             if (step != null) {
                 // Valid step involving this player (block, pass...)
-                processStep(step);
+                addStepToStack(step);
             } else if (isTurn(d)) {
                 // Select a new player on the moving side.
                 selected = d;
@@ -333,11 +333,21 @@ var processPush = function(step) {
 }
 
 var processFollowUp = function(step) {
-    selectFollowUp(step);
+    switch (step.choice) {
+    case true:
+        processMove(step);
+        break;
+    case false:
+        postStep(step);
+        stepStack.shift();
+        processNextStep();
+    case null:
+        selectFollowUp(step);
+    }
 }
 
 var processKnockDown = function(step) {
-    
+
 }
 
 var postStep = function(step) {
@@ -568,6 +578,7 @@ var defineFollowUp = function(blockStep) {
     step.y0 = blockStep.y0;
     step.x1 = blockStep.x1;
     step.y1 = blockStep.y1;
+    step.choice = null;
     step.matchId = matchData.id;
     return step
 }
@@ -697,19 +708,15 @@ var blockDice = function(data) {
 }
 
 var followUp = function(data) {
-    stepStack.shift();
+    // Update the followUp step
+    var step = data.data;
     if (data.option == "Yes") {
-        // Change the block step into a move step
-        var step = data.data;
-        var newStep = {};
-        for (var attr in step) {
-            if (attr != "targetNum") {
-                newStep[attr] = step[attr];
-            }
-            newStep.stepType = "move";
-        }
-        processStep(newStep);
+        step.choice = true;
+    } else {
+        step.choice = false;
     }
+    stepStack[0] = step;
+    processNextStep();
 }
 
 var push = function(step, xpos, ypos) {

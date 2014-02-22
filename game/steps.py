@@ -4,7 +4,7 @@ import random
 
 
 def resolve(match, step_type, data):
-    if step_type == 'move' or step_type == 'push':
+    if step_type in ['move', 'push', 'followUp']:
         # A move step
         # Find out which player it is
         if data['side'] == 'home':
