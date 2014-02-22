@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<style>
+.home
+{
+    fill: #FF0000;
+}
+.away
+{
+    fill: #0000FF;
+}
+circle.selected
+{
+    stroke: #000000;
+    stroke-width: 4;
+}
+.pitch
+{
+    fill: #DDFFDD;
+    stroke: #BBFFBB;
+    stroke-width: 1;
+}
+.pitch.gridOption
+{
+    stroke: #FF0000;
+    stroke-width: 4;
+}
+.button
+{
+    fill: #00BB00;
+    stroke: #008800;
+    stroke-width: 1;
+}
+.buttonText
+{
+    fill: #000000;
+    text-anchor: middle;
+    dominant-baseline: middle;
+}
+.selected .button
+{
+    stroke: #000000;
+    stroke-width: 4;
+}
+.button.inactive
+{
+    fill: #AAAAAA;
+}
+.buttonText.inactive
+{
+    fill: #444444;
+}
+.optionsWindow
+{
+    fill: #FFFFFF;
+}
+.optionsText
+{
+    text-anchor: middle;
+}
+</style>
+<body>
+<script type="text/javascript" src="/static/js/d3.v3.min.js"></script>
+<script type="text/javascript" src="/static/js/jquery-1.10.2.js"></script>
+<script type="text/javascript">
+function getCookie(name) {
+    var cookieValue = null;
+    if (document.cookie && document.cookie != '') {
+        var cookies = document.cookie.split(';');
+        for (var i = 0; i < cookies.length; i++) {
+            var cookie = jQuery.trim(cookies[i]);
+            // Does this cookie string begin with the name we want?
+            if (cookie.substring(0, name.length + 1) == (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+var csrftoken = getCookie('csrftoken');
+function csrfSafeMethod(method) {
+    // these HTTP methods do not require CSRF protection
+    return (/^(GET|HEAD|OPTIONS|TRACE)$/.test(method));
+}
+$.ajaxSetup({
+    crossDomain: false, // obviates need for sameOrigin test
+    beforeSend: function(xhr, settings) {
+        if (!csrfSafeMethod(settings.type)) {
+            xhr.setRequestHeader("X-CSRFToken", csrftoken);
+        }
+    }
+});
+
+var player_id = function(d) {
+    return d.side + d.num;
+}
+
+var gridId = function(d) {
+    return "grid" + d.xpos + "_" + d.ypos;
+}
+
+var cx = function(d) {
+    return squareSize * (0.5 + d.xpos) + margin;
+}
+var cy = function(d) {
+    return squareSize * (0.5 + d.ypos) + margin;
+}
+
+var nSquaresX = 26,
+    nSquaresY = 15;
+
+var width = 1500,
+    height = 1000,
+    margin = 10;
+    squareSize = 40,
+    buttonWidth = 100,
+    buttonHeight = 30;
+
+var selected = null;
+
+var players = {{ players_json | safe }};
+var matchData = {{ match_data | safe }};
+var history = {{ history | safe }};
+
+var stepStack = new Array;
+
+var addStepToStack = function(step) {
+    if (step != null) {
+        stepStack[stepStack.length] = step;
+        if (stepStack.length == 1) {
+            console.log("Processing the step on the stack")
+            processNextStep();
+        }
+    }
+}
+
+// Make the SVG container
+var svg = d3.select("body").append("svg")
+    .attr("width", width)
+    .attr("height", height)
+
+// Make the pitch
+var clickPitch = function(d) {
+    console.log("clicked on pitch")
+    console.log(d)
+    if (selected != null) {
+        step = defineStep(d.xpos, d.ypos);
+        addStepToStack(step);
+    }
+}
+var coords = new Array(nSquaresX * nSquaresY);
+for (var xIndex = 0; xIndex < nSquaresX; xIndex++) {
+    for (var yIndex = 0; yIndex < nSquaresY; yIndex++) {
+        coords[yIndex*nSquaresX + xIndex] = {"xpos": xIndex, "ypos": yIndex};
+    }
+}
+var pitch = svg.selectAll("rect.pitch").data(coords).enter().append("rect")
+    .attr("x", function(d) { return d.xpos*squareSize + margin; })
+    .attr("y", function(d) { return d.ypos*squareSize + margin; })
+    .attr("width", squareSize)
+    .attr("height", squareSize)
+    .attr("class", "pitch")
+    .attr("id", gridId)
+pitch.on("click", clickPitch)
+
+// Make the control buttons
+// End Turn
+var endTurn = function(d) {
+    var step = {
+        "stepType": "endTurn",
+        "action": "endTurn",
+        "oldSide": currentSide(),
+        "matchId": matchData.id
+    }
+    clearSelection();
+    postStep(step);
+}
+svg.append("rect")
+    .attr("x", nSquaresX * squareSize + 2 * margin)
+    .attr("y", margin)
+    .attr("width", buttonWidth)
+    .attr("height", buttonHeight)
+    .attr("class", "button")
+    .on("click", endTurn)
+svg.append("text")
+    .attr("x", nSquaresX * squareSize + 2 * margin + 0.5 * buttonWidth)
+    .attr("y", margin + 0.5 * buttonHeight)
+    .attr("class", "buttonText")
+    .text("End Turn")
+    .on("click", endTurn)
+
+// Action selectors
+var selectedAction = null;
+var selectAction = function(d) {
+    selectedAction = d.action;
+    d3.selectAll(".action").classed("selected", false);
+    d3.select(this).classed("selected", true);
+}
+var selectorData = [
+    {label: "Move", action: "move"},
+    {label: "Block", action: "block"},
+    {label: "Blitz", action: "blitz"},
+    {label: "Pass", action: "pass"},
+    {label: "Hand-off", action: "handOff"},
+    {label: "Foul", action: "foul"}
+];
+var g = svg.selectAll("g.action")
+    .data(selectorData)
+    .enter()
+    .append("g")
+    .attr("class", "action")
+    .on("click", selectAction);
+g.append("rect")
+    .attr("x", nSquaresX * squareSize + 2 * margin)
+    .attr("y", function(d, i) { return margin + (2.0+1.3*i)*buttonHeight; })
+    .attr("width", buttonWidth)
+    .attr("height", buttonHeight)
+    .classed("button", true)
+g.append("text")
+    .text(function(d) { return d.label; })
+    .attr("x", nSquaresX * squareSize + 2 * margin + 0.5 * buttonWidth)
+    .attr("y", function(d, i) { return margin + (2.5+1.3*i)*buttonHeight; })
+    .classed("buttonText", true)
+
+// Make a background for selecting options
+var optionsWindow = svg.append("rect")
+    .attr("class", "optionsWindow")
+    .attr("x", 0.4 * nSquaresX * squareSize + margin)
+    .attr("y", 0.4 * nSquaresY * squareSize + margin)
+    .attr("width", 0.2 * nSquaresX * squareSize)
+    .attr("height", 0.2 * nSquaresY * squareSize)
+    .style("visibility", "hidden");
+var optionsText = svg.append("text")
+    .attr("class", "optionsText")
+    .attr("x", 0.5 * nSquaresX * squareSize + margin)
+    .attr("y", 0.42 * nSquaresY * squareSize + margin)
+    .style("visibility", "hidden");
+
+// Make the circles that represent the players
+svg.selectAll("circle")
+    .data(players)
+    .enter()
+    .append("circle")
+    .attr("cx", cx)
+    .attr("cy", cy)
+    .attr("r", 0.5*squareSize)
+    .attr("class", function(d) {
+        return d.side
+    })
+    .attr("id", player_id)
+    .classed("selected", false)
+    .on("click", function(d) {
+        if (selected == d) {
+            // Was already selected. Unselect.
+            clearSelection()
+        } else {
+            var step = null;
+            if (selected != null) {
+                thisPlayer = playerWithId(this.id);
+                step = defineStep(thisPlayer.xpos, thisPlayer.ypos);
+            }
+            if (step != null) {
+                // Valid step involving this player (block, pass...)
+                processStep(step);
+            } else if (isTurn(d)) {
+                // Select a new player on the moving side.
+                selected = d;
+                d3.selectAll("circle").classed("selected", false);
+                d3.select(this).classed("selected", true);            
+            }
+        }
+    })
+
+var clearSelection = function() {
+    selected = null;
+    d3.select("circle.selected").classed("selected", false);
+}
+
+var processNextStep = function() {
+    console.log("Processing next step");
+    if (stepStack.length != 0) {
+        console.log("About to process step");
+        processStep(stepStack[0]);
+    }
+}
+
+var processStep = function(step) {
+    console.log("Processing step");
+    if (step != null) {
+        switch (step.stepType) {
+        case "move":
+            processMove(step);
+            break;
+        case "block":
+            processBlock(step);
+            break;
+        case "push":
+            processPush(step);
+            break;
+        case "followUp":
+            processFollowUp(step);
+            break;
+        case "knockDown":
+            processKnockDown(step);
+            break;
+        }
+    }
+}
+
+var processMove = function(step) {
+    // Move the player object
+    var player = playerInPos(step.x0, step.y0);
+    player.xpos = step.x1;
+    player.ypos = step.y1;
+    // Move the circle on screen
+    d3.select('#'+player_id(player))
+        .transition()
+        .attr("cx", cx)
+        .attr("cy", cy)
+    // Tell the server
+    postStep(step);
+    stepStack.shift();
+    processNextStep();
+}
+
+var processBlock = function(step) {
+    postStep(step);
+}
+
+var processPush = function(step) {
+    selectPush(step);
+}
+
+var processFollowUp = function(step) {
+    selectFollowUp(step);
+}
+
+var processKnockDown = function(step) {
+    
+}
+
+var postStep = function(step) {
+    // Tell the server about the move
+    if (step.historyPosition == null) {
+        step.historyPosition = history.length;
+        history[step.historyPosition] = step;
+    }
+    console.log("Sending move " + step.historyPosition + " to server");
+    console.log(step);
+    $.ajax({
+        type: "POST",
+        url: "/game/post_step", 
+        data: step,
+        dataType: "json",
+        success: function(result) {
+            switch (result.status)
+            {
+                case "duplicate":
+                    break;
+                case "resend":
+                    var index;
+                    for (index = result.start; index <= result.historyPosition; index++) {
+                        postStep(history[index]);
+                    }
+                    break;
+                case 0:
+                    postProcessStep(step, result);
+                    break;
+                default:
+                    console.log("Unrecognised status: " + result.status + " for step " + step.historyPosition);
+                    break;
+            }
+        },
+        error: function(jqxhr, textStatus, errorThrown) {
+            console.log("Error receieved for step " + step.historyPosition);
+            restoreTo(step.historyPosition - 1);
+        }
+    });    
+}
+
+var postProcessStep = function(step, result) {
+    switch (step.stepType) {
+    case "block":
+        if (step.selectedDice == null) {
+        // if (step.nDice > 1) {
+            selectDice(result.dice, step, blockDice);
+        // } else {
+        //     dice = result.dice[0];
+        //     blockDice({"option": dice, "data": step});
+        // }
+        }
+        break;
+    }
+}
+
+var restoreTo = function(restorePosition) {
+    console.log("Restoring to " + restorePosition);
+    var position;
+    for (position = history.length - 1; position > restorePosition; position--) {
+        console.log("Removing history item " + position);
+        step = history[position];
+        switch (step.stepType) {
+        case "move":
+            var player_index;
+            for (player_index = 0; player_index < players.length; player_index++) {
+                if (players[player_index].side == step.side &&
+                    players[player_index].num == step.num) {
+                    player = players[player_index];
+                    break;
+                }
+            }
+            player.xpos = step.x0;
+            player.ypos = step.y0;
+            d3.select("#"+player_id(player))
+                .transition()
+                .attr("cx", cx)
+                .attr("cy", cy)
+            break;
+        }
+        history.splice(-1, 1);
+    }
+}
+
+var isTurn = function(player) {
+    return player.side == currentSide();
+}
+
+var currentSide = function() {
+    // Check through the history to see which side's turn started most recently
+    for (var index = history.length-1; index >= 0; index--) {
+        if (history[index].stepType == "endTurn") {
+            return otherSide(history[index].oldSide);
+        }
+    }
+    // Check which side kicked off first
+    return matchData.firstKickingTeam;
+}
+
+var playerInPos = function(xpos, ypos) {
+    for (var playerIndex = 0; playerIndex < players.length; playerIndex++) {
+        if (players[playerIndex].xpos == xpos &&
+            players[playerIndex].ypos == ypos) {
+            return players[playerIndex];
+        }
+    }
+    return null;
+}
+
+var playerWithId = function(id) {
+    var side = id.substring(0, 4);
+    var num = id.substring(4);
+    return findPlayer(side, num);
+}
+
+var findPlayer = function(side, num) {
+    for (var index = 0; index < players.length; index++) {
+        var player = players[index];
+        if (player.side == side && player.num == num) {
+            return player;
+        }
+    }
+    return null;
+}
+
+var isAdjacent = function(xpos_0, ypos_0, xpos_1, ypos_1) {
+    return (Math.abs(xpos_0 - xpos_1) <= 1 && Math.abs(ypos_0 - ypos_1) <= 1)
+}
+
+var defineStep = function(xpos, ypos) {
+    var step = {};
+    switch(selectedAction) {
+    case "move":
+        if (playerInPos(xpos, ypos) == null && isAdjacent(xpos, ypos, selected.xpos, selected.ypos)) {
+            step.stepType = "move";
+        } else {
+            step = null;
+        }
+        break;
+    case "block":
+        var targetPlayer = playerInPos(xpos, ypos);
+        if (targetPlayer != null && targetPlayer.side != selected.side && isAdjacent(xpos, ypos, selected.xpos, selected.ypos)) {
+            step.stepType = "block";
+            step.targetNum = targetPlayer.num;
+        } else {
+            step = null;
+        }
+        break;
+    case "blitz":
+        if (isAdjacent(xpos, ypos, selected.xpos, selected.ypos)) {
+            var targetPlayer = playerInPos(xpos, ypos);
+            if (targetPlayer == null) {
+                step.stepType = "move";
+            } else if (targetPlayer.side != selected.side) {
+                step.stepType = "block";
+                step.targetNum = targetPlayer.num;
+            } else {
+                step = null;
+            }
+        } else {
+            step = null;
+        }
+        break;
+    default:
+        step = null;
+    }
+    if (step != null) {
+        step.action = selectedAction;
+        step.side = selected.side;
+        step.num = selected.num;
+        step.x0 = selected.xpos;
+        step.y0 = selected.ypos;
+        step.x1 = xpos;
+        step.y1 = ypos;
+        step.matchId = matchData.id;
+    }
+    return step;
+}
+
+var selectDice = function(diceArray, step, callback) {
+    var message = "Which dice throw would you like to use?";
+    selectFromOptions(diceArray, message, step, callback);
+}
+
+var defineKnockDown = function(step, dice, victim) {
+    var newStep = {}
+    newStep.action = selectedAction;
+    newStep.stepType = "knockDown";
+    if (victim == "defender") {
+        newStep.num = step.targetNum;
+        newStep.side = otherSide(step.side);
+    } else {
+        newStep.num = step.num;
+        newStep.side = step.side;
+    }
+    var player = findPlayer(newStep.side, newStep.num);
+    if ((step.dice == "bothDown" && hasSkill(player, "Block")) || (step.dice == "defenderStumbles" && hasSkill(player, "Dodge"))) {
+        // Avoid a Both Down result with the block skill, or a Defender Stumbles with the dodge skill
+        return null;
+    } else {
+        return newStep;
+    }
+}
+
+var definePush = function(blockStep) {
+    var step = {};
+    step.stepType = "push";
+    step.targetNum = blockStep.targetNum;
+    step.action = blockStep.action;
+    step.side = blockStep.side;
+    step.num = blockStep.num;
+    step.x0 = blockStep.x0;
+    step.y0 = blockStep.y0;
+    step.x1 = blockStep.x1;
+    step.y1 = blockStep.y1;
+    step.matchId = matchData.id;
+    return step
+}
+
+var defineFollowUp = function(blockStep) {
+    var step = {};
+    step.stepType = "followUp";
+    step.targetNum = blockStep.targetNum;
+    step.action = blockStep.action;
+    step.side = blockStep.side;
+    step.num = blockStep.num;
+    step.x0 = blockStep.x0;
+    step.y0 = blockStep.y0;
+    step.x1 = blockStep.x1;
+    step.y1 = blockStep.y1;
+    step.matchId = matchData.id;
+    return step
+}
+
+var selectPush = function(step) {
+    var squares = new Array;
+    var xB = step.x1 + (step.x1 - step.x0);
+    var yB = step.y1 + (step.y1 - step.y0);
+    if (playerInPos(xB, yB) == null) {
+        squares[squares.length] = [xB, yB];
+    }
+    var xA, yA, xC, yC;
+    if (step.x1 == step.x0) {
+        // Up/down push
+        xA = xB - 1;
+        yA = yB;
+        xC = xB + 1;
+        yC = yB;
+    } else if (step.y1 == step.y0) {
+        // Left/right push
+        xA = xB;
+        yA = yB - 1;
+        xC = xB;
+        yC = yB + 1;
+    } else {
+        // Diagonal push
+        xA = xB;
+        yA = step.y1;
+        xC = step.x1;
+        yC = yB;
+    }
+    if (playerInPos(xA, yA) == null) {
+        squares[squares.length] = [xA, yA];
+    }
+    if (playerInPos(xC, yC) == null) {
+        squares[squares.length] = [xC, yC];
+    }
+    console.log("Choose push from these squares:");
+    console.log(squares);
+    if (squares.length > 0) {
+        pitch.on("click", null);
+        for (var index = 0; index < squares.length; index++) {
+            var xpos = squares[index][0];
+            var ypos = squares[index][1];
+            svg.select("#" + gridId({"xpos": xpos, "ypos": ypos}))
+                .classed("gridOption", true)
+                .on("click", function(d) {push(step, d.xpos, d.ypos);})
+        }
+        pitch.sort(function(a, b) {
+            if (svg.select("#" + gridId(a)).classed("gridOption")) {
+                return 1;
+            } else {
+                return -1;
+            }
+        })
+    }
+}
+
+var selectFollowUp = function(step) {
+    var message = "Do you want to follow up?"
+    selectFromOptions(["Yes", "No"], message, step, followUp);
+}
+
+var selectFromOptions = function(options, message, data, callback) {
+    var selectOption = function(d) {
+        svg.selectAll("rect.optionsWindow").style("visibility", "hidden");
+        svg.selectAll("text.optionsText").style("visibility", "hidden");
+        svg.selectAll("g.option").data([]).exit().remove();
+        callback(d);
+    }
+    var optionsData = new Array;
+    for (var index = 0; index < options.length; index++) {
+        optionsData[index] = {"option": options[index], "data": data};
+    }
+    svg.selectAll("rect.optionsWindow").style("visibility", "visible");
+    svg.selectAll("text.optionsText").text(message).style("visibility", "visible");
+    var g = svg.selectAll("g.option")
+        .data(optionsData)
+        .enter()
+        .append("g")
+        .attr("class", "option")
+        .on("click", selectOption);
+    g.append("rect")
+        .attr("x", 0.5 * nSquaresX * squareSize + margin - 0.5 * buttonWidth)
+        .attr("y", function(d, i) { return 0.45 * nSquaresY * squareSize + margin + (1.3*i)*buttonHeight; })
+        .attr("width", buttonWidth)
+        .attr("height", buttonHeight)
+        .classed("button", true)
+    g.append("text")
+        .text(function(d) { return d.option; })
+        .attr("x", 0.5 * nSquaresX * squareSize + margin)
+        .attr("y", function(d, i) { return 0.45 * nSquaresY * squareSize + margin + (0.5+1.3*i)*buttonHeight; })
+        .classed("buttonText", true)
+}
+
+var blockDice = function(data) {
+    var dice = data.option;
+    var step = data.data;
+    step.selectedDice = dice;
+    postStep(step);
+    var nextStep = null;
+    var followingStep = null;
+    var thirdStep = null;
+    switch (dice) {
+    case "attackerDown":
+        nextStep = defineKnockDown(step, dice, "attacker");
+        break;
+    case "bothDown":
+        nextStep = defineKnockDown(step, dice, "defender");
+        followingStep = defineKnockDown(step, dice, "attacker");
+        break;
+    case "pushed":
+        nextStep = definePush(step);
+        followingStep = defineFollowUp(step);
+        break;
+    case "defenderStumbles":
+    case "defenderDown":
+        nextStep = definePush(step);
+        followingStep = defineFollowUp(step);
+        thirdStep = defineKnockDown(step, dice, "defender");
+        break;
+    }
+    stepStack.shift();
+    addStepToStack(nextStep);
+    addStepToStack(followingStep);
+    addStepToStack(thirdStep);
+}
+
+var followUp = function(data) {
+    stepStack.shift();
+    if (data.option == "Yes") {
+        // Change the block step into a move step
+        var step = data.data;
+        var newStep = {};
+        for (var attr in step) {
+            if (attr != "targetNum") {
+                newStep[attr] = step[attr];
+            }
+            newStep.stepType = "move";
+        }
+        processStep(newStep);
+    }
+}
+
+var push = function(step, xpos, ypos) {
+    console.log("push happening")
+    console.log(step)
+    svg.selectAll(".gridOption")
+        .classed("gridOption", false)
+    pitch.on("click", clickPitch)
+    var player = playerInPos(step.x1, step.y1);
+    var newStep = {};
+    newStep.action = step.action;
+    newStep.stepType = "push";
+    newStep.side = player.side;
+    newStep.num = player.num;
+    newStep.x0 = step.x1;
+    newStep.y0 = step.y1;
+    newStep.x1 = xpos;
+    newStep.y1 = ypos;
+    newStep.matchId = matchData.id;
+    processMove(newStep);
+}
+
+var otherSide = function(side) {
+    if (side == "home") {
+        return "away";
+    } else if (side == "away") {
+        return "home";
+    } else {
+        console.log("No other side for " + side);
+        return null;
+    }
+}
+
+</script>
+</body>
+</html>
