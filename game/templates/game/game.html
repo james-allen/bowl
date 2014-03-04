@@ -233,7 +233,15 @@ var createKnockDownSymbol = function(xpos, ypos, stunned) {
 }
 
 var standUp = function() {
-    return;
+    if (!(d3.select("#standUpButton").classed("inactive"))) {
+        var step = {
+            "stepType": "standUp",
+            "action": selectedAction,
+            "side": selected.side,
+            "num": selected.num
+        }
+        addStepToStack(step);
+    }
 }
 
 // Make the SVG container
@@ -425,6 +433,9 @@ var processStep = function(step) {
         case "knockDown":
             processKnockDown(step);
             break;
+        case "standUp":
+            processStandUp(step);
+            break;
         }
     }
 }
@@ -471,6 +482,10 @@ var processKnockDown = function(step) {
     var player = findPlayer(step.side, step.num);
     player.down = true;
     createKnockDownSymbol(player.xpos, player.ypos, false);
+    postStep(step);
+}
+
+var processStandUp = function(step) {
     postStep(step);
 }
 
@@ -545,6 +560,15 @@ var postProcessStep = function(step, result) {
             } else {
                 removeFromPitch(player);
             }
+        }
+        stepStack.shift();
+        processNextStep();
+    case "standUp":
+        if (result.success) {
+            var player = findPlayer(step.side, step.num);
+            player.down = false;
+            d3.select("#"+player_id(player)+"knockDown")
+                .data([]).exit().remove();
         }
         stepStack.shift();
         processNextStep();

@@ -2,18 +2,21 @@ from game.models import PlayerInGame
 
 import random
 
+def find_player(match, data):
+    """Find out which player it is."""
+    if data['side'] == 'home':
+        team = match.home_team
+    elif data['side'] == 'away':
+        team = match.away_team
+    num = data['num']
+    player = PlayerInGame.objects.get(
+        match=match, player__team=team, player__number=num)
+    return player
 
 def resolve(match, step_type, data):
     if step_type in ['move', 'push', 'followUp']:
         # A move step
-        # Find out which player it is
-        if data['side'] == 'home':
-            team = match.home_team
-        elif data['side'] == 'away':
-            team = match.away_team
-        num = data['num']
-        player = PlayerInGame.objects.get(
-            match=match, player__team=team, player__number=num)
+        player = find_player(match, data)
         # Update the player's position in the database
         player.xpos = data['x1']
         player.ypos = data['y1']
@@ -28,20 +31,14 @@ def resolve(match, step_type, data):
         elif data['side'] == 'away':
             attacking_team = match.away_team
             defending_team = match.home_team
-        print("Established teams")
         attacking_num = int(data['num'])
-        print(attacking_num)
         defending_num = int(data['targetNum'])
-        print(defending_num)
         attacking_player = PlayerInGame.objects.get(
             match=match, player__team=attacking_team, 
             player__number=attacking_num)
         defending_player = PlayerInGame.objects.get(
             match=match, player__team=defending_team,
             player__number=defending_num)
-        print("Established players")
-        print(attacking_player, attacking_player.player, attacking_player.player.st)
-        print(defending_player, defending_player.player, defending_player.player.st)
         n_dice = 1
         if attacking_player.player.st > (2 * defending_player.player.st):
             n_dice = 3
@@ -51,31 +48,17 @@ def resolve(match, step_type, data):
             n_dice = 3
         elif attacking_player.player.st < defending_player.player.st:
             n_dice = 2
-        print("Rolling dice")
         return roll_block_dice(n_dice)
     elif step_type == 'knockDown':
-        print("Knockdown!")
         # A player knocked over
-        # Find out which player it is
-        if data['side'] == 'home':
-            team = match.home_team
-        elif data['side'] == 'away':
-            team = match.away_team
-        num = data['num']
-        print(team, num)
-        player = PlayerInGame.objects.get(
-            match=match, player__team=team, player__number=num)
-        print(player)
+        player = find_player(match, data)
         # Knock the player over in the database
         player.down = True
         player.save()
         # Roll against armour
-        print("about to roll for armour")
         armour_roll = roll_armour_dice(player)
-        print(armour_roll)
         if armour_roll['success']:
             injury_roll = roll_injury_dice()
-            print(injury_roll)
             if injury_roll['result'] == 'stunned':
                 player.stunned = True
             elif injury_roll['result'] == 'knockedOut':
@@ -91,6 +74,19 @@ def resolve(match, step_type, data):
         else:
             injury_roll = None
         return {'armourRoll': armour_roll, 'injuryRoll': injury_roll}
+    elif step_type == 'standUp':
+        # A player standing up
+        player = find_player(match, data)
+        if player.player.ma < 3:
+            dice = roll_dice(6, 1)
+            success = dice['dice'][0] >= 4
+        else:
+            dice = None
+            success = True
+        if success:
+            player.down = False
+            player.save()
+        return {'dice': dice, 'success': success}
     elif step_type == 'endTurn':
         return {}
 
