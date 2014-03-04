@@ -64,6 +64,12 @@ circle.selected
     stroke-width: 1;
     fill: yellow;
 }
+.stunnedSymbol
+{
+    stroke: black;
+    stroke-width: 1;
+    fill: red;
+}
 </style>
 <body>
 <script type="text/javascript" src="/static/js/d3.v3.min.js"></script>
@@ -149,6 +155,81 @@ var playersOnPitch = function() {
         }
     }
     return onPitch;
+}
+
+var playerInPos = function(xpos, ypos) {
+    for (var playerIndex = 0; playerIndex < players.length; playerIndex++) {
+        if (players[playerIndex].xpos == xpos &&
+            players[playerIndex].ypos == ypos) {
+            return players[playerIndex];
+        }
+    }
+    return null;
+}
+
+var playerWithId = function(id) {
+    var side = id.substring(0, 4);
+    var num = id.substring(4);
+    return findPlayer(side, num);
+}
+
+var findPlayer = function(side, num) {
+    for (var index = 0; index < players.length; index++) {
+        var player = players[index];
+        if (player.side == side && player.num == num) {
+            return player;
+        }
+    }
+    return null;
+}
+
+var knockDownSymbolGenerator = function(xpos, ypos, stunned) {
+    var nPoint = 10;
+    var outerRadius = 0.2 * squareSize;
+    if (stunned) {
+        outerRadius *= 1.5;
+    }
+    var innerRadius = 0.6 * outerRadius;
+    var jitter = 0.08 * outerRadius;
+    var x0 = margin + squareSize*(xpos + 0.25);
+    var y0 = margin + squareSize*(ypos + 0.25);
+    var coords = new Array(2*nPoint + 1);
+    var theta;
+    for (var iPoint = 0; iPoint < nPoint; iPoint++) {
+        theta = 2 * Math.PI * iPoint / nPoint;
+        coords[2*iPoint] = {
+            "x": x0 + outerRadius*Math.cos(theta) + 2*jitter*(Math.random()-0.5),
+            "y": y0 + outerRadius*Math.sin(theta) + 2*jitter*(Math.random()-0.5)
+        }
+        theta = 2 * Math.PI * (iPoint + 0.5) / nPoint;
+        coords[2*iPoint + 1] = {
+            "x": x0 + innerRadius*Math.cos(theta) + 2*jitter*(Math.random()-0.5),
+            "y": y0 + innerRadius*Math.sin(theta) + 2*jitter*(Math.random()-0.5)
+        }
+    }
+    coords[2*nPoint] = coords[0];
+    var line = d3.svg.line()
+        .x(function(d) { return d.x; })
+        .y(function(d) { return d.y; })
+        .interpolate("linear");
+    return line(coords);
+}
+
+var createKnockDownSymbol = function(xpos, ypos, stunned) {
+    var player = playerInPos(xpos, ypos);
+    var id, symbolClass;
+    if (stunned) {
+        id = player_id(player) + "stunned";
+        symbolClass = "stunnedSymbol"
+    } else {
+        id = player_id(player) + "knockDown";
+        symbolClass = "knockDownSymbol"
+    }
+    var symbol = svg.append("path")
+        .attr("d", knockDownSymbolGenerator(xpos, ypos, stunned))
+        .attr("class", symbolClass)
+        .attr("id", id);
+    return symbol;
 }
 
 // Make the SVG container
@@ -287,6 +368,14 @@ svg.selectAll("circle")
         }
     })
 
+// Add knockDown or stunned symbols as necessary
+for (var index = 0; index < players.length; index++) {
+    var player = players[index];
+    if (player.down) {
+        createKnockDownSymbol(player.xpos, player.ypos, player.stunned);
+    }
+}
+
 var clearSelection = function() {
     selected = null;
     d3.select("circle.selected").classed("selected", false);
@@ -364,10 +453,7 @@ var processFollowUp = function(step) {
 var processKnockDown = function(step) {
     var player = findPlayer(step.side, step.num);
     player.down = true;
-    var knockDownSymbol = svg.append("path")
-        .attr("d", knockDownSymbolGenerator(player.xpos, player.ypos, false))
-        .attr("class", "knockDownSymbol")
-        .attr("id", player_id(player) + "knockDown");
+    createKnockDownSymbol(player.xpos, player.ypos, false);
     postStep(step);
 }
 
@@ -438,10 +524,7 @@ var postProcessStep = function(step, result) {
                 player.stunned = true;
                 d3.select("#"+player_id(player)+"knockDown")
                     .data([]).exit().remove();
-                var stunnedSymbol = svg.append("path")
-                    .attr("d", knockDownSymbolGenerator(player.xpos, player.ypos, true))
-                    .attr("class", "stunnedSymbol")
-                    .attr("id", player_id(player) + "stunned");
+                createKnockDownSymbol(player.xpos, player.ypos, true);
             } else {
                 removeFromPitch(player);
             }
@@ -492,32 +575,6 @@ var currentSide = function() {
     }
     // Check which side kicked off first
     return matchData.firstKickingTeam;
-}
-
-var playerInPos = function(xpos, ypos) {
-    for (var playerIndex = 0; playerIndex < players.length; playerIndex++) {
-        if (players[playerIndex].xpos == xpos &&
-            players[playerIndex].ypos == ypos) {
-            return players[playerIndex];
-        }
-    }
-    return null;
-}
-
-var playerWithId = function(id) {
-    var side = id.substring(0, 4);
-    var num = id.substring(4);
-    return findPlayer(side, num);
-}
-
-var findPlayer = function(side, num) {
-    for (var index = 0; index < players.length; index++) {
-        var player = players[index];
-        if (player.side == side && player.num == num) {
-            return player;
-        }
-    }
-    return null;
 }
 
 var isAdjacent = function(xpos_0, ypos_0, xpos_1, ypos_1) {
@@ -793,37 +850,6 @@ var otherSide = function(side) {
     }
 }
 
-var knockDownSymbolGenerator = function(xpos, ypos, stunned) {
-    var nPoint = 10;
-    var outerRadius = 0.2 * squareSize;
-    if (stunned) {
-        outerRadius *= 1.5;
-    }
-    var innerRadius = 0.6 * outerRadius;
-    var jitter = 0.08 * outerRadius;
-    var x0 = margin + squareSize*(xpos + 0.25);
-    var y0 = margin + squareSize*(ypos + 0.25);
-    var coords = new Array(2*nPoint + 1);
-    var theta;
-    for (var iPoint = 0; iPoint < nPoint; iPoint++) {
-        theta = 2 * Math.PI * iPoint / nPoint;
-        coords[2*iPoint] = {
-            "x": x0 + outerRadius*Math.cos(theta) + 2*jitter*(Math.random()-0.5),
-            "y": y0 + outerRadius*Math.sin(theta) + 2*jitter*(Math.random()-0.5)
-        }
-        theta = 2 * Math.PI * (iPoint + 0.5) / nPoint;
-        coords[2*iPoint + 1] = {
-            "x": x0 + innerRadius*Math.cos(theta) + 2*jitter*(Math.random()-0.5),
-            "y": y0 + innerRadius*Math.sin(theta) + 2*jitter*(Math.random()-0.5)
-        }
-    }
-    coords[2*nPoint] = coords[0];
-    var line = d3.svg.line()
-        .x(function(d) { return d.x; })
-        .y(function(d) { return d.y; })
-        .interpolate("linear");
-    return line(coords);
-}
 
 </script>
 </body>
