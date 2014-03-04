@@ -1,4 +1,4 @@
-from game.models import Race, Team, Player, Match, PlayerOnPitch
+from game.models import Race, Team, Player, Match, PlayerInGame
 
 def start():
     # Make races
@@ -18,14 +18,14 @@ def start():
     xpos = 0
     ypos = 0
     for player in reavers.player_set.all():
-        pop = PlayerOnPitch(player=player, match=match, xpos=xpos, ypos=ypos)
-        pop.save()
+        pig = PlayerInGame(player=player, match=match, xpos=xpos, ypos=ypos, on_pitch=True)
+        pig.save()
         xpos += 1
         ypos += 1
     ypos = 0
     for player in raiders.player_set.all():
-        pop = PlayerOnPitch(player=player, match=match, xpos=xpos, ypos=ypos)
-        pop.save()
+        pig = PlayerInGame(player=player, match=match, xpos=xpos, ypos=ypos, on_pitch=True)
+        pig.save()
         xpos += 1
         ypos += 1
         

@@ -58,6 +58,12 @@ circle.selected
 {
     text-anchor: middle;
 }
+.knockDownSymbol
+{
+    stroke: black;
+    stroke-width: 1;
+    fill: yellow;
+}
 </style>
 <body>
 <script type="text/javascript" src="/static/js/d3.v3.min.js"></script>
@@ -135,6 +141,16 @@ var addStepToStack = function(step) {
     }
 }
 
+var playersOnPitch = function() {
+    var onPitch = new Array;
+    for (var index = 0; index < players.length; index++) {
+        if (players[index].onPitch) {
+            onPitch[onPitch.length] = players[index];
+        }
+    }
+    return onPitch;
+}
+
 // Make the SVG container
 var svg = d3.select("body").append("svg")
     .attr("width", width)
@@ -171,7 +187,6 @@ var endTurn = function(d) {
         "stepType": "endTurn",
         "action": "endTurn",
         "oldSide": currentSide(),
-        "matchId": matchData.id
     }
     clearSelection();
     postStep(step);
@@ -239,7 +254,7 @@ var optionsText = svg.append("text")
 
 // Make the circles that represent the players
 svg.selectAll("circle")
-    .data(players)
+    .data(playersOnPitch())
     .enter()
     .append("circle")
     .attr("cx", cx)
@@ -347,7 +362,20 @@ var processFollowUp = function(step) {
 }
 
 var processKnockDown = function(step) {
+    var player = findPlayer(step.side, step.num);
+    player.down = true;
+    var knockDownSymbol = svg.append("path")
+        .attr("d", knockDownSymbolGenerator(player.xpos, player.ypos, false))
+        .attr("class", "knockDownSymbol")
+        .attr("id", player_id(player) + "knockDown");
+    postStep(step);
+}
 
+var removeFromPitch = function(player) {
+    player.onPitch = false;
+    d3.select("#"+player_id(player)).data([]).exit().remove();
+    d3.select("#"+player_id(player)+"knockDown").data([]).exit().remove();
+    d3.select("#"+player_id(player)+"stunned").data([]).exit().remove();
 }
 
 var postStep = function(step) {
@@ -356,6 +384,7 @@ var postStep = function(step) {
         step.historyPosition = history.length;
         history[step.historyPosition] = step;
     }
+    step.matchId = matchData.id;
     console.log("Sending move " + step.historyPosition + " to server");
     console.log(step);
     $.ajax({
@@ -364,17 +393,22 @@ var postStep = function(step) {
         data: step,
         dataType: "json",
         success: function(result) {
+            console.log(step.historyPosition + ": Result");
+            console.log(result)
             switch (result.status)
             {
                 case "duplicate":
+                    console.log(step.historyPosition + ": Duplicate step")
                     break;
                 case "resend":
+                    console.log(step.historyPosition + ": Resend step")
                     var index;
-                    for (index = result.start; index <= result.historyPosition; index++) {
+                    for (index = result.start; index <= step.historyPosition; index++) {
                         postStep(history[index]);
                     }
                     break;
                 case 0:
+                    console.log(step.historyPosition + ": OK")
                     postProcessStep(step, result);
                     break;
                 default:
@@ -383,7 +417,7 @@ var postStep = function(step) {
             }
         },
         error: function(jqxhr, textStatus, errorThrown) {
-            console.log("Error receieved for step " + step.historyPosition);
+            console.log("Error received for step " + step.historyPosition);
             restoreTo(step.historyPosition - 1);
         }
     });    
@@ -393,14 +427,27 @@ var postProcessStep = function(step, result) {
     switch (step.stepType) {
     case "block":
         if (step.selectedDice == null) {
-        // if (step.nDice > 1) {
             selectDice(result.dice, step, blockDice);
-        // } else {
-        //     dice = result.dice[0];
-        //     blockDice({"option": dice, "data": step});
-        // }
         }
         break;
+    case "knockDown":
+        console.log(result);
+        if (result.armourRoll.success) {
+            var player = findPlayer(step.side, step.num);
+            if (result.injury_roll.result == "stunned") {
+                player.stunned = true;
+                d3.select("#"+player_id(player)+"knockDown")
+                    .data([]).exit().remove();
+                var stunnedSymbol = svg.append("path")
+                    .attr("d", knockDownSymbolGenerator(player.xpos, player.ypos, true))
+                    .attr("class", "stunnedSymbol")
+                    .attr("id", player_id(player) + "stunned");
+            } else {
+                removeFromPitch(player);
+            }
+        }
+        stepStack.shift();
+        processNextStep();
     }
 }
 
@@ -522,7 +569,6 @@ var defineStep = function(xpos, ypos) {
         step.y0 = selected.ypos;
         step.x1 = xpos;
         step.y1 = ypos;
-        step.matchId = matchData.id;
     }
     return step;
 }
@@ -563,7 +609,6 @@ var definePush = function(blockStep) {
     step.y0 = blockStep.y0;
     step.x1 = blockStep.x1;
     step.y1 = blockStep.y1;
-    step.matchId = matchData.id;
     return step
 }
 
@@ -579,7 +624,6 @@ var defineFollowUp = function(blockStep) {
     step.x1 = blockStep.x1;
     step.y1 = blockStep.y1;
     step.choice = null;
-    step.matchId = matchData.id;
     return step
 }
 
@@ -735,7 +779,6 @@ var push = function(step, xpos, ypos) {
     newStep.y0 = step.y1;
     newStep.x1 = xpos;
     newStep.y1 = ypos;
-    newStep.matchId = matchData.id;
     processMove(newStep);
 }
 
@@ -748,6 +791,38 @@ var otherSide = function(side) {
         console.log("No other side for " + side);
         return null;
     }
+}
+
+var knockDownSymbolGenerator = function(xpos, ypos, stunned) {
+    var nPoint = 10;
+    var outerRadius = 0.2 * squareSize;
+    if (stunned) {
+        outerRadius *= 1.5;
+    }
+    var innerRadius = 0.6 * outerRadius;
+    var jitter = 0.08 * outerRadius;
+    var x0 = margin + squareSize*(xpos + 0.25);
+    var y0 = margin + squareSize*(ypos + 0.25);
+    var coords = new Array(2*nPoint + 1);
+    var theta;
+    for (var iPoint = 0; iPoint < nPoint; iPoint++) {
+        theta = 2 * Math.PI * iPoint / nPoint;
+        coords[2*iPoint] = {
+            "x": x0 + outerRadius*Math.cos(theta) + 2*jitter*(Math.random()-0.5),
+            "y": y0 + outerRadius*Math.sin(theta) + 2*jitter*(Math.random()-0.5)
+        }
+        theta = 2 * Math.PI * (iPoint + 0.5) / nPoint;
+        coords[2*iPoint + 1] = {
+            "x": x0 + innerRadius*Math.cos(theta) + 2*jitter*(Math.random()-0.5),
+            "y": y0 + innerRadius*Math.sin(theta) + 2*jitter*(Math.random()-0.5)
+        }
+    }
+    coords[2*nPoint] = coords[0];
+    var line = d3.svg.line()
+        .x(function(d) { return d.x; })
+        .y(function(d) { return d.y; })
+        .interpolate("linear");
+    return line(coords);
 }
 
 </script>

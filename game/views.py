@@ -7,16 +7,16 @@ from django.shortcuts import render
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.db.utils import IntegrityError
 
-from game.models import Match, PlayerOnPitch, Step
+from game.models import Match, PlayerInGame, Step
 from game.steps import resolve
 
 # Create your views here.
 @ensure_csrf_cookie
 def game_view(request):
     match = Match.objects.all()[0]
-    home_players = PlayerOnPitch.objects.filter(
+    home_players = PlayerInGame.objects.filter(
         match=match, player__team=match.home_team).all()
-    away_players = PlayerOnPitch.objects.filter(
+    away_players = PlayerInGame.objects.filter(
         match=match, player__team=match.away_team).all()
     players_list = []
     players_list.extend([p.as_dict('home') for p in home_players])
@@ -34,6 +34,8 @@ def game_view(request):
 def post_step_view(request):
     # sleep(randint(1, 5))
     # Get the match in question
+    print('post_step_view')
+    print('POST:', request.POST)
     match = Match.objects.get(id=request.POST['matchId'])
     # Check what steps have previously been saved
     history_saved = Step.objects.filter(match=match).values_list(
@@ -44,6 +46,7 @@ def post_step_view(request):
         expected_position = history_saved[len(history_saved)-1] + 1
     # Check where this new step fits in with the history
     history_position = int(request.POST['historyPosition'])
+    print('expected:', expected_position, 'actual:', history_position)
     if history_position > expected_position:
         # Missing some history, so request it be resent
         result = {'status': 'resend',
@@ -57,6 +60,7 @@ def post_step_view(request):
         # Turn the POST data into a model step
         properties = {key: value for key, value in request.POST.items() 
                       if key not in ['stepType', 'matchId', 'historyPosition']}
+        print(str(history_position) + ':', properties)
         step_type = request.POST['stepType']
         step = Step(
             step_type=step_type,
@@ -70,9 +74,10 @@ def post_step_view(request):
             result = {'status': 'duplicate'}
         else:
             # Carry out the step
-            print("Carrying out the step")
+            print(str(history_position) + ':', "Carrying out the step")
             result = resolve(match, step_type, properties)
             # Tell the client that everything is ok
             result['status'] = 0
     result_json = json.dumps(result)
+    print(str(history_position) + ':', result_json)
     return HttpResponse(result_json, content_type="application/json")

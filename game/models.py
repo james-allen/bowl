@@ -57,7 +57,7 @@ class Match(models.Model):
         return result_dict
         
 
-class PlayerOnPitch(models.Model):
+class PlayerInGame(models.Model):
     player = models.ForeignKey(Player)
     match = models.ForeignKey(Match)
     xpos = models.IntegerField()
@@ -66,6 +66,9 @@ class PlayerOnPitch(models.Model):
     down = models.BooleanField(default=False)
     stunned = models.BooleanField(default=False)
     has_ball = models.BooleanField(default=False)
+    on_pitch = models.BooleanField(default=False)
+    knocked_out = models.BooleanField(default=False)
+    casualty = models.BooleanField(default=False)
 
     def as_dict(self, side):
         result_dict = {
@@ -77,6 +80,9 @@ class PlayerOnPitch(models.Model):
             'down': self.down,
             'stunned': self.stunned,
             'hasBall': self.has_ball,
+            'onPitch': self.on_pitch,
+            'knockedOut': self.knocked_out,
+            'casualty': self.casualty,
             'skills': self.player.skills,
         }
         return result_dict
