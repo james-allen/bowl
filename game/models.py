@@ -45,6 +45,8 @@ class Match(models.Model):
     away_team = models.ForeignKey(Team, related_name='away_match')
     turn = models.IntegerField(default=0)
     first_kicking_team = models.CharField(max_length=4)
+    x_ball = models.IntegerField(null=True, default=None)
+    y_ball = models.IntegerField(null=True, default=None)
 
     def as_dict(self):
         result_dict = {
@@ -53,6 +55,8 @@ class Match(models.Model):
             'awayTeam': self.away_team.name,
             'turn': self.turn,
             'firstKickingTeam': self.first_kicking_team,
+            'xBall': self.x_ball,
+            'yBall': self.y_ball,
         }
         return result_dict
         

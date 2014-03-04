@@ -70,6 +70,12 @@ circle.selected
     stroke-width: 1;
     fill: red;
 }
+.ball
+{
+    stroke: black;
+    stroke-width: 1;
+    fill: brown;
+}
 </style>
 <body>
 <script type="text/javascript" src="/static/js/d3.v3.min.js"></script>
@@ -392,6 +398,18 @@ svg.selectAll("circle")
             }
         }
     })
+
+var drawBall = function(xBall, yBall) {
+    svg.append("circle")
+        .attr("cx", squareSize * (0.7 + xBall) + margin)
+        .attr("cy", squareSize * (0.7 + yBall) + margin)
+        .attr("r", 0.2*squareSize)
+        .attr("class", "ball")
+}
+
+if (matchData.xBall != null && matchData.yBall != null) {
+    drawBall(matchData.xBall, matchData.yBall);
+}
 
 // Add knockDown or stunned symbols as necessary
 for (var index = 0; index < players.length; index++) {

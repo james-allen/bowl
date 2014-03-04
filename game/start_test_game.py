@@ -13,7 +13,7 @@ def start():
     raiders = Team(race=orc, name='Orcland Raiders')
     raiders.save()
     populate_orcs(raiders)
-    match = Match(home_team=reavers, away_team=raiders, first_kicking_team='home')
+    match = Match(home_team=reavers, away_team=raiders, first_kicking_team='home', x_ball=3, y_ball=1)
     match.save()
     xpos = 0
     ypos = 0
