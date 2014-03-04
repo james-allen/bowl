@@ -118,7 +118,7 @@ def roll_armour_dice(player):
 
 def roll_injury_dice():
     dice = roll_dice(6, 2)
-    total = sum(dice)
+    total = sum(dice['dice'])
     if total <= 7:
         result = 'stunned'
     elif total <= 9:

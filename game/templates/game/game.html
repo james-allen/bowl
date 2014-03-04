@@ -520,7 +520,7 @@ var postProcessStep = function(step, result) {
         console.log(result);
         if (result.armourRoll.success) {
             var player = findPlayer(step.side, step.num);
-            if (result.injury_roll.result == "stunned") {
+            if (result.injuryRoll.result == "stunned") {
                 player.stunned = true;
                 d3.select("#"+player_id(player)+"knockDown")
                     .data([]).exit().remove();
