@@ -189,6 +189,10 @@ var findPlayer = function(side, num) {
     return null;
 }
 
+var ballInPos = function(xpos, ypos) {
+    return (matchData.xBall == xpos && matchData.yBall == ypos);
+}
+
 var knockDownSymbolGenerator = function(xpos, ypos, stunned) {
     var nPoint = 10;
     var outerRadius = 0.2 * squareSize;
