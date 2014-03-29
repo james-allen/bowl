@@ -607,8 +607,8 @@ var postProcessStep = function(step, result) {
         break;
     case "knockDown":
         console.log(result);
+        var player = findPlayer(step.side, step.num);
         if (result.armourRoll.success) {
-            var player = findPlayer(step.side, step.num);
             if (result.injuryRoll.result == "stunned") {
                 player.stunned = true;
                 d3.select("#"+player_id(player)+"knockDown")
@@ -618,7 +618,13 @@ var postProcessStep = function(step, result) {
                 removeFromPitch(player);
             }
         }
-        stepStack.shift();
+        if (player.hasBall) {
+            player.hasBall = false;
+            var nextStep = defineScatter();
+            stepStack[0] = nextStep;
+        } else {
+            stepStack.shift();
+        }
         processNextStep();
         break;
     case "standUp":
