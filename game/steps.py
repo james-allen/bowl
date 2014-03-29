@@ -61,6 +61,7 @@ def resolve(match, step_type, data):
         player = find_player(match, data)
         # Knock the player over in the database
         player.down = True
+        player.has_ball = False
         player.save()
         # Roll against armour
         armour_roll = roll_armour_dice(player)
@@ -108,17 +109,20 @@ def resolve(match, step_type, data):
         dice = roll_dice(8, 1)
         direction = sum(dice['dice'])
         if direction in [1, 4, 6]:
-            x1 = data['x0'] - 1
+            x1 = int(data['x0']) - 1
         elif direction in [3, 5, 8]:
-            x1 = data['x0'] + 1
+            x1 = int(data['x0']) + 1
         else:
-            x1 = data['x0']
+            x1 = int(data['x0'])
         if direction in [1, 2, 3]:
-            y1 = data['y0'] - 1
+            y1 = int(data['y0']) - 1
         elif direction in [6, 7, 8]:
-            y1 = data['y0'] + 1
+            y1 = int(data['y0']) + 1
         else:
-            y1 = data['y0']
+            y1 = int(data['y0'])
+        match.x_ball = x1
+        match.y_ball = y1
+        match.save()
         return {'dice': dice, 'direction': direction, 'x1': x1, 'y1': y1}
     elif step_type == 'catch':
         # Catching the ball
