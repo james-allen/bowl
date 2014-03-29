@@ -125,6 +125,13 @@ var cy = function(d) {
     return squareSize * (0.5 + d.ypos) + margin;
 }
 
+var cxBall = function() {
+    return squareSize * (0.7 + matchData.xBall) + margin;
+}
+var cyBall = function() {
+    return squareSize * (0.7 + matchData.yBall) + margin;
+}
+
 var nSquaresX = 26,
     nSquaresY = 15;
 
@@ -403,16 +410,17 @@ svg.selectAll("circle")
         }
     })
 
-var drawBall = function(xBall, yBall) {
+var drawBall = function() {
     svg.append("circle")
-        .attr("cx", squareSize * (0.7 + xBall) + margin)
-        .attr("cy", squareSize * (0.7 + yBall) + margin)
+        .attr("cx", cxBall())
+        .attr("cy", cyBall())
         .attr("r", 0.2*squareSize)
         .attr("class", "ball")
+        .attr("id", "ball")
 }
 
 if (matchData.xBall != null && matchData.yBall != null) {
-    drawBall(matchData.xBall, matchData.yBall);
+    drawBall();
 }
 
 // Add knockDown or stunned symbols as necessary
@@ -458,6 +466,15 @@ var processStep = function(step) {
         case "standUp":
             processStandUp(step);
             break;
+        case "pickUp":
+            processPickUp(step);
+            break;
+        case "scatter":
+            processScatter(step);
+            break;
+        case "catch":
+            processCatch(step);
+            break;
         }
     }
 }
@@ -474,7 +491,13 @@ var processMove = function(step) {
         .attr("cy", cy)
     // Tell the server
     postStep(step);
-    stepStack.shift();
+    if (ballInPos(step.x1, step.y1)) {
+        // Automatically attempt to pick up the ball
+        var nextStep = definePickUp(player);
+        stepStack[0] = nextStep;
+    } else {
+        stepStack.shift();    
+    }
     processNextStep();
 }
 
@@ -508,6 +531,18 @@ var processKnockDown = function(step) {
 }
 
 var processStandUp = function(step) {
+    postStep(step);
+}
+
+var processPickUp = function(step) {
+    postStep(step);
+}
+
+var processScatter = function(step) {
+    postStep(step);
+}
+
+var processCatch = function(step) {
     postStep(step);
 }
 
@@ -585,6 +620,7 @@ var postProcessStep = function(step, result) {
         }
         stepStack.shift();
         processNextStep();
+        break;
     case "standUp":
         if (result.success) {
             var player = findPlayer(step.side, step.num);
@@ -594,6 +630,32 @@ var postProcessStep = function(step, result) {
         }
         stepStack.shift();
         processNextStep();
+        break;
+    case "pickUp":
+        if (result.success) {
+            var player = findPlayer(step.side, step.num);
+            player.hasBall = true;
+            stepStack.shift();
+        } else {
+            var nextStep = defineScatter();
+            stepStack[0] = nextStep;
+        }
+        processNextStep();
+        break;
+    case "scatter":
+        scatterBall(result.x1, result.y1);
+        break;
+    case "catch":
+        if (result.success) {
+            var player = findPlayer(step.side, step.num);
+            player.hasBall = true;
+            stepStack.shift();
+        } else {
+            var nextStep = defineScatter();
+            stepStack[0] = nextStep;
+        }
+        processNextStep();
+        break;
     }
 }
 
@@ -745,6 +807,38 @@ var defineFollowUp = function(blockStep) {
     step.y1 = blockStep.y1;
     step.choice = null;
     return step
+}
+
+var definePickUp = function(player) {
+    var step = {};
+    step.stepType = "pickUp";
+    step.side = player.side;
+    step.num = player.num;
+    step.xpos = player.xpos;
+    step.ypos = player.ypos;
+    step.action = selectedAction;
+    return step;
+}
+
+var defineScatter = function() {
+    var step = {};
+    step.stepType = "scatter";
+    step.action = selectedAction;
+    step.x0 = matchData.xBall;
+    step.y0 = matchData.yBall;
+    return step;
+}
+
+var defineCatch = function(player, accurate) {
+    var step = {};
+    step.stepType = "catch";
+    step.side = player.side;
+    step.num = player.num;
+    step.xpos = player.xpos;
+    step.ypos = player.ypos;
+    step.accurate = accurate;
+    step.action = selectedAction;
+    return step;
 }
 
 var selectPush = function(step) {
@@ -900,6 +994,23 @@ var push = function(step, xpos, ypos) {
     newStep.x1 = xpos;
     newStep.y1 = ypos;
     processMove(newStep);
+}
+
+var scatterBall = function(xpos, ypos) {
+    matchData.xBall = xpos;
+    matchData.yBall = ypos;
+    d3.select("#ball")
+        .transition()
+        .attr("cx", cxBall())
+        .attr("cy", cyBall())
+    var player = playerInPos(xpos, ypos);
+    if (player != null) {
+        var nextStep = defineCatch(player, false);
+        stepStack[0] = nextStep;
+    } else {
+        stepStack.shift()
+    }
+    processNextStep();
 }
 
 var otherSide = function(side) {

@@ -87,8 +87,60 @@ def resolve(match, step_type, data):
             player.down = False
             player.save()
         return {'dice': dice, 'success': success}
+    elif step_type == 'pickUp':
+        # A player picking up the ball
+        player = find_player(match, data)
+        modifier = 1 - n_tackle_zones(player)
+        result = roll_agility_dice(player, modifier=modifier)
+        if result['success']:
+            player.has_ball = True
+            player.save()
+        return result
+    elif step_type == 'scatter':
+        # Scattering the ball
+        dice = roll_dice(8, 1)
+        direction = sum(dice['dice'])
+        if direction in [1, 4, 6]:
+            x1 = data['x0'] - 1
+        elif direction in [3, 5, 8]:
+            x1 = data['x0'] + 1
+        else:
+            x1 = data['x0']
+        if direction in [1, 2, 3]:
+            y1 = data['y0'] - 1
+        elif direction in [6, 7, 8]:
+            y1 = data['y0'] + 1
+        else:
+            y1 = data['y0']
+        return {'dice': dice, 'direction': direction, 'x1': x1, 'y1': y1}
+    elif step_type == 'catch':
+        # Catching the ball
+        player = find_player(match, data)
+        if player.down:
+            return {'success': False}
+        modifier = - n_tackle_zones(player)
+        if data['accurate']:
+            modifier += 1
+        result = roll_agility_dice(player, modifier=modifier)
+        if result['success']:
+            player.has_ball = True
+            player.save()
+        return result
     elif step_type == 'endTurn':
         return {}
+
+def n_tackle_zones(player):
+    opponents = PlayerInGame.objects.filter(
+        match=player.match)
+    opponents = opponents.exclude(
+        player__team=player.player.team)
+    opponents = opponents.filter(
+        xpos__gt=(player.xpos-2), ypos__gt=(player.ypos-2))
+    opponents = opponents.filter(
+        xpos__lt=(player.xpos+2), ypos__lt=(player.ypos+2))
+    opponents = opponents.filter(
+        down=False)
+    return opponents.count()
 
 def roll_block_dice(n_dice):
     result_num = roll_dice(6, n_dice)
@@ -105,11 +157,8 @@ def roll_block_dice(n_dice):
 
 def roll_armour_dice(player):
     dice = roll_dice(6, 2)
-    print('dice:', dice)
     total = sum(dice['dice'])
-    print('total:', total)
     success = (total > player.player.av)
-    print('success:', success)
     return {'dice': dice, 'total': total, 'success': success}
 
 def roll_injury_dice():
@@ -122,6 +171,19 @@ def roll_injury_dice():
     else:
         result = 'casualty'
     return {'dice': dice, 'total': total, 'result': result}
+
+def roll_agility_dice(player, modifier=0):
+    dice = roll_dice(6, 1)
+    raw_result = sum(dice['dice'])
+    modified_result = raw_result + modifier
+    if raw_result == 1:
+        success = False
+    elif raw_result == 6:
+        success = True
+    else:
+        success = ((modified_result + min(player.player.ag, 6)) >= 7)
+    return {'dice': dice, 'rawResult': raw_result, 
+            'modifiedResult': modified_result, 'success': success}
 
 def roll_dice(n_sides, n_dice):
     return {"nDice": n_dice,
