@@ -475,6 +475,9 @@ var processStep = function(step) {
         case "catch":
             processCatch(step);
             break;
+        case "pass":
+            processPass(step);
+            break;
         }
     }
 }
@@ -491,12 +494,7 @@ var processMove = function(step) {
         .attr("cy", cy)
     if (player.hasBall) {
         // Move the ball too
-        matchData.xBall = step.x1;
-        matchData.yBall = step.y1;
-        d3.select("#ball")
-            .transition()
-            .attr("cx", cxBall())
-            .attr("cy", cyBall())        
+        moveBall(step.x1, step.y1);
     }
     // Tell the server
     postStep(step);
@@ -554,6 +552,10 @@ var processScatter = function(step) {
 }
 
 var processCatch = function(step) {
+    postStep(step);
+}
+
+var processPass = function(step) {
     postStep(step);
 }
 
@@ -631,7 +633,7 @@ var postProcessStep = function(step, result) {
         }
         if (player.hasBall) {
             player.hasBall = false;
-            var nextStep = defineScatter();
+            var nextStep = defineScatter(1);
             stepStack[0] = nextStep;
         } else {
             stepStack.shift();
@@ -654,7 +656,7 @@ var postProcessStep = function(step, result) {
             player.hasBall = true;
             stepStack.shift();
         } else {
-            var nextStep = defineScatter();
+            var nextStep = defineScatter(1);
             stepStack[0] = nextStep;
         }
         processNextStep();
@@ -668,9 +670,35 @@ var postProcessStep = function(step, result) {
             player.hasBall = true;
             stepStack.shift();
         } else {
-            var nextStep = defineScatter();
+            var nextStep = defineScatter(1);
             stepStack[0] = nextStep;
         }
+        processNextStep();
+        break;
+    case "pass":
+        var player = findPlayer(step.side, step.num);
+        player.hasBall = false;
+        var nextStep;
+        if (result.success) {
+            console.log('Pass was a success.');
+            moveBall(result.x1, result.y1);
+            var receivingPlayer = playerInPos(result.x1, result.y1);
+            if (receivingPlayer != null) {
+                console.log('Receiving player found, will try to catch.');
+                nextStep = defineCatch(receivingPlayer, true);
+            } else {
+                console.log('No receiving player found, automatically scatter.');
+                nextStep = defineScatter(1);
+            }
+        } else if (result.fumble) {
+            console.log('Fumbled pass, scatter from starting point.');
+            nextStep = defineScatter(1);
+        } else {
+            console.log('Unsuccessful pass, scatter three times.');
+            moveBall(result.x1, result.y1);
+            nextStep = defineScatter(3);
+        }
+        stepStack[0] = nextStep;
         processNextStep();
         break;
     }
@@ -757,6 +785,16 @@ var defineStep = function(xpos, ypos) {
             step = null;
         }
         break;
+    case "pass":
+        var targetPlayer = playerInPos(xpos, ypos);
+        if (targetPlayer == null && isAdjacent(xpos, ypos, selected.xpos, selected.ypos)) {
+            step.stepType = "move";
+        } else if (inPassRange(xpos, ypos) && selected.hasBall) {
+            step.stepType = "pass";
+        } else {
+            step = null;
+        }
+        break;
     default:
         step = null;
     }
@@ -837,12 +875,13 @@ var definePickUp = function(player) {
     return step;
 }
 
-var defineScatter = function() {
+var defineScatter = function(nScatter) {
     var step = {};
     step.stepType = "scatter";
     step.action = selectedAction;
     step.x0 = matchData.xBall;
     step.y0 = matchData.yBall;
+    step.nScatter = nScatter;
     return step;
 }
 
@@ -1023,12 +1062,7 @@ var push = function(step, xpos, ypos) {
 }
 
 var scatterBall = function(xpos, ypos) {
-    matchData.xBall = xpos;
-    matchData.yBall = ypos;
-    d3.select("#ball")
-        .transition()
-        .attr("cx", cxBall())
-        .attr("cy", cyBall())
+    moveBall(xpos, ypos);
     var player = playerInPos(xpos, ypos);
     if (player != null) {
         var nextStep = defineCatch(player, false);
@@ -1048,6 +1082,21 @@ var otherSide = function(side) {
         console.log("No other side for " + side);
         return null;
     }
+}
+
+var moveBall = function(xpos, ypos) {
+    matchData.xBall = xpos;
+    matchData.yBall = ypos;
+    d3.select("#ball")
+        .transition()
+        .attr("cx", cxBall())
+        .attr("cy", cyBall())    
+}
+
+var inPassRange = function(xpos, ypos) {
+    var deltaX = Math.abs(xpos - selected.xpos);
+    var deltaY = Math.abs(ypos - selected.ypos);
+    return ((deltaX <= 1 && deltaY <= 13) || (deltaX <= 4 && deltaY <= 12) || (deltaX <= 6 && deltaY <= 11) || (deltaX <= 8 && deltaY <= 10) || (deltaX == 9 && deltaY <= 9) || (deltaX == 10 && deltaY <= 8) || (deltaX == 11 && deltaY <= 6) || (deltaX == 12 && deltaY <= 4) || (deltaX == 13 && deltaY <= 1));
 }
 
 

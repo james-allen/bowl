@@ -106,24 +106,24 @@ def resolve(match, step_type, data):
         return result
     elif step_type == 'scatter':
         # Scattering the ball
-        dice = roll_dice(8, 1)
-        direction = sum(dice['dice'])
-        if direction in [1, 4, 6]:
-            x1 = int(data['x0']) - 1
-        elif direction in [3, 5, 8]:
-            x1 = int(data['x0']) + 1
-        else:
-            x1 = int(data['x0'])
-        if direction in [1, 2, 3]:
-            y1 = int(data['y0']) - 1
-        elif direction in [6, 7, 8]:
-            y1 = int(data['y0']) + 1
-        else:
-            y1 = int(data['y0'])
-        match.x_ball = x1
-        match.y_ball = y1
+        n_scatter = int(data['nScatter'])
+        dice = roll_dice(8, n_scatter)
+        x_ball = int(data['x0'])
+        y_ball = int(data['y0'])
+        for direction in dice['dice']:
+            if direction in [1, 4, 6]:
+                x_ball -= 1
+            elif direction in [3, 5, 8]:
+                x_ball += 1
+            if direction in [1, 2, 3]:
+                y_ball -= 1
+            elif direction in [6, 7, 8]:
+                y_ball += 1
+        match.x_ball = x_ball
+        match.y_ball = y_ball
         match.save()
-        return {'dice': dice, 'direction': direction, 'x1': x1, 'y1': y1}
+        return {'dice': dice, 'direction': direction, 
+                'x1': x_ball, 'y1': y_ball}
     elif step_type == 'catch':
         # Catching the ball
         player = find_player(match, data)
@@ -136,6 +136,35 @@ def resolve(match, step_type, data):
         if result['success']:
             player.has_ball = True
             player.save()
+        return result
+    elif step_type == 'pass':
+        # Pass the ball
+        player = find_player(match, data)
+        delta_x = abs(int(data['x1']) - int(data['x0']))
+        delta_y = abs(int(data['y1']) - int(data['y0']))
+        pass_range = find_pass_range(delta_x, delta_y)
+        if pass_range == 'quickPass':
+            modifier = 1
+        elif pass_range == 'shortPass':
+            modifier = 0
+        elif pass_range == 'longPass':
+            modifier = -1
+        elif pass_range == 'longBomb':
+            modifier = -2
+        modifier -= n_tackle_zones(player)
+        result = roll_agility_dice(player, modifier=modifier)
+        fumble = (min(result['rawResult'], result['modifiedResult']) <= 1)
+        if fumble:
+            result['success'] = False
+        else:
+            match.x_ball = int(data['x1'])
+            match.y_ball = int(data['y1'])
+            match.save()
+            result['x1'] = match.x_ball
+            result['y1'] = match.y_ball
+        result['fumble'] = fumble
+        player.has_ball = False
+        player.save()
         return result
     elif step_type == 'endTurn':
         return {}
@@ -199,4 +228,35 @@ def roll_agility_dice(player, modifier=0):
 def roll_dice(n_sides, n_dice):
     return {"nDice": n_dice,
         "dice": [random.randint(1, n_sides) for i in range(n_dice)]}
-        
+
+def find_pass_range(delta_x, delta_y):
+    if ((delta_x <= 1 and delta_y <= 3) or
+        (delta_x == 2 and delta_y <= 2) or
+        (delta_x == 3 and delta_y <= 1)):
+        return 'quickPass'
+    elif ((delta_x <= 3 and delta_y <= 6) or
+          (delta_x == 4 and delta_y <= 5) or
+          (delta_x == 5 and delta_y <= 4) or
+          (delta_x == 6 and delta_y <= 3)):
+        return 'shortPass'
+    elif ((delta_x <= 2 and delta_y <= 10) or
+          (delta_x <= 4 and delta_y <= 9) or
+          (delta_x <= 6 and delta_y <= 8) or
+          (delta_x == 7 and delta_y <= 7) or
+          (delta_x == 8 and delta_y <= 6) or
+          (delta_x == 9 and delta_y <= 4) or
+          (delta_x == 10 and delta_y <= 2)):
+        return 'longPass'
+    elif ((delta_x <= 1 and delta_y <= 13) or
+          (delta_x <= 4 and delta_y <= 12) or
+          (delta_x <= 6 and delta_y <= 11) or
+          (delta_x <= 8 and delta_y <= 10) or
+          (delta_x == 9 and delta_y <= 9) or
+          (delta_x == 10 and delta_y <= 8) or
+          (delta_x == 11 and delta_y <= 6) or
+          (delta_x == 12 and delta_y <= 4) or
+          (delta_x == 13 and delta_y <= 1)):
+        return 'longBomb'
+    else:
+        return 'outOfRange'
+
