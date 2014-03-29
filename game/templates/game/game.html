@@ -394,7 +394,7 @@ svg.selectAll("circle")
         } else {
             var step = null;
             if (selected != null) {
-                thisPlayer = playerWithId(this.id);
+                var thisPlayer = playerWithId(this.id);
                 step = defineStep(thisPlayer.xpos, thisPlayer.ypos);
             }
             if (step != null) {
@@ -489,9 +489,18 @@ var processMove = function(step) {
         .transition()
         .attr("cx", cx)
         .attr("cy", cy)
+    if (player.hasBall) {
+        // Move the ball too
+        matchData.xBall = step.x1;
+        matchData.yBall = step.y1;
+        d3.select("#ball")
+            .transition()
+            .attr("cx", cxBall())
+            .attr("cy", cyBall())        
+    }
     // Tell the server
     postStep(step);
-    if (ballInPos(step.x1, step.y1)) {
+    if (!player.hasBall && ballInPos(step.x1, step.y1)) {
         // Automatically attempt to pick up the ball
         var nextStep = definePickUp(player);
         stepStack[0] = nextStep;
@@ -679,7 +688,7 @@ var restoreTo = function(restorePosition) {
             for (player_index = 0; player_index < players.length; player_index++) {
                 if (players[player_index].side == step.side &&
                     players[player_index].num == step.num) {
-                    player = players[player_index];
+                    var player = players[player_index];
                     break;
                 }
             }

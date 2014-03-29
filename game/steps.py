@@ -16,8 +16,6 @@ def find_player(match, data):
 def resolve(match, step_type, data):
     if step_type in ['move', 'push', 'followUp']:
         # A move step
-        print('This is the data that resolve() sees:')
-        print(data)
         if step_type == 'followUp' and data['choice'] == 'false':
             return {}
         player = find_player(match, data)
@@ -25,6 +23,11 @@ def resolve(match, step_type, data):
         player.xpos = data['x1']
         player.ypos = data['y1']
         player.save()
+        if player.has_ball:
+            # Move the ball too
+            match.x_ball = data['x1']
+            match.y_ball = data['y1']
+            match.save()
         return {}
     elif step_type == 'block':
         # A block step
