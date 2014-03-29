@@ -518,8 +518,10 @@ var processFollowUp = function(step) {
         postStep(step);
         stepStack.shift();
         processNextStep();
+        break;
     case null:
         selectFollowUp(step);
+        break;
     }
 }
 
@@ -908,9 +910,18 @@ var selectFollowUp = function(step) {
 
 var selectFromOptions = function(options, message, data, callback) {
     var selectOption = function(d) {
+        console.log("Option selected")
+        console.log(d)
+        console.log("About to remove these items:")
+        console.log(svg.selectAll("rect.optionsWindow"))
         svg.selectAll("rect.optionsWindow").style("visibility", "hidden");
+        console.log("About to remove these items:")
+        console.log(svg.selectAll("rect.optionsText"))
         svg.selectAll("text.optionsText").style("visibility", "hidden");
+        console.log("About to remove these items:")
+        console.log(svg.selectAll("g.option"))
         svg.selectAll("g.option").data([]).exit().remove();
+        console.log("Window removed, about to run callback")
         callback(d);
     }
     var optionsData = new Array;
