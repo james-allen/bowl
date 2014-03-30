@@ -499,8 +499,14 @@ var processMove = function(step) {
     // Tell the server
     postStep(step);
     if (!player.hasBall && ballInPos(step.x1, step.y1)) {
-        // Automatically attempt to pick up the ball
-        var nextStep = definePickUp(player);
+        var nextStep
+        if (step.stepType == "push") {
+            // The ball scatters away if you're pushed into it
+            nextStep = defineScatter(1);
+        } else {
+            // Automatically attempt to pick up the ball
+            nextStep = definePickUp(player);
+        }
         stepStack[0] = nextStep;
     } else {
         stepStack.shift();    
