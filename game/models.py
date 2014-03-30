@@ -47,6 +47,10 @@ class Match(models.Model):
     first_kicking_team = models.CharField(max_length=4)
     x_ball = models.IntegerField(null=True, default=None)
     y_ball = models.IntegerField(null=True, default=None)
+    home_rerolls = models.IntegerField(default=0)
+    away_rerolls = models.IntegerField(default=0)
+    home_reroll_used_this_turn = models.BooleanField(default=False)
+    away_reroll_used_this_turn = models.BooleanField(default=False)
 
     def as_dict(self):
         result_dict = {
@@ -57,6 +61,10 @@ class Match(models.Model):
             'firstKickingTeam': self.first_kicking_team,
             'xBall': self.x_ball,
             'yBall': self.y_ball,
+            'homeRerolls': self.home_rerolls,
+            'awayRerolls': self.away_rerolls,
+            'homeRerollUsedThisTurn': self.home_reroll_used_this_turn,
+            'awayRerollUsedThisTurn': self.away_reroll_used_this_turn,
         }
         return result_dict
         

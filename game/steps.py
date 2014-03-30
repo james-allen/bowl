@@ -14,6 +14,16 @@ def find_player(match, data):
     return player
 
 def resolve(match, step_type, data):
+    if step_type == 'reroll':
+        if data['rerollType'] == 'team':
+            if data['side'] == 'home':
+                match.home_rerolls -= 1
+                match.home_reroll_used_this_turn = True
+            else:
+                match.away_rerolls -= 1
+                match.away_reroll_used_this_turn = True
+            match.save()
+        step_type = data['rerollStepType']
     if step_type in ['move', 'push', 'followUp']:
         # A move step
         if step_type == 'followUp' and data['choice'] == 'false':

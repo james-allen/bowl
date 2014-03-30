@@ -447,7 +447,8 @@ var processNextStep = function() {
 var processStep = function(step) {
     console.log("Processing step");
     if (step != null) {
-        switch (step.stepType) {
+        var stepType = (step.stepType == "reroll") ? step.rerollStepType : step.stepType;
+        switch (stepType) {
         case "move":
             processMove(step);
             break;
@@ -618,10 +619,13 @@ var postStep = function(step) {
 }
 
 var postProcessStep = function(step, result) {
-    switch (step.stepType) {
+    var stepType = (step.stepType == "reroll") ? step.rerollStepType : step.stepType;
+    switch (stepType) {
     case "block":
         if (step.selectedDice == null) {
-            selectDice(result.dice, step, blockDice);
+            var message = "Which block dice would you like to use?";
+            var teamReroll = (teamRerollAvailable(step.side) && step.stepType != "reroll") ? "active" : "inactive";
+            selectFromOptions(result.dice, message, step, blockDice, teamReroll, false, false);
         }
         break;
     case "knockDown":
@@ -811,11 +815,6 @@ var defineStep = function(xpos, ypos) {
     return step;
 }
 
-var selectDice = function(diceArray, step, callback) {
-    var message = "Which dice throw would you like to use?";
-    selectFromOptions(diceArray, message, step, callback);
-}
-
 var defineKnockDown = function(step, dice, victim) {
     var newStep = {}
     newStep.action = selectedAction;
@@ -956,28 +955,37 @@ var selectPush = function(step) {
 
 var selectFollowUp = function(step) {
     var message = "Do you want to follow up?"
-    selectFromOptions(["Yes", "No"], message, step, followUp);
+    selectFromOptions(["Yes", "No"], message, step, followUp, false, false, false);
 }
 
-var selectFromOptions = function(options, message, data, callback) {
+var selectFromOptions = function(options, message, data, callback, teamReroll, skillReroll, proReroll) {
     var selectOption = function(d) {
-        console.log("Option selected")
-        console.log(d)
-        console.log("About to remove these items:")
-        console.log(svg.selectAll("rect.optionsWindow"))
+        if (d.inactive) { return; }
         svg.selectAll("rect.optionsWindow").style("visibility", "hidden");
-        console.log("About to remove these items:")
-        console.log(svg.selectAll("rect.optionsText"))
         svg.selectAll("text.optionsText").style("visibility", "hidden");
-        console.log("About to remove these items:")
-        console.log(svg.selectAll("g.option"))
         svg.selectAll("g.option").data([]).exit().remove();
-        console.log("Window removed, about to run callback")
-        callback(d);
+        if (d.option == "Use team re-roll") {
+            reroll(d, "team");
+        } else if (d.option == "Use skill re-roll") {
+            reroll(d, "skill");
+        } else if (d.option == "Use Pro re-roll") {
+            reroll(d, "pro");
+        } else {
+            callback(d);            
+        }
     }
     var optionsData = new Array;
     for (var index = 0; index < options.length; index++) {
-        optionsData[index] = {"option": options[index], "data": data};
+        optionsData[index] = {"option": options[index], "data": data, "inactive": false};
+    }
+    if (teamReroll) {
+        optionsData[optionsData.length] = {"option": "Use team re-roll", "data": data, "inactive": (teamReroll == "inactive")};
+    }
+    if (skillReroll) {
+        optionsData[optionsData.length] = {"option": "Use skill re-roll", "data": data, "inactive": (skillReroll == "inactive")};
+    }
+    if (proReroll) {
+        optionsData[optionsData.length] = {"option": "Use Pro re-roll", "data": data, "inactive": (proReroll == "inactive")};
     }
     svg.selectAll("rect.optionsWindow").style("visibility", "visible");
     svg.selectAll("text.optionsText").text(message).style("visibility", "visible");
@@ -986,6 +994,7 @@ var selectFromOptions = function(options, message, data, callback) {
         .enter()
         .append("g")
         .attr("class", "option")
+        .classed("inactive", function(d) {return d.inactive})
         .on("click", selectOption);
     g.append("rect")
         .attr("x", 0.5 * nSquaresX * squareSize + margin - 0.5 * buttonWidth)
@@ -1107,6 +1116,35 @@ var inPassRange = function(xpos, ypos) {
     return ((deltaX <= 1 && deltaY <= 13) || (deltaX <= 4 && deltaY <= 12) || (deltaX <= 6 && deltaY <= 11) || (deltaX <= 8 && deltaY <= 10) || (deltaX == 9 && deltaY <= 9) || (deltaX == 10 && deltaY <= 8) || (deltaX == 11 && deltaY <= 6) || (deltaX == 12 && deltaY <= 4) || (deltaX == 13 && deltaY <= 1));
 }
 
+var teamRerollAvailable = function(side) {
+    // Also need to check if a skill reroll has just been used on the same throw.
+    var available;
+    if (side == "home") {
+        available = (matchData.homeRerolls > 0 && !matchData.homeRerollUsedThisTurn);
+    } else {
+        available = (matchData.awayRerolls > 0 && !matchData.awayRerollUsedThisTurn);
+    }
+    return available;
+}
+
+var reroll = function(data, rerollType) {
+    var step = $.extend({}, data.data);
+    step.rerollStepType = step.stepType;
+    step.stepType = "reroll";
+    step.rerollType = rerollType;
+    step.historyPosition = null;
+    if (rerollType == "team") {
+        if (step.side == "home") {
+            matchData.homeRerolls -= 1;
+            matchData.homeRerollUsedThisTurn = true;
+        } else {
+            matchData.awayRerolls -= 1;
+            matchData.awayRerollUsedThisTurn = true;
+        }
+    }
+    stepStack[0] = step;
+    processNextStep();
+}
 
 </script>
 </body>
