@@ -662,7 +662,7 @@ var postProcessStep = function(step, result) {
         processNextStep();
         break;
     case "scatter":
-        scatterBall(result.x1, result.y1);
+        scatterBall(result.x1, result.y1, step.bounceAgain);
         break;
     case "catch":
         if (result.success) {
@@ -680,23 +680,18 @@ var postProcessStep = function(step, result) {
         player.hasBall = false;
         var nextStep;
         if (result.success) {
-            console.log('Pass was a success.');
             moveBall(result.x1, result.y1);
             var receivingPlayer = playerInPos(result.x1, result.y1);
             if (receivingPlayer != null) {
-                console.log('Receiving player found, will try to catch.');
                 nextStep = defineCatch(receivingPlayer, true);
             } else {
-                console.log('No receiving player found, automatically scatter.');
                 nextStep = defineScatter(1);
             }
         } else if (result.fumble) {
-            console.log('Fumbled pass, scatter from starting point.');
             nextStep = defineScatter(1);
         } else {
-            console.log('Unsuccessful pass, scatter three times.');
             moveBall(result.x1, result.y1);
-            nextStep = defineScatter(3);
+            nextStep = defineScatter(3, true);
         }
         stepStack[0] = nextStep;
         processNextStep();
@@ -875,13 +870,15 @@ var definePickUp = function(player) {
     return step;
 }
 
-var defineScatter = function(nScatter) {
+var defineScatter = function(nScatter, bounceAgain) {
+    bounceAgain = (typeof bounceAgain === "undefined") ? false : bounceAgain;
     var step = {};
     step.stepType = "scatter";
     step.action = selectedAction;
     step.x0 = matchData.xBall;
     step.y0 = matchData.yBall;
     step.nScatter = nScatter;
+    step.bounceAgain = bounceAgain;
     return step;
 }
 
@@ -1061,14 +1058,19 @@ var push = function(step, xpos, ypos) {
     processMove(newStep);
 }
 
-var scatterBall = function(xpos, ypos) {
+var scatterBall = function(xpos, ypos, bounceAgain) {
     moveBall(xpos, ypos);
     var player = playerInPos(xpos, ypos);
     if (player != null) {
         var nextStep = defineCatch(player, false);
         stepStack[0] = nextStep;
     } else {
-        stepStack.shift()
+        if (bounceAgain) {
+            var nextStep = defineScatter(1, false);
+            stepStack[0] = nextStep;
+        } else {
+            stepStack.shift()
+        }
     }
     processNextStep();
 }
