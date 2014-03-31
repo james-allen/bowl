@@ -95,7 +95,7 @@ class PlayerInGame(models.Model):
             'onPitch': self.on_pitch,
             'knockedOut': self.knocked_out,
             'casualty': self.casualty,
-            'skills': self.player.skills,
+            'skills': self.player.skills.split(','),
         }
         return result_dict
 

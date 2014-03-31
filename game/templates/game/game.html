@@ -625,7 +625,8 @@ var postProcessStep = function(step, result) {
         if (step.selectedDice == null) {
             var message = "Which block dice would you like to use?";
             var teamReroll = (teamRerollAvailable(step.side) && step.stepType != "reroll") ? "active" : "inactive";
-            selectFromOptions(result.dice, message, step, blockDice, teamReroll, false, false);
+            var data = {"step": step, "result": result}
+            selectFromOptions(result.dice, message, data, blockDice, teamReroll, false, false);
         }
         break;
     case "knockDown":
@@ -661,15 +662,7 @@ var postProcessStep = function(step, result) {
         processNextStep();
         break;
     case "pickUp":
-        if (result.success) {
-            var player = findPlayer(step.side, step.num);
-            player.hasBall = true;
-            stepStack.shift();
-        } else {
-            var nextStep = defineScatter(1);
-            stepStack[0] = nextStep;
-        }
-        processNextStep();
+        confirmResult(step, result, "Sure Hands", postProcessPickUp);
         break;
     case "scatter":
         scatterBall(result.x1, result.y1, step.bounceAgain);
@@ -707,6 +700,18 @@ var postProcessStep = function(step, result) {
         processNextStep();
         break;
     }
+}
+
+var postProcessPickUp = function(data) {
+    if (data.data.result.success) {
+        var player = findPlayer(data.data.step.side, data.data.step.num);
+        player.hasBall = true;
+        stepStack.shift();
+    } else {
+        var nextStep = defineScatter(1);
+        stepStack[0] = nextStep;
+    }
+    processNextStep();
 }
 
 var restoreTo = function(restorePosition) {
@@ -953,6 +958,29 @@ var selectPush = function(step) {
     }
 }
 
+var confirmResult = function(step, result, rerollSkill, callback) {
+    var message;
+    var teamReroll, skillReroll, proReroll;
+    var data = {"step": step, "result": result};
+    if (result.success) {
+        message = "Success!";
+        teamReroll = false;
+        skillReroll = false;
+        proReroll = false;
+    } else {
+        message = "Failed!";
+        var player = findPlayer(step.side, step.num);
+        teamReroll = (teamRerollAvailable(step.side) && step.stepType != "reroll") ? "active" : "inactive";
+        if (rerollSkill != null) {
+            skillReroll = (hasSkill(player, rerollSkill) && step.stepType != "reroll") ? "active" : "inactive";        
+        } else {
+            skillReroll = false;
+        }
+        proReroll = false;
+    }
+    selectFromOptions(["OK"], message, data, callback, teamReroll, skillReroll, proReroll);
+}
+
 var selectFollowUp = function(step) {
     var message = "Do you want to follow up?"
     selectFromOptions(["Yes", "No"], message, step, followUp, false, false, false);
@@ -1121,14 +1149,14 @@ var teamRerollAvailable = function(side) {
     var available;
     if (side == "home") {
         available = (matchData.homeRerolls > 0 && !matchData.homeRerollUsedThisTurn);
-    } else {
+    } else if (side == "away") {
         available = (matchData.awayRerolls > 0 && !matchData.awayRerollUsedThisTurn);
     }
     return available;
 }
 
 var reroll = function(data, rerollType) {
-    var step = $.extend({}, data.data);
+    var step = $.extend({}, data.data.step);
     step.rerollStepType = step.stepType;
     step.stepType = "reroll";
     step.rerollType = rerollType;
@@ -1144,6 +1172,15 @@ var reroll = function(data, rerollType) {
     }
     stepStack[0] = step;
     processNextStep();
+}
+
+var hasSkill = function(player, skill) {
+    for (var i = 0; i < player.skills.length; i++) {
+        if (player.skills[i] == skill) {
+            return true;
+        }
+    }
+    return false;
 }
 
 </script>
