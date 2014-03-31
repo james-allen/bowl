@@ -668,36 +668,10 @@ var postProcessStep = function(step, result) {
         scatterBall(result.x1, result.y1, step.bounceAgain);
         break;
     case "catch":
-        if (result.success) {
-            var player = findPlayer(step.side, step.num);
-            player.hasBall = true;
-            stepStack.shift();
-        } else {
-            var nextStep = defineScatter(1);
-            stepStack[0] = nextStep;
-        }
-        processNextStep();
+        confirmResult(step, result, "Catch", postProcessCatch);
         break;
     case "pass":
-        var player = findPlayer(step.side, step.num);
-        player.hasBall = false;
-        var nextStep;
-        if (result.success) {
-            moveBall(result.x1, result.y1);
-            var receivingPlayer = playerInPos(result.x1, result.y1);
-            if (receivingPlayer != null) {
-                nextStep = defineCatch(receivingPlayer, true);
-            } else {
-                nextStep = defineScatter(1);
-            }
-        } else if (result.fumble) {
-            nextStep = defineScatter(1);
-        } else {
-            moveBall(result.x1, result.y1);
-            nextStep = defineScatter(3, true);
-        }
-        stepStack[0] = nextStep;
-        processNextStep();
+        confirmResult(step, result, "Pass", postProcessPass);
         break;
     }
 }
@@ -711,6 +685,42 @@ var postProcessPickUp = function(data) {
         var nextStep = defineScatter(1);
         stepStack[0] = nextStep;
     }
+    processNextStep();
+}
+
+var postProcessCatch = function(data) {
+    if (data.data.result.success) {
+        var player = findPlayer(data.data.step.side, data.data.step.num);
+        player.hasBall = true;
+        stepStack.shift();
+    } else {
+        var nextStep = defineScatter(1);
+        stepStack[0] = nextStep;
+    }
+    processNextStep();
+}
+
+var postProcessPass = function(data) {
+    var step = data.data.step;
+    var result = data.data.result;
+    var player = findPlayer(step.side, step.num);
+    player.hasBall = false;
+    var nextStep;
+    if (result.success) {
+        moveBall(result.x1, result.y1);
+        var receivingPlayer = playerInPos(result.x1, result.y1);
+        if (receivingPlayer != null) {
+            nextStep = defineCatch(receivingPlayer, true);
+        } else {
+            nextStep = defineScatter(1);
+        }
+    } else if (result.fumble) {
+        nextStep = defineScatter(1);
+    } else {
+        moveBall(result.x1, result.y1);
+        nextStep = defineScatter(3, true);
+    }
+    stepStack[0] = nextStep;
     processNextStep();
 }
 
@@ -968,7 +978,11 @@ var confirmResult = function(step, result, rerollSkill, callback) {
         skillReroll = false;
         proReroll = false;
     } else {
-        message = "Failed!";
+        if (result.fumble) {
+            message = "Fumbled!";
+        } else {
+            message = "Failed!";
+        }
         var player = findPlayer(step.side, step.num);
         teamReroll = (teamRerollAvailable(step.side) && step.stepType != "reroll") ? "active" : "inactive";
         if (rerollSkill != null) {
