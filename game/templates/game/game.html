@@ -326,6 +326,8 @@ var endTurn = function(d) {
         "oldSide": currentSide(),
     }
     clearSelection();
+    matchData.homeRerollUsedThisTurn = false;
+    matchData.awayRerollUsedThisTurn = false;
     postStep(step);
 }
 appendButton(svg, nSquaresX * squareSize + 2 * margin, margin, "End Turn", endTurn);
@@ -1159,7 +1161,6 @@ var inPassRange = function(xpos, ypos) {
 }
 
 var teamRerollAvailable = function(side) {
-    // Also need to check if a skill reroll has just been used on the same throw.
     var available;
     if (side == "home") {
         available = (matchData.homeRerolls > 0 && !matchData.homeRerollUsedThisTurn);

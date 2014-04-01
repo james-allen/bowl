@@ -177,6 +177,9 @@ def resolve(match, step_type, data):
         player.save()
         return result
     elif step_type == 'endTurn':
+        match.home_reroll_used_this_turn = False;
+        match.away_reroll_used_this_turn = False;
+        match.save()
         return {}
 
 def n_tackle_zones(player):
