@@ -943,7 +943,7 @@ var selectPush = function(step) {
     var squares = new Array;
     var xB = step.x1 + (step.x1 - step.x0);
     var yB = step.y1 + (step.y1 - step.y0);
-    if (playerInPos(xB, yB) == null) {
+    if (playerInPos(xB, yB) == null && onPitch(xB, yB)) {
         squares[squares.length] = [xB, yB];
     }
     var xA, yA, xC, yC;
@@ -966,14 +966,20 @@ var selectPush = function(step) {
         xC = step.x1;
         yC = yB;
     }
-    if (playerInPos(xA, yA) == null) {
+    if (playerInPos(xA, yA) == null && onPitch(xA, yA)) {
         squares[squares.length] = [xA, yA];
     }
-    if (playerInPos(xC, yC) == null) {
+    if (playerInPos(xC, yC) == null && onPitch(xC, yC)) {
         squares[squares.length] = [xC, yC];
     }
     console.log("Choose push from these squares:");
     console.log(squares);
+    if (squares.length == 0 && onPitch(xA, yA) && onPitch(xB, yB) && onPitch(xC, yC)) {
+        // Have to push into another player
+        squares[0] = [xB, yB];
+        squares[1] = [xA, yA];
+        squares[2] = [xC, yC];
+    }
     if (squares.length > 0) {
         pitch.on("click", null);
         for (var index = 0; index < squares.length; index++) {
@@ -990,6 +996,8 @@ var selectPush = function(step) {
                 return -1;
             }
         })
+    } else {
+        // Have to push into the crowd
     }
 }
 
