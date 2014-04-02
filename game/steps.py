@@ -121,6 +121,8 @@ def resolve(match, step_type, data):
         x_ball = int(data['x0'])
         y_ball = int(data['y0'])
         for direction in dice['dice']:
+            last_x = x_ball
+            last_y = y_ball
             if direction in [1, 4, 6]:
                 x_ball -= 1
             elif direction in [3, 5, 8]:
@@ -129,11 +131,14 @@ def resolve(match, step_type, data):
                 y_ball -= 1
             elif direction in [6, 7, 8]:
                 y_ball += 1
+            if not on_pitch(x_ball, y_ball):
+                break
         match.x_ball = x_ball
         match.y_ball = y_ball
         match.save()
         return {'dice': dice, 'direction': direction, 
-                'x1': x_ball, 'y1': y_ball}
+                'x1': x_ball, 'y1': y_ball,
+                'lastX': last_x, 'lastY': last_y}
     elif step_type == 'catch':
         # Catching the ball
         player = find_player(match, data)
@@ -176,6 +181,51 @@ def resolve(match, step_type, data):
         player.has_ball = False
         player.save()
         return result
+    elif step_type == 'throwin':
+        x0 = int(data['lastX'])
+        y0 = int(data['lastY'])
+        if y0 == 0:
+            edge = 0
+        elif y0 == 14:
+            edge = 2
+        elif x0 == 0:
+            edge = 3
+        elif x0 == 25:
+            edge = 1
+        else:
+            raise ValueError(
+                'Starting coordinates are not on the edge of the pitch!')
+        direction_dice = roll_dice(3, 1)
+        direction = direction_dice['dice'][0]
+        distance_dice = roll_dice(6, 2)
+        distance = sum(distance_dice['dice'])
+        compass = direction + 2 * edge
+        if compass == 0:
+            x_dir, y_dir = 1, 1
+        elif compass == 1:
+            x_dir, y_dir = 0, 1
+        elif compass == 2:
+            x_dir, y_dir = -1, 1
+        elif compass == 3:
+            x_dir, y_dir = -1, 0
+        elif compass == 4:
+            x_dir, y_dir = -1, -1
+        elif compass == 5:
+            x_dir, y_dir = 0, -1
+        elif compass == 6:
+            x_dir, y_dir = 1, -1
+        elif compass == 7:
+            x_dir, y_dir = 1, 0
+        x1 = x0 + (distance - 1) * x_dir
+        y1 = y0 + (distance - 1) * y_dir
+        last_x = x1 - x_dir
+        last_y = y1 - y_dir
+        while not on_pitch(x1, y1):
+            x1 = last_x
+            y1 = last_y
+            last_x = x1 - x_dir
+            last_y = y1 - y_dir
+        return {'x1': x1, 'y1': y1, 'lastX': last_x, 'lastY': last_y}
     elif step_type == 'endTurn':
         match.home_reroll_used_this_turn = False;
         match.away_reroll_used_this_turn = False;
@@ -272,4 +322,8 @@ def find_pass_range(delta_x, delta_y):
         return 'longBomb'
     else:
         return 'outOfRange'
+
+def on_pitch(xpos, ypos):
+    return 0 <= xpos < 26 and 0 <= ypos < 15
+
 

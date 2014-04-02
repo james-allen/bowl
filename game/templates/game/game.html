@@ -484,6 +484,9 @@ var processStep = function(step) {
         case "pass":
             processPass(step);
             break;
+        case "throwin":
+            processThrowin(step);
+            break;
         }
     }
 }
@@ -568,6 +571,10 @@ var processCatch = function(step) {
 }
 
 var processPass = function(step) {
+    postStep(step);
+}
+
+var processThrowin = function(step) {
     postStep(step);
 }
 
@@ -670,13 +677,16 @@ var postProcessStep = function(step, result) {
         confirmResult(step, result, "Sure Hands", postProcessPickUp);
         break;
     case "scatter":
-        scatterBall(result.x1, result.y1, step.bounceAgain);
+        scatterBall(step, result);
         break;
     case "catch":
         confirmResult(step, result, "Catch", postProcessCatch);
         break;
     case "pass":
         confirmResult(step, result, "Pass", postProcessPass);
+        break;
+    case "throwin":
+        scatterBall(step, result);
         break;
     }
 }
@@ -919,6 +929,16 @@ var defineCatch = function(player, accurate) {
     return step;
 }
 
+var defineThrowin = function(lastX, lastY) {
+    var step = {};
+    step.stepType = "throwin";
+    step.lastX = lastX;
+    step.lastY = lastY;
+    step.bounceAgain = true;
+    step.action = selectedAction;
+    return step;
+}
+
 var selectPush = function(step) {
     var squares = new Array;
     var xB = step.x1 + (step.x1 - step.x0);
@@ -1120,18 +1140,25 @@ var push = function(step, xpos, ypos) {
     processMove(newStep);
 }
 
-var scatterBall = function(xpos, ypos, bounceAgain) {
+var scatterBall = function(step, result) {
+    var xpos = result.x1;
+    var ypos = result.y1;
     moveBall(xpos, ypos);
-    var player = playerInPos(xpos, ypos);
-    if (player != null) {
-        var nextStep = defineCatch(player, false);
+    if (!onPitch(xpos, ypos)) {
+        var nextStep = defineThrowin(result.lastX, result.lastY);
         stepStack[0] = nextStep;
     } else {
-        if (bounceAgain) {
-            var nextStep = defineScatter(1, false);
+        var player = playerInPos(xpos, ypos);
+        if (player != null) {
+            var nextStep = defineCatch(player, false);
             stepStack[0] = nextStep;
         } else {
-            stepStack.shift()
+            if (step.bounceAgain) {
+                var nextStep = defineScatter(1, false);
+                stepStack[0] = nextStep;
+            } else {
+                stepStack.shift()
+            }
         }
     }
     processNextStep();
@@ -1206,6 +1233,10 @@ var hasSkill = function(player, skill) {
         }
     }
     return false;
+}
+
+var onPitch = function(xpos, ypos) {
+    return (0 <= xpos && xpos < 26 && 0 <= ypos && ypos < 15);
 }
 
 </script>
