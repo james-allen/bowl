@@ -149,6 +149,7 @@ var matchData = {{ match_data | safe }};
 var history = {{ history | safe }};
 
 var stepStack = new Array;
+var viewData = {};
 
 var addStepToStack = function(step) {
     if (step != null) {
@@ -419,6 +420,8 @@ var drawBall = function() {
         .attr("r", 0.2*squareSize)
         .attr("class", "ball")
         .attr("id", "ball")
+    viewData.nBallTransition = 0;
+    viewData.ballTransition = null;
 }
 
 if (matchData.xBall != null && matchData.yBall != null) {
@@ -1148,10 +1151,17 @@ var otherSide = function(side) {
 var moveBall = function(xpos, ypos) {
     matchData.xBall = xpos;
     matchData.yBall = ypos;
-    d3.select("#ball")
-        .transition()
+    var base;
+    if (viewData.nBallTransition > 0) {
+        base = viewData.ballTransition;
+    } else {
+        base = d3.select("#ball");
+    }
+    viewData.ballTransition = base.transition()
         .attr("cx", cxBall())
-        .attr("cy", cyBall())    
+        .attr("cy", cyBall())
+        .each("end", function(){viewData.nBallTransition -= 1;});
+    viewData.nBallTransition += 1;
 }
 
 var inPassRange = function(xpos, ypos) {
