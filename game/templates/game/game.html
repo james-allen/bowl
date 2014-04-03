@@ -155,7 +155,6 @@ var addStepToStack = function(step) {
     if (step != null) {
         stepStack[stepStack.length] = step;
         if (stepStack.length == 1) {
-            console.log("Processing the step on the stack")
             processNextStep();
         }
     }
@@ -431,7 +430,7 @@ if (matchData.xBall != null && matchData.yBall != null) {
 // Add knockDown or stunned symbols as necessary
 for (var index = 0; index < players.length; index++) {
     var player = players[index];
-    if (player.down) {
+    if (player.onPitch && player.down) {
         createKnockDownSymbol(player.xpos, player.ypos, player.stunned);
     }
 }
@@ -442,15 +441,13 @@ var clearSelection = function() {
 }
 
 var processNextStep = function() {
-    console.log("Processing next step");
     if (stepStack.length != 0) {
-        console.log("About to process step");
         processStep(stepStack[0]);
     }
 }
 
 var processStep = function(step) {
-    console.log("Processing step");
+    console.log("Processing step: ", step);
     if (step != null) {
         var stepType = (step.stepType == "reroll") ? step.rerollStepType : step.stepType;
         switch (stepType) {
@@ -461,7 +458,7 @@ var processStep = function(step) {
             processBlock(step);
             break;
         case "push":
-            processPush(step);
+            selectPush(step);
             break;
         case "followUp":
             processFollowUp(step);
@@ -508,14 +505,8 @@ var processMove = function(step) {
     // Tell the server
     postStep(step);
     if (!player.hasBall && ballInPos(step.x1, step.y1)) {
-        var nextStep
-        if (step.stepType == "push") {
-            // The ball scatters away if you're pushed into it
-            nextStep = defineScatter(1);
-        } else {
-            // Automatically attempt to pick up the ball
-            nextStep = definePickUp(player);
-        }
+        // Automatically attempt to pick up the ball
+        var nextStep = definePickUp(player);
         stepStack[0] = nextStep;
     } else {
         stepStack.shift();    
@@ -528,7 +519,38 @@ var processBlock = function(step) {
 }
 
 var processPush = function(step) {
-    selectPush(step);
+    console.log("In processPush: ", step)
+    // Check if they're being pushed into someone else
+    var nextPlayer = playerInPos(step.x1, step.y1);
+    // Move the player object
+    var player = findPlayer(step.side, step.num);
+    player.xpos = step.x1;
+    player.ypos = step.y1;
+    // Move the circle on screen
+    d3.select('#'+player_id(player))
+        .transition()
+        .attr("cx", cx)
+        .attr("cy", cy)
+    if (player.hasBall) {
+        // Move the ball too
+        moveBall(step.x1, step.y1);
+    }
+    // Tell the server
+    postStep(step);
+    if (nextPlayer != null) {
+        // Push the next player too
+        step.targetSide = nextPlayer.side;
+        step.targetNum = nextPlayer.num;
+        var nextStep = definePush(step);
+        stepStack[0] = nextStep;
+    } else if (!player.hasBall && ballInPos(step.x1, step.y1)) {
+        // The ball scatters away if you're pushed into it
+        var nextStep = defineScatter(1);
+        stepStack[0] = nextStep;
+    } else {
+        stepStack.shift();    
+    }
+    processNextStep();
 }
 
 var processFollowUp = function(step) {
@@ -549,9 +571,15 @@ var processFollowUp = function(step) {
 
 var processKnockDown = function(step) {
     var player = findPlayer(step.side, step.num);
-    player.down = true;
-    createKnockDownSymbol(player.xpos, player.ypos, false);
-    postStep(step);
+    if (player.onPitch) {
+        player.down = true;
+        createKnockDownSymbol(player.xpos, player.ypos, false);
+        postStep(step);        
+    } else {
+        // The player must have just been pushed off the pitch
+        stepStack.shift();
+        processNextStep();
+    }
 }
 
 var processStandUp = function(step) {
@@ -801,6 +829,7 @@ var defineStep = function(xpos, ypos) {
         if (targetPlayer != null && targetPlayer.side != selected.side && isAdjacent(xpos, ypos, selected.xpos, selected.ypos)) {
             step.stepType = "block";
             step.targetNum = targetPlayer.num;
+            step.targetSide = targetPlayer.side;
         } else {
             step = null;
         }
@@ -813,6 +842,7 @@ var defineStep = function(xpos, ypos) {
             } else if (targetPlayer.side != selected.side) {
                 step.stepType = "block";
                 step.targetNum = targetPlayer.num;
+                step.targetSide = targetPlayer.side;
             } else {
                 step = null;
             }
@@ -865,17 +895,18 @@ var defineKnockDown = function(step, dice, victim) {
     }
 }
 
-var definePush = function(blockStep) {
+var definePush = function(lastStep) {
+    console.log("In definePush: ", lastStep);
     var step = {};
     step.stepType = "push";
-    step.targetNum = blockStep.targetNum;
-    step.action = blockStep.action;
-    step.side = blockStep.side;
-    step.num = blockStep.num;
-    step.x0 = blockStep.x0;
-    step.y0 = blockStep.y0;
-    step.x1 = blockStep.x1;
-    step.y1 = blockStep.y1;
+    step.action = lastStep.action;
+    step.side = lastStep.targetSide;
+    step.num = lastStep.targetNum;
+    step.x0 = lastStep.x0;
+    step.y0 = lastStep.y0;
+    step.x1 = lastStep.x1;
+    step.y1 = lastStep.y1;
+    console.log("Result of definePush: ", step);
     return step
 }
 
@@ -940,6 +971,7 @@ var defineThrowin = function(lastX, lastY) {
 }
 
 var selectPush = function(step) {
+    console.log("In selectPush: ", step)
     var squares = new Array;
     var xB = step.x1 + (step.x1 - step.x0);
     var yB = step.y1 + (step.y1 - step.y0);
@@ -972,8 +1004,6 @@ var selectPush = function(step) {
     if (playerInPos(xC, yC) == null && onPitch(xC, yC)) {
         squares[squares.length] = [xC, yC];
     }
-    console.log("Choose push from these squares:");
-    console.log(squares);
     if (squares.length == 0 && onPitch(xA, yA) && onPitch(xB, yB) && onPitch(xC, yC)) {
         // Have to push into another player
         squares[0] = [xB, yB];
@@ -1086,7 +1116,7 @@ var selectFromOptions = function(options, message, data, callback, teamReroll, s
 
 var blockDice = function(data) {
     var dice = data.option;
-    var step = data.data;
+    var step = data.data.step;
     step.selectedDice = dice;
     postStep(step);
     var nextStep = null;
@@ -1130,12 +1160,10 @@ var followUp = function(data) {
 }
 
 var push = function(step, xpos, ypos) {
-    console.log("push happening")
-    console.log(step)
     svg.selectAll(".gridOption")
         .classed("gridOption", false)
     pitch.on("click", clickPitch)
-    var player = playerInPos(step.x1, step.y1);
+    var player = findPlayer(step.side, step.num);
     var newStep = {};
     newStep.action = step.action;
     newStep.stepType = "push";
@@ -1145,7 +1173,7 @@ var push = function(step, xpos, ypos) {
     newStep.y0 = step.y1;
     newStep.x1 = xpos;
     newStep.y1 = ypos;
-    processMove(newStep);
+    processPush(newStep);
 }
 
 var scatterBall = function(step, result) {
