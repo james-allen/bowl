@@ -173,7 +173,8 @@ var playersOnPitch = function() {
 var playerInPos = function(xpos, ypos) {
     for (var playerIndex = 0; playerIndex < players.length; playerIndex++) {
         if (players[playerIndex].xpos == xpos &&
-            players[playerIndex].ypos == ypos) {
+            players[playerIndex].ypos == ypos &&
+            players[playerIndex].onPitch) {
             return players[playerIndex];
         }
     }
@@ -376,6 +377,29 @@ var optionsText = svg.append("text")
     .attr("y", 0.42 * nSquaresY * squareSize + margin)
     .style("visibility", "hidden");
 
+var clickPlayer = function(d) {
+    if (selected == d) {
+        // Was already selected. Unselect.
+        clearSelection()
+    } else {
+        var step = null;
+        if (selected != null) {
+            var thisPlayer = playerWithId(this.id);
+            step = defineStep(thisPlayer.xpos, thisPlayer.ypos);
+        }
+        if (step != null) {
+            // Valid step involving this player (block, pass...)
+            addStepToStack(step);
+        } else if (isTurn(d)) {
+            // Select a new player on the moving side.
+            selected = d;
+            d3.selectAll("circle").classed("selected", false);
+            d3.select(this).classed("selected", true);
+            d3.select("#standUpButton").classed("inactive", selected.stunned || !(selected.down))
+        }
+    }
+}
+
 // Make the circles that represent the players
 svg.selectAll("circle")
     .data(playersOnPitch())
@@ -389,28 +413,7 @@ svg.selectAll("circle")
     })
     .attr("id", player_id)
     .classed("selected", false)
-    .on("click", function(d) {
-        if (selected == d) {
-            // Was already selected. Unselect.
-            clearSelection()
-        } else {
-            var step = null;
-            if (selected != null) {
-                var thisPlayer = playerWithId(this.id);
-                step = defineStep(thisPlayer.xpos, thisPlayer.ypos);
-            }
-            if (step != null) {
-                // Valid step involving this player (block, pass...)
-                addStepToStack(step);
-            } else if (isTurn(d)) {
-                // Select a new player on the moving side.
-                selected = d;
-                d3.selectAll("circle").classed("selected", false);
-                d3.select(this).classed("selected", true);
-                d3.select("#standUpButton").classed("inactive", selected.stunned || !(selected.down))
-            }
-        }
-    })
+    .on("click", clickPlayer)
 
 var drawBall = function() {
     svg.append("circle")
@@ -1012,12 +1015,18 @@ var selectPush = function(step) {
     }
     if (squares.length > 0) {
         pitch.on("click", null);
+        svg.selectAll("circle").on("click", null);
         for (var index = 0; index < squares.length; index++) {
             var xpos = squares[index][0];
             var ypos = squares[index][1];
             svg.select("#" + gridId({"xpos": xpos, "ypos": ypos}))
                 .classed("gridOption", true)
                 .on("click", function(d) {push(step, d.xpos, d.ypos);})
+            var player = playerInPos(xpos, ypos);
+            if (player != null) {
+                svg.select("#" + player_id(player))
+                    .on("click", function(d) {push(step, d.xpos, d.ypos);})
+            }
         }
         pitch.sort(function(a, b) {
             if (svg.select("#" + gridId(a)).classed("gridOption")) {
@@ -1163,6 +1172,7 @@ var push = function(step, xpos, ypos) {
     svg.selectAll(".gridOption")
         .classed("gridOption", false)
     pitch.on("click", clickPitch)
+    svg.selectAll("circle").on("click", clickPlayer);
     var player = findPlayer(step.side, step.num);
     var newStep = {};
     newStep.action = step.action;
