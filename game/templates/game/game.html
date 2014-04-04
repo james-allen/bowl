@@ -529,11 +529,17 @@ var processPush = function(step) {
     var player = findPlayer(step.side, step.num);
     player.xpos = step.x1;
     player.ypos = step.y1;
+    var playerSymbol = d3.select("#" + player_id(player));
+    if (step.offPitch) {
+        playerSymbol = playerSymbol.data([]).exit();
+    }
     // Move the circle on screen
-    d3.select('#'+player_id(player))
-        .transition()
+    var transition = playerSymbol.transition()
         .attr("cx", cx)
         .attr("cy", cy)
+    if (step.offPitch) {
+        transition.remove();
+    }
     if (player.hasBall) {
         // Move the ball too
         moveBall(step.x1, step.y1);
@@ -550,10 +556,15 @@ var processPush = function(step) {
         // The ball scatters away if you're pushed into it
         var nextStep = defineScatter(1);
         stepStack[0] = nextStep;
+    } else if (player.hasBall && step.offPitch) {
+        var nextStep = defineThrowin(step.x0, step.y0);
+        stepStack[0] = nextStep;
     } else {
         stepStack.shift();    
     }
-    processNextStep();
+    if (!step.offPitch) {
+        processNextStep();
+    }
 }
 
 var processFollowUp = function(step) {
@@ -718,6 +729,11 @@ var postProcessStep = function(step, result) {
         break;
     case "throwin":
         scatterBall(step, result);
+        break;
+    case "push":
+        if (step.offPitch) {
+            displayMessage(result.injuryRoll.result, null, function(d) {processNextStep();})
+        }
         break;
     }
 }
@@ -890,8 +906,8 @@ var defineKnockDown = function(step, dice, victim) {
         newStep.side = step.side;
     }
     var player = findPlayer(newStep.side, newStep.num);
-    if ((step.dice == "bothDown" && hasSkill(player, "Block")) || (step.dice == "defenderStumbles" && hasSkill(player, "Dodge"))) {
-        // Avoid a Both Down result with the block skill, or a Defender Stumbles with the dodge skill
+    if ((step.dice == "bothDown" && hasSkill(player, "Block")) || (step.dice == "defenderStumbles" && hasSkill(player, "Dodge")) || !onPitch(player)) {
+        // Avoid a Both Down result with the block skill, or a Defender Stumbles with the dodge skill. Do nothing if the player has been pushed off the pitch.
         return null;
     } else {
         return newStep;
@@ -1037,6 +1053,18 @@ var selectPush = function(step) {
         })
     } else {
         // Have to push into the crowd
+        var xpos, ypos;
+        if (!onPitch(xB, xB)) {
+            xpos = xB;
+            ypos = yB;
+        } else if (!onPitch(xA, xA)) {
+            xpos = xA;
+            ypos = yA;
+        } else {
+            xpos = xC;
+            ypos = yC;
+        }
+        displayMessage("Pushed into the crowd!", null, function() {push(step, xpos, ypos);});
     }
 }
 
@@ -1070,6 +1098,10 @@ var confirmResult = function(step, result, rerollSkill, callback) {
 var selectFollowUp = function(step) {
     var message = "Do you want to follow up?"
     selectFromOptions(["Yes", "No"], message, step, followUp, false, false, false);
+}
+
+var displayMessage = function(message, data, callback) {
+    selectFromOptions(["OK"], message, data, callback, false, false, false);
 }
 
 var selectFromOptions = function(options, message, data, callback, teamReroll, skillReroll, proReroll) {
@@ -1183,6 +1215,7 @@ var push = function(step, xpos, ypos) {
     newStep.y0 = step.y1;
     newStep.x1 = xpos;
     newStep.y1 = ypos;
+    newStep.offPitch = !onPitch(xpos, ypos);
     processPush(newStep);
 }
 

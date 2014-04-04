@@ -38,7 +38,18 @@ def resolve(match, step_type, data):
             match.x_ball = data['x1']
             match.y_ball = data['y1']
             match.save()
-        return {}
+        if step_type == 'push' and bool(data['offPitch']):
+            player.on_pitch = False
+            injury_roll = roll_injury_dice()
+            if injury_roll['result'] == 'knockedOut':
+                player.knocked_out = True
+            elif injury_roll['result'] == 'casualty':
+                player.casualty = True
+            player.save()
+            result = {'injuryRoll': injury_roll}
+        else:
+            result = {}
+        return result
     elif step_type == 'block':
         # A block step
         # Find out which is the attacking player
