@@ -829,7 +829,7 @@ var defineStep = function(xpos, ypos) {
         break;
     case "block":
         var targetPlayer = playerInPos(xpos, ypos);
-        if (targetPlayer != null && targetPlayer.side != selected.side && isAdjacent(xpos, ypos, selected.xpos, selected.ypos)) {
+        if (targetPlayer != null && targetPlayer.side != selected.side && isAdjacent(xpos, ypos, selected.xpos, selected.ypos) && !targetPlayer.down) {
             step.stepType = "block";
             step.targetNum = targetPlayer.num;
             step.targetSide = targetPlayer.side;
@@ -842,7 +842,7 @@ var defineStep = function(xpos, ypos) {
             var targetPlayer = playerInPos(xpos, ypos);
             if (targetPlayer == null) {
                 step.stepType = "move";
-            } else if (targetPlayer.side != selected.side) {
+            } else if (targetPlayer.side != selected.side && !targetPlayer.down) {
                 step.stepType = "block";
                 step.targetNum = targetPlayer.num;
                 step.targetSide = targetPlayer.side;
