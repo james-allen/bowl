@@ -39,6 +39,8 @@ def resolve(match, step_type, data):
         player.ypos = int(data['y1'])
         if step_type == 'move':
             player.move_left -= 1
+            if player.move_left == -2:
+                player.finished_action = True
         if player.has_ball:
             # Move the ball too
             match.x_ball = data['x1']
@@ -111,7 +113,9 @@ def resolve(match, step_type, data):
         result['defenceSt'] = defence_st
         if data['action'] == 'blitz':
             attacking_player.move_left -= 1
-            attacking_player.save()
+        if attacking_player.move_left == -2 or data['action'] != "blitz":
+            attacking_player.finished_action = True
+        attacking_player.save()
         return result
     elif step_type == 'foul':
         # A foul on a player
@@ -174,7 +178,8 @@ def resolve(match, step_type, data):
         if sent_off:
             attacking_player.sent_off = True
             attacking_player.on_pitch = False
-            attacking_player.save()
+        attacking_player.finished_action = True    
+        attacking_player.save()
         return {'armourRoll': armour_roll, 'injuryRoll': injury_roll, 
                 'sentOff': sent_off}
     elif step_type == 'knockDown':
@@ -208,6 +213,8 @@ def resolve(match, step_type, data):
         player = find_player(match, data)
         set_action(player, data['action'])
         player.move_left -= 3
+        if player.move_left <= -2:
+            player.finished_action = True
         if player.player.ma < 3:
             dice = roll_dice(6, 1)
             success = dice['dice'][0] >= 4
@@ -293,6 +300,7 @@ def resolve(match, step_type, data):
             result['y1'] = match.y_ball
         result['fumble'] = fumble
         player.has_ball = False
+        player.finished_action = True
         player.save()
         return result
     elif step_type == 'handOff':
@@ -300,6 +308,8 @@ def resolve(match, step_type, data):
         # Always successful
         player = find_player(match, data)
         set_action(player, data['action'])
+        player.finished_action = True
+        player.save()
         match.x_ball = int(data['x1'])
         match.y_ball = int(data['y1'])
         match.save()
@@ -360,6 +370,7 @@ def resolve(match, step_type, data):
         for player in PlayerInGame.objects.filter(match=match):
             player.move_left = player.ma
             player.action = ''
+            player.finished_action = False
             player.save()
         return {}
 

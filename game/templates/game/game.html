@@ -3,11 +3,19 @@
 <style>
 .home
 {
-    fill: #FF0000;
+    fill: rgba(255,0,0,1.0);
+}
+.home.finishedAction
+{
+    fill: rgba(255,0,0,0.5);
 }
 .away
 {
-    fill: #0000FF;
+    fill: rgba(0,0,255,1.0);
+}
+.away.finishedAction
+{
+    fill: rgba(0,0,255,0.5);
 }
 circle.selected
 {
@@ -332,6 +340,8 @@ var endTurn = function(d) {
     for (var i = 0; i < players.length; i++) {
         players[i].moveLeft = players[i].ma;
         players[i].action = "";
+        players[i].finishedAction = false;
+        svg.selectAll("circle").classed("finishedAction", false);
     }
     postStep(step);
 }
@@ -376,6 +386,11 @@ var setAction = function(player, action) {
         svg.select("#" + action + "Button").classed("inactive", false).classed("selected", true);
     }
     return;
+}
+
+var finishAction = function(player) {
+    player.finishedAction = true;
+    svg.select("#" + player_id(player)).classed("finishedAction", true);
 }
 
 // Extra buttons
@@ -454,11 +469,14 @@ if (matchData.xBall != null && matchData.yBall != null) {
     drawBall();
 }
 
-// Add knockDown or stunned symbols as necessary
+// Add knockDown or stunned symbols as necessary, and mark players that have finished their turn
 for (var index = 0; index < players.length; index++) {
     var player = players[index];
     if (player.onPitch && player.down) {
         createKnockDownSymbol(player.xpos, player.ypos, player.stunned);
+    }
+    if (player.onPitch && player.finishedAction) {
+        d3.select("#" + player_id(player)).classed("finishedAction", true);
     }
 }
 
@@ -534,6 +552,9 @@ var processMove = function(step) {
     player.ypos = step.y1;
     if (step.stepType == "move") {
         player.moveLeft -= 1;
+        if (player.moveLeft == -2) {
+            finishAction(player);
+        }
     }
     // Move the circle on screen
     d3.select('#'+player_id(player))
@@ -556,8 +577,12 @@ var processMove = function(step) {
 }
 
 var processBlock = function(step) {
+    var player = playerInPos(step.x0, step.y0);
     if (step.action == "blitz") {
-        playerInPos(step.x0, step.y0).moveLeft -= 1;
+        player.moveLeft -= 1;
+    }
+    if (player.moveLeft == -2 || step.action != "blitz") {
+        finishAction(player);
     }
     postStep(step);
 }
@@ -637,7 +662,11 @@ var processKnockDown = function(step) {
 }
 
 var processStandUp = function(step) {
-    playerInPos(step.x0, step.y0).moveLeft -= 3;
+    var player = playerInPos(step.x0, step.y0);
+    player.moveLeft -= 3;
+    if (player.moveLeft <= -2) {
+        finishAction(player);
+    }
     postStep(step);
 }
 
@@ -654,6 +683,8 @@ var processCatch = function(step) {
 }
 
 var processPass = function(step) {
+    var player = playerInPos(step.x0, step.y0);
+    finishAction(player);
     postStep(step);
 }
 
@@ -662,11 +693,14 @@ var processThrowin = function(step) {
 }
 
 var processFoul = function(step) {
+    var player = playerInPos(step.x0, step.y0);
+    finishAction(player);
     postStep(step);
 }
 
 var processHandOff = function(step) {
     var player = findPlayer(step.side, step.num);
+    finishAction(player);
     player.hasBall = false;
     moveBall(step.x1, step.y1);
     postStep(step);
@@ -691,6 +725,9 @@ var removeFromPitch = function(player, reason) {
         player.casualty = true;
     } else if (reason == "sentOff") {
         player.sentOff = true;
+    }
+    if (player === selected) {
+        clearSelection();
     }
 }
 
@@ -995,6 +1032,9 @@ var isAdjacent = function(xpos_0, ypos_0, xpos_1, ypos_1) {
 }
 
 var defineStep = function(xpos, ypos) {
+    if (selected == null || selected.finishedAction) {
+        return [];
+    }
     var step = {};
     switch(selectedAction) {
     case "move":

@@ -81,6 +81,7 @@ class PlayerInGame(models.Model):
     skills = models.TextField()
     action = models.CharField(max_length=8)
     move_left = models.IntegerField()
+    finished_action = models.BooleanField(default=False)
     down = models.BooleanField(default=False)
     stunned = models.BooleanField(default=False)
     has_ball = models.BooleanField(default=False)
@@ -101,6 +102,7 @@ class PlayerInGame(models.Model):
             'av': self.av,
             'action': self.action,
             'moveLeft': self.move_left,
+            'finishedAction': self.finished_action,
             'down': self.down,
             'stunned': self.stunned,
             'hasBall': self.has_ball,
