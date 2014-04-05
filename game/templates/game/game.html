@@ -233,12 +233,8 @@ var knockDownSymbolGenerator = function(xpos, ypos, stunned) {
             "y": y0 + innerRadius*Math.sin(theta) + 2*jitter*(Math.random()-0.5)
         }
     }
-    coords[2*nPoint] = coords[0];
-    var line = d3.svg.line()
-        .x(function(d) { return d.x; })
-        .y(function(d) { return d.y; })
-        .interpolate("linear");
-    return line(coords);
+    coords[2*nPoint] = {"x": coords[0].x, "y": coords[0].y};
+    return coords;
 }
 
 var createKnockDownSymbol = function(xpos, ypos, stunned) {
@@ -251,11 +247,30 @@ var createKnockDownSymbol = function(xpos, ypos, stunned) {
         id = player_id(player) + "knockDown";
         symbolClass = "knockDownSymbol"
     }
+    var line = d3.svg.line()
+        .x(function(d) { return d.x; })
+        .y(function(d) { return d.y; })
+        .interpolate("linear");
     var symbol = svg.append("path")
-        .attr("d", knockDownSymbolGenerator(xpos, ypos, stunned))
         .attr("class", symbolClass)
-        .attr("id", id);
+        .attr("id", id)
+        .data([knockDownSymbolGenerator(xpos, ypos, stunned)])
+        .attr("d", line);
     return symbol;
+}
+
+var moveLine = function(id, deltaX, deltaY) {
+    var path = d3.select("#"+id);
+    var data = path.data()[0];
+    for (var i = 0; i < data.length; i++) {
+        data[i].x += deltaX;
+        data[i].y += deltaY;
+    }
+    var line = d3.svg.line()
+        .x(function(d) { return d.x; })
+        .y(function(d) { return d.y; })
+        .interpolate("linear");
+    path.transition().attr("d", line);    
 }
 
 var standUp = function() {
@@ -564,6 +579,11 @@ var processMove = function(step) {
     if (player.hasBall) {
         // Move the ball too
         moveBall(step.x1, step.y1);
+    }
+    if (player.down) {
+        // Move their down/stunned symbol
+        var id = (player.stunned) ? player_id(player) + "stunned" : player_id(player) + "knockDown";
+        moveLine(id, squareSize * (step.x1 - step.x0), squareSize * (step.y1 - step.y0));
     }
     // Tell the server
     postStep(step);
