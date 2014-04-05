@@ -278,6 +278,13 @@ def resolve(match, step_type, data):
         player.has_ball = False
         player.save()
         return result
+    elif step_type == 'handOff':
+        # Hand-Off the ball to an adjacent player
+        # Always successful
+        match.x_ball = int(data['x1'])
+        match.y_ball = int(data['y1'])
+        match.save()
+        return {}
     elif step_type == 'throwin':
         x0 = int(data['lastX'])
         y0 = int(data['lastY'])

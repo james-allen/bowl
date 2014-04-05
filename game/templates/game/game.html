@@ -486,6 +486,8 @@ var processStep = function(step) {
             break;
         case "foul":
             processFoul(step);
+        case "handOff":
+            processHandOff(step);
         }
     }
 }
@@ -620,6 +622,15 @@ var processThrowin = function(step) {
 
 var processFoul = function(step) {
     postStep(step);
+}
+
+var processHandOff = function(step) {
+    moveBall(step.x1, step.y1);
+    postStep(step);
+    var player = playerInPos(step.x1, step.y1);
+    var nextStep = defineCatch(player, true);
+    stepStack[0] = nextStep;
+    processNextStep();
 }
 
 var removeFromPitch = function(player, reason) {
@@ -916,6 +927,20 @@ var defineStep = function(xpos, ypos) {
             step.stepType = "move";
         } else if (inPassRange(xpos, ypos) && selected.hasBall) {
             step.stepType = "pass";
+        } else {
+            step = null;
+        }
+        break;
+    case "handOff":
+        if (isAdjacent(xpos, ypos, selected.xpos, selected.ypos)) {
+            var targetPlayer = playerInPos(xpos, ypos);
+            if (targetPlayer == null) {
+                step.stepType = "move";
+            } else if (selected.hasBall) {
+                step.stepType = "handOff";
+            } else {
+                step = null;
+            }
         } else {
             step = null;
         }
