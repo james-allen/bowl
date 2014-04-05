@@ -270,8 +270,10 @@ var svg = d3.select("body").append("svg")
 // Make the pitch
 var clickPitch = function(d) {
     if (selected != null) {
-        step = defineStep(d.xpos, d.ypos);
-        addStepToStack(step);
+        var stepArray = defineStep(d.xpos, d.ypos);
+        for (var i =0; i < stepArray.length; i++) {
+            addStepToStack(stepArray[i]);
+        }
     }
 }
 var coords = new Array(nSquaresX * nSquaresY);
@@ -382,14 +384,16 @@ var clickPlayer = function(d) {
         // Was already selected. Unselect.
         clearSelection()
     } else {
-        var step = null;
+        var stepArray = [];
         if (selected != null) {
             var thisPlayer = playerWithId(this.id);
-            step = defineStep(thisPlayer.xpos, thisPlayer.ypos);
+            stepArray = defineStep(thisPlayer.xpos, thisPlayer.ypos);
         }
-        if (step != null) {
+        if (stepArray.length > 0) {
             // Valid step involving this player (block, pass...)
-            addStepToStack(step);
+            for (var i = 0; i < stepArray.length; i++) {
+                addStepToStack(stepArray[i]);
+            }
         } else if (isTurn(d)) {
             // Select a new player on the moving side.
             selected = d;
@@ -489,15 +493,20 @@ var processStep = function(step) {
             break;
         case "foul":
             processFoul(step);
+            break;
         case "handOff":
             processHandOff(step);
+            break;
+        case "goForIt":
+            processGoForIt(step);
+            break;
         }
     }
 }
 
 var processMove = function(step) {
     // Move the player object
-    var player = playerInPos(step.x0, step.y0);
+    var player = findPlayer(step.side, step.num);
     player.xpos = step.x1;
     player.ypos = step.y1;
     if (step.stepType == "move") {
@@ -642,6 +651,10 @@ var processHandOff = function(step) {
     var nextStep = defineCatch(receivingPlayer, true);
     stepStack[0] = nextStep;
     processNextStep();
+}
+
+var processGoForIt = function(step) {
+    postStep(step);
 }
 
 var removeFromPitch = function(player, reason) {
@@ -792,6 +805,9 @@ var postProcessStep = function(step, result) {
             message = message + "<br/>Sent off!";
         }
         displayMessage(message, null, function(d) {processNextStep;});
+        break;
+    case "goForIt":
+        confirmResult(step, result, null, postProcessGoForIt);
     }
 }
 
@@ -888,6 +904,26 @@ var postProcessKnockDown = function(data) {
     processNextStep();
 }
 
+var postProcessGoForIt = function(data) {
+    var step = data.data.step;
+    var result = data.data.result;
+    // Remove the goForIt step from the stack
+    stepStack.shift()
+    if (!result.success) {
+        if (stepStack[0].stepType == "move") {
+            // Make sure they can't fall over twice
+            stepStack[0].dodge = false;
+        } else {
+            // Remove the following step
+            stepStack.shift();
+        }
+        var player = findPlayer(step.side, step.num);
+        var nextStep = defineFall(player);
+        addStepToStack(nextStep);
+    }
+    processNextStep();
+}
+
 var restoreTo = function(restorePosition) {
     console.log("Restoring to " + restorePosition);
     var position;
@@ -939,9 +975,10 @@ var defineStep = function(xpos, ypos) {
     var step = {};
     switch(selectedAction) {
     case "move":
-        if (selected.moveLeft > 0 && playerInPos(xpos, ypos) == null && isAdjacent(xpos, ypos, selected.xpos, selected.ypos)) {
+        if (selected.moveLeft > -2 && playerInPos(xpos, ypos) == null && isAdjacent(xpos, ypos, selected.xpos, selected.ypos)) {
             step.stepType = "move";
             step.dodge = (nTackleZones(selected) > 0);
+            step.goForIt = (selected.moveLeft <= 0);
         } else {
             step = null;
         }
@@ -957,15 +994,17 @@ var defineStep = function(xpos, ypos) {
         }
         break;
     case "blitz":
-        if (selected.moveLeft > 0 && isAdjacent(xpos, ypos, selected.xpos, selected.ypos)) {
+        if (selected.moveLeft > -2 && isAdjacent(xpos, ypos, selected.xpos, selected.ypos)) {
             var targetPlayer = playerInPos(xpos, ypos);
             if (targetPlayer == null) {
                 step.stepType = "move";
                 step.dodge = (nTackleZones(selected) > 0);
+                step.goForIt = (selected.moveLeft <= 0);
             } else if (targetPlayer.side != selected.side && !targetPlayer.down) {
                 step.stepType = "block";
                 step.targetNum = targetPlayer.num;
                 step.targetSide = targetPlayer.side;
+                step.goForIt = (selected.moveLeft <= 0);
             } else {
                 step = null;
             }
@@ -975,9 +1014,10 @@ var defineStep = function(xpos, ypos) {
         break;
     case "pass":
         var targetPlayer = playerInPos(xpos, ypos);
-        if (selected.moveLeft > 0 && targetPlayer == null && isAdjacent(xpos, ypos, selected.xpos, selected.ypos)) {
+        if (selected.moveLeft > -2 && targetPlayer == null && isAdjacent(xpos, ypos, selected.xpos, selected.ypos)) {
             step.stepType = "move";
             step.dodge = (nTackleZones(selected) > 0);
+            step.goForIt = (selected.moveLeft <= 0);
         } else if (inPassRange(xpos, ypos) && selected.hasBall) {
             step.stepType = "pass";
         } else {
@@ -988,9 +1028,10 @@ var defineStep = function(xpos, ypos) {
         if (isAdjacent(xpos, ypos, selected.xpos, selected.ypos)) {
             var targetPlayer = playerInPos(xpos, ypos);
             if (targetPlayer == null) {
-                if (selected.moveLeft > 0) {
+                if (selected.moveLeft > -2) {
                     step.stepType = "move";
                     step.dodge = (nTackleZones(selected) > 0);
+                    step.goForIt = (selected.moveLeft <= 0);
                 } else {
                     step = null;
                 }
@@ -1007,9 +1048,10 @@ var defineStep = function(xpos, ypos) {
         if (isAdjacent(xpos, ypos, selected.xpos, selected.ypos)) {
             var targetPlayer = playerInPos(xpos, ypos);
             if (targetPlayer == null) {
-                if (selected.moveLeft > 0) {
+                if (selected.moveLeft > -2) {
                     step.stepType = "move";
                     step.dodge = (nTackleZones(selected) > 0);
+                    step.goForIt = (selected.moveLeft <= 0);
                 } else {
                     step = null;
                 }
@@ -1027,16 +1069,23 @@ var defineStep = function(xpos, ypos) {
     default:
         step = null;
     }
+    var stepArray = [];
     if (step != null) {
-        step.action = selectedAction;
-        step.side = selected.side;
-        step.num = selected.num;
-        step.x0 = selected.xpos;
-        step.y0 = selected.ypos;
-        step.x1 = xpos;
-        step.y1 = ypos;
+        if (step.goForIt) {
+            stepArray[0] = {"stepType": "goForIt"};
+        }
+        stepArray[stepArray.length] = step;
+        for (var i = 0; i < stepArray.length; i++) {
+            stepArray[i].action = selectedAction;
+            stepArray[i].side = selected.side;
+            stepArray[i].num = selected.num;
+            stepArray[i].x0 = selected.xpos;
+            stepArray[i].y0 = selected.ypos;
+            stepArray[i].x1 = xpos;
+            stepArray[i].y1 = ypos;            
+        }
     }
-    return step;
+    return stepArray;
 }
 
 var defineKnockDown = function(step, dice, victim) {

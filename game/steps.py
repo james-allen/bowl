@@ -338,6 +338,10 @@ def resolve(match, step_type, data):
             last_x = x1 - x_dir
             last_y = y1 - y_dir
         return {'x1': x1, 'y1': y1, 'lastX': last_x, 'lastY': last_y}
+    elif step_type == 'goForIt':
+        result = roll_dice(6, 1)
+        result['success'] = (result['dice'][0] != 1)
+        return result
     elif step_type == 'endTurn':
         match.home_reroll_used_this_turn = False;
         match.away_reroll_used_this_turn = False;
