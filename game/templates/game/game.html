@@ -625,10 +625,12 @@ var processFoul = function(step) {
 }
 
 var processHandOff = function(step) {
+    var player = findPlayer(step.side, step.num);
+    player.hasBall = false;
     moveBall(step.x1, step.y1);
     postStep(step);
-    var player = playerInPos(step.x1, step.y1);
-    var nextStep = defineCatch(player, true);
+    var receivingPlayer = playerInPos(step.x1, step.y1);
+    var nextStep = defineCatch(receivingPlayer, true);
     stepStack[0] = nextStep;
     processNextStep();
 }
