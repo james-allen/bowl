@@ -74,6 +74,11 @@ class PlayerInGame(models.Model):
     match = models.ForeignKey(Match)
     xpos = models.IntegerField()
     ypos = models.IntegerField()
+    ma = models.IntegerField()
+    st = models.IntegerField()
+    ag = models.IntegerField()
+    av = models.IntegerField()
+    skills = models.TextField()
     action = models.CharField(max_length=8)
     down = models.BooleanField(default=False)
     stunned = models.BooleanField(default=False)
@@ -89,6 +94,10 @@ class PlayerInGame(models.Model):
             'num': self.player.number,
             'xpos': self.xpos,
             'ypos': self.ypos,
+            'ma': self.ma,
+            'st': self.st,
+            'ag': self.ag,
+            'av': self.av,
             'action': self.action,
             'down': self.down,
             'stunned': self.stunned,
@@ -97,9 +106,21 @@ class PlayerInGame(models.Model):
             'knockedOut': self.knocked_out,
             'casualty': self.casualty,
             'sentOff': self.sent_off,
-            'skills': self.player.skills.split(','),
+            'skills': self.skills.split(','),
         }
         return result_dict
+
+def create_pig(parent, **kwargs):
+    pig = PlayerInGame()
+    pig.player = parent
+    pig.ma = parent.ma
+    pig.st = parent.st
+    pig.ag = parent.ag
+    pig.av = parent.av
+    pig.skills = parent.skills
+    for key, value in kwargs.items():
+        setattr(pig, key, value)
+    return
 
 
 class Step(models.Model):
