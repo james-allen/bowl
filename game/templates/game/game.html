@@ -327,6 +327,9 @@ var endTurn = function(d) {
     clearSelection();
     matchData.homeRerollUsedThisTurn = false;
     matchData.awayRerollUsedThisTurn = false;
+    for (var i = 0; i < players.length; i++) {
+        players[i].moveLeft = players[i].ma;
+    }
     postStep(step);
 }
 appendButton(svg, nSquaresX * squareSize + 2 * margin, margin, "End Turn", endTurn);
@@ -497,6 +500,9 @@ var processMove = function(step) {
     var player = playerInPos(step.x0, step.y0);
     player.xpos = step.x1;
     player.ypos = step.y1;
+    if (step.stepType == "move") {
+        player.moveLeft -= 1;
+    }
     // Move the circle on screen
     d3.select('#'+player_id(player))
         .transition()
@@ -518,6 +524,9 @@ var processMove = function(step) {
 }
 
 var processBlock = function(step) {
+    if (step.action == "blitz") {
+        playerInPos(step.x0, step.y0).moveLeft -= 1;
+    }
     postStep(step);
 }
 
@@ -596,6 +605,7 @@ var processKnockDown = function(step) {
 }
 
 var processStandUp = function(step) {
+    playerInPos(step.x0, step.y0).moveLeft -= 3;
     postStep(step);
 }
 
@@ -929,7 +939,7 @@ var defineStep = function(xpos, ypos) {
     var step = {};
     switch(selectedAction) {
     case "move":
-        if (playerInPos(xpos, ypos) == null && isAdjacent(xpos, ypos, selected.xpos, selected.ypos)) {
+        if (selected.moveLeft > 0 && playerInPos(xpos, ypos) == null && isAdjacent(xpos, ypos, selected.xpos, selected.ypos)) {
             step.stepType = "move";
             step.dodge = (nTackleZones(selected) > 0);
         } else {
@@ -947,7 +957,7 @@ var defineStep = function(xpos, ypos) {
         }
         break;
     case "blitz":
-        if (isAdjacent(xpos, ypos, selected.xpos, selected.ypos)) {
+        if (selected.moveLeft > 0 && isAdjacent(xpos, ypos, selected.xpos, selected.ypos)) {
             var targetPlayer = playerInPos(xpos, ypos);
             if (targetPlayer == null) {
                 step.stepType = "move";
@@ -965,7 +975,7 @@ var defineStep = function(xpos, ypos) {
         break;
     case "pass":
         var targetPlayer = playerInPos(xpos, ypos);
-        if (targetPlayer == null && isAdjacent(xpos, ypos, selected.xpos, selected.ypos)) {
+        if (selected.moveLeft > 0 && targetPlayer == null && isAdjacent(xpos, ypos, selected.xpos, selected.ypos)) {
             step.stepType = "move";
             step.dodge = (nTackleZones(selected) > 0);
         } else if (inPassRange(xpos, ypos) && selected.hasBall) {
@@ -978,8 +988,12 @@ var defineStep = function(xpos, ypos) {
         if (isAdjacent(xpos, ypos, selected.xpos, selected.ypos)) {
             var targetPlayer = playerInPos(xpos, ypos);
             if (targetPlayer == null) {
-                step.stepType = "move";
-                step.dodge = (nTackleZones(selected) > 0);
+                if (selected.moveLeft > 0) {
+                    step.stepType = "move";
+                    step.dodge = (nTackleZones(selected) > 0);
+                } else {
+                    step = null;
+                }
             } else if (selected.hasBall) {
                 step.stepType = "handOff";
             } else {
@@ -993,8 +1007,12 @@ var defineStep = function(xpos, ypos) {
         if (isAdjacent(xpos, ypos, selected.xpos, selected.ypos)) {
             var targetPlayer = playerInPos(xpos, ypos);
             if (targetPlayer == null) {
-                step.stepType = "move";
-                step.dodge = (nTackleZones(selected) > 0);
+                if (selected.moveLeft > 0) {
+                    step.stepType = "move";
+                    step.dodge = (nTackleZones(selected) > 0);
+                } else {
+                    step = null;
+                }
             } else if (targetPlayer.side != selected.side && targetPlayer.down) {
                 step.stepType = "foul";
                 step.targetNum = targetPlayer.num;

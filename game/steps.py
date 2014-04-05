@@ -32,7 +32,8 @@ def resolve(match, step_type, data):
         # Update the player's position in the database
         player.xpos = int(data['x1'])
         player.ypos = int(data['y1'])
-        player.save()
+        if step_type == 'move':
+            player.move_left -= 1
         if player.has_ball:
             # Move the ball too
             match.x_ball = data['x1']
@@ -45,13 +46,13 @@ def resolve(match, step_type, data):
                 player.knocked_out = True
             elif injury_roll['result'] == 'casualty':
                 player.casualty = True
-            player.save()
             result = {'injuryRoll': injury_roll}
         elif step_type == 'move' and data['dodge'] == 'true':
             modifier = 1 - n_tackle_zones(player)
             result = roll_agility_dice(player, modifier=modifier)
         else:
             result = {'success': True}
+        player.save()
         return result
     elif step_type == 'block':
         # A block step
@@ -102,6 +103,9 @@ def resolve(match, step_type, data):
         result = roll_block_dice(n_dice)
         result['attackSt'] = attack_st
         result['defenceSt'] = defence_st
+        if data['action'] == 'blitz':
+            attacking_player.move_left -= 1
+            attacking_player.save()
         return result
     elif step_type == 'foul':
         # A foul on a player
@@ -195,6 +199,7 @@ def resolve(match, step_type, data):
     elif step_type == 'standUp':
         # A player standing up
         player = find_player(match, data)
+        player.move_left -= 3
         if player.player.ma < 3:
             dice = roll_dice(6, 1)
             success = dice['dice'][0] >= 4
@@ -203,7 +208,7 @@ def resolve(match, step_type, data):
             success = True
         if success:
             player.down = False
-            player.save()
+        player.save()
         return {'dice': dice, 'success': success}
     elif step_type == 'pickUp':
         # A player picking up the ball
@@ -337,6 +342,9 @@ def resolve(match, step_type, data):
         match.home_reroll_used_this_turn = False;
         match.away_reroll_used_this_turn = False;
         match.save()
+        for player in PlayerInGame.objects.filter(match=match):
+            player.move_left = player.ma
+            player.save()
         return {}
 
 def n_tackle_zones(player):

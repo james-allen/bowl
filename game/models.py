@@ -80,6 +80,7 @@ class PlayerInGame(models.Model):
     av = models.IntegerField()
     skills = models.TextField()
     action = models.CharField(max_length=8)
+    move_left = models.IntegerField()
     down = models.BooleanField(default=False)
     stunned = models.BooleanField(default=False)
     has_ball = models.BooleanField(default=False)
@@ -99,6 +100,7 @@ class PlayerInGame(models.Model):
             'ag': self.ag,
             'av': self.av,
             'action': self.action,
+            'moveLeft': self.move_left,
             'down': self.down,
             'stunned': self.stunned,
             'hasBall': self.has_ball,
@@ -118,9 +120,10 @@ def create_pig(parent, **kwargs):
     pig.ag = parent.ag
     pig.av = parent.av
     pig.skills = parent.skills
+    pig.move_left = parent.ma
     for key, value in kwargs.items():
         setattr(pig, key, value)
-    return
+    return pig
 
 
 class Step(models.Model):
