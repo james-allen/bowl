@@ -75,7 +75,11 @@ def post_step_view(request):
         else:
             # Carry out the step
             print(str(history_position) + ':', "Carrying out the step")
-            result = resolve(match, step_type, properties)
+            try:
+                result = resolve(match, step_type, properties)
+            except Exception as e:
+                print(e)
+                raise
             # Tell the client that everything is ok
             result['status'] = 0
     result_json = json.dumps(result)

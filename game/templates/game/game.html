@@ -710,27 +710,14 @@ var postProcessStep = function(step, result) {
         }
         break;
     case "knockDown":
-        var player = findPlayer(step.side, step.num);
+        var data = {"step": step, "result": result};
+        var message = "Armour roll: ";
         if (result.armourRoll.success) {
-            if (result.injuryRoll.result == "stunned") {
-                player.stunned = true;
-                d3.select("#"+player_id(player)+"knockDown")
-                    .data([]).exit().remove();
-                createKnockDownSymbol(player.xpos, player.ypos, true);
-            } else {
-                removeFromPitch(player, result.injuryRoll.result);
-            }
-        }
-        if (player.hasBall) {
-            player.hasBall = false;
-        }
-        if (ballInPos(player.xpos, player.ypos)) {
-            var nextStep = defineScatter(1);
-            stepStack[0] = nextStep;
+            message = message + "Success!<br/>Injury roll: " + result.injuryRoll.result;
         } else {
-            stepStack.shift();
+            message = message + "Failed!";
         }
-        processNextStep();
+        displayMessage(message, data, postProcessKnockDown);        
         break;
     case "standUp":
         if (result.success) {
@@ -865,6 +852,32 @@ var postProcessMove = function(data) {
     processNextStep();
 }
 
+var postProcessKnockDown = function(data) {
+    var step = data.data.step;
+    var result = data.data.result;
+    var player = findPlayer(step.side, step.num);
+    if (result.armourRoll.success) {
+        if (result.injuryRoll.result == "stunned") {
+            player.stunned = true;
+            d3.select("#"+player_id(player)+"knockDown")
+                .data([]).exit().remove();
+            createKnockDownSymbol(player.xpos, player.ypos, true);
+        } else {
+            removeFromPitch(player, result.injuryRoll.result);
+        }
+    }
+    if (player.hasBall) {
+        player.hasBall = false;
+    }
+    if (ballInPos(player.xpos, player.ypos)) {
+        var nextStep = defineScatter(1);
+        stepStack[0] = nextStep;
+    } else {
+        stepStack.shift();
+    }
+    processNextStep();
+}
+
 var restoreTo = function(restorePosition) {
     console.log("Restoring to " + restorePosition);
     var position;
@@ -938,6 +951,7 @@ var defineStep = function(xpos, ypos) {
             var targetPlayer = playerInPos(xpos, ypos);
             if (targetPlayer == null) {
                 step.stepType = "move";
+                step.dodge = (nTackleZones(selected) > 0);
             } else if (targetPlayer.side != selected.side && !targetPlayer.down) {
                 step.stepType = "block";
                 step.targetNum = targetPlayer.num;
@@ -953,6 +967,7 @@ var defineStep = function(xpos, ypos) {
         var targetPlayer = playerInPos(xpos, ypos);
         if (targetPlayer == null && isAdjacent(xpos, ypos, selected.xpos, selected.ypos)) {
             step.stepType = "move";
+            step.dodge = (nTackleZones(selected) > 0);
         } else if (inPassRange(xpos, ypos) && selected.hasBall) {
             step.stepType = "pass";
         } else {
@@ -964,6 +979,7 @@ var defineStep = function(xpos, ypos) {
             var targetPlayer = playerInPos(xpos, ypos);
             if (targetPlayer == null) {
                 step.stepType = "move";
+                step.dodge = (nTackleZones(selected) > 0);
             } else if (selected.hasBall) {
                 step.stepType = "handOff";
             } else {
@@ -978,6 +994,7 @@ var defineStep = function(xpos, ypos) {
             var targetPlayer = playerInPos(xpos, ypos);
             if (targetPlayer == null) {
                 step.stepType = "move";
+                step.dodge = (nTackleZones(selected) > 0);
             } else if (targetPlayer.side != selected.side && targetPlayer.down) {
                 step.stepType = "foul";
                 step.targetNum = targetPlayer.num;
