@@ -394,7 +394,7 @@ var setAction = function(player, action) {
     }
     if (action == "") {
         selectedAction = null;
-        svg.selectAll("g.action").classed("inactive", false);
+        svg.selectAll("g.action").classed("inactive", false).classed("selected", false);
     } else {
         selectedAction = action;
         svg.selectAll("g.action").classed("inactive", true).classed("selected", false);
