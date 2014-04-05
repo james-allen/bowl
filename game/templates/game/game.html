@@ -1052,7 +1052,7 @@ var isAdjacent = function(xpos_0, ypos_0, xpos_1, ypos_1) {
 }
 
 var defineStep = function(xpos, ypos) {
-    if (selected == null || selected.finishedAction) {
+    if (selected == null || selected.finishedAction || selected.down) {
         return [];
     }
     var step = {};
