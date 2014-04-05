@@ -100,6 +100,69 @@ def resolve(match, step_type, data):
         result['attackSt'] = attack_st
         result['defenceSt'] = defence_st
         return result
+    elif step_type == 'foul':
+        # A foul on a player
+        # Find out which is the attacking player
+        if data['side'] == 'home':
+            attacking_team = match.home_team
+            defending_team = match.away_team
+        elif data['side'] == 'away':
+            attacking_team = match.away_team
+            defending_team = match.home_team
+        attacking_num = int(data['num'])
+        defending_num = int(data['targetNum'])
+        attacking_player = PlayerInGame.objects.get(
+            match=match, player__team=attacking_team, 
+            player__number=attacking_num)
+        defending_player = PlayerInGame.objects.get(
+            match=match, player__team=defending_team,
+            player__number=defending_num)
+        modifier = 0
+        for player in PlayerInGame.objects.filter(
+            match=match, player__team=attacking_team,
+            xpos__gt=(defending_player.xpos-2),
+            xpos__lt=(defending_player.xpos+2),
+            ypos__gt=(defending_player.ypos-2),
+            ypos__lt=(defending_player.ypos+2),
+            on_pitch=True, down=False):
+            if player != attacking_player and n_tackle_zones(player) == 0:
+                modifier += 1
+        for player in PlayerInGame.objects.filter(
+            match=match, player__team=defending_team,
+            xpos__gt=(attacking_player.xpos-2),
+            xpos__lt=(attacking_player.xpos+2),
+            ypos__gt=(attacking_player.ypos-2),
+            ypos__lt=(attacking_player.ypos+2),
+            on_pitch=True, down=False):
+            if player != defending_player and n_tackle_zones(player) == 1:
+                modifier -= 1
+        # Roll against armour
+        armour_roll = roll_armour_dice(defending_player, modifier)
+        if armour_roll['success']:
+            injury_roll = roll_injury_dice()
+            if injury_roll['result'] == 'stunned':
+                defending_player.stunned = True
+            elif injury_roll['result'] == 'knockedOut':
+                defending_player.knocked_out = True
+                defending_player.on_pitch = False
+            elif injury_roll['result'] == 'casualty':
+                defending_player.casualty = True
+                defending_player.on_pitch = False
+            else:
+                raise ValueError('Injury roll returned unexpected result: ' + 
+                                 injury_roll['result'])
+            defending_player.save()
+        else:
+            injury_roll = None
+        sent_off = (is_double(armour_roll['dice']) or 
+                    (armour_roll['success'] and 
+                     is_double(injury_roll['dice'])))
+        if sent_off:
+            attacking_player.sent_off = True
+            attacking_player.on_pitch = False
+            attacking_player.save()
+        return {'armourRoll': armour_roll, 'injuryRoll': injury_roll, 
+                'sentOff': sent_off}
     elif step_type == 'knockDown':
         # A player knocked over
         player = find_player(match, data)
@@ -292,22 +355,26 @@ def roll_block_dice(n_dice):
     return {"nDice": n_dice,
         "dice": [block_dice_dict[num] for num in result_num["dice"]]}
 
-def roll_armour_dice(player):
+def roll_armour_dice(player, modifier=0):
     dice = roll_dice(6, 2)
-    total = sum(dice['dice'])
-    success = (total > player.player.av)
-    return {'dice': dice, 'total': total, 'success': success}
+    raw_result = sum(dice['dice'])
+    modified_result = raw_result + modifier
+    success = (modified_result > player.player.av)
+    return {'dice': dice, 'rawResult': raw_result, 
+            'modifiedResult': modified_result, 'success': success}
 
-def roll_injury_dice():
+def roll_injury_dice(modifier=0):
     dice = roll_dice(6, 2)
-    total = sum(dice['dice'])
-    if total <= 7:
+    raw_result = sum(dice['dice'])
+    modified_result = raw_result + modifier
+    if modified_result <= 7:
         result = 'stunned'
-    elif total <= 9:
+    elif modified_result <= 9:
         result = 'knockedOut'
     else:
         result = 'casualty'
-    return {'dice': dice, 'total': total, 'result': result}
+    return {'dice': dice, 'rawResult': raw_result, 
+            'modifiedResult': modified_result, 'result': result}
 
 def roll_agility_dice(player, modifier=0):
     dice = roll_dice(6, 1)
@@ -325,6 +392,9 @@ def roll_agility_dice(player, modifier=0):
 def roll_dice(n_sides, n_dice):
     return {"nDice": n_dice,
         "dice": [random.randint(1, n_sides) for i in range(n_dice)]}
+
+def is_double(dice):
+    return dice['dice'][0] == dice['dice'][1]
 
 def find_pass_range(delta_x, delta_y):
     if ((delta_x <= 1 and delta_y <= 3) or

@@ -81,6 +81,7 @@ class PlayerInGame(models.Model):
     on_pitch = models.BooleanField(default=False)
     knocked_out = models.BooleanField(default=False)
     casualty = models.BooleanField(default=False)
+    sent_off = models.BooleanField(default=False)
 
     def as_dict(self, side):
         result_dict = {
@@ -95,6 +96,7 @@ class PlayerInGame(models.Model):
             'onPitch': self.on_pitch,
             'knockedOut': self.knocked_out,
             'casualty': self.casualty,
+            'sentOff': self.sent_off,
             'skills': self.player.skills.split(','),
         }
         return result_dict
