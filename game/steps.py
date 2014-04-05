@@ -38,7 +38,7 @@ def resolve(match, step_type, data):
             match.x_ball = data['x1']
             match.y_ball = data['y1']
             match.save()
-        if step_type == 'push' and bool(data['offPitch']):
+        if step_type == 'push' and data['offPitch'] == 'true':
             player.on_pitch = False
             injury_roll = roll_injury_dice()
             if injury_roll['result'] == 'knockedOut':
@@ -67,16 +67,39 @@ def resolve(match, step_type, data):
         defending_player = PlayerInGame.objects.get(
             match=match, player__team=defending_team,
             player__number=defending_num)
+        attack_st = attacking_player.player.st
+        for player in PlayerInGame.objects.filter(
+            match=match, player__team=attacking_team,
+            xpos__gt=(defending_player.xpos-2),
+            xpos__lt=(defending_player.xpos+2),
+            ypos__gt=(defending_player.ypos-2),
+            ypos__lt=(defending_player.ypos+2),
+            on_pitch=True, down=False):
+            if player != attacking_player and n_tackle_zones(player) == 1:
+                attack_st += 1
+        defence_st = defending_player.player.st
+        for player in PlayerInGame.objects.filter(
+            match=match, player__team=defending_team,
+            xpos__gt=(attacking_player.xpos-2),
+            xpos__lt=(attacking_player.xpos+2),
+            ypos__gt=(attacking_player.ypos-2),
+            ypos__lt=(attacking_player.ypos+2),
+            on_pitch=True, down=False):
+            if player != defending_player and n_tackle_zones(player) == 1:
+                defence_st += 1
         n_dice = 1
-        if attacking_player.player.st > (2 * defending_player.player.st):
+        if attack_st > (2 * defence_st):
             n_dice = 3
-        elif attacking_player.player.st > defending_player.player.st:
+        elif attack_st > defence_st:
             n_dice = 2
-        elif (2 * attacking_player.player.st) < defending_player.player.st:
+        elif (2 * attack_st) < defence_st:
             n_dice = 3
-        elif attacking_player.player.st < defending_player.player.st:
+        elif attack_st < defence_st:
             n_dice = 2
-        return roll_block_dice(n_dice)
+        result = roll_block_dice(n_dice)
+        result['attackSt'] = attack_st
+        result['defenceSt'] = defence_st
+        return result
     elif step_type == 'knockDown':
         # A player knocked over
         player = find_player(match, data)

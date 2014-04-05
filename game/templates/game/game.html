@@ -269,8 +269,6 @@ var svg = d3.select("body").append("svg")
 
 // Make the pitch
 var clickPitch = function(d) {
-    console.log("clicked on pitch")
-    console.log(d)
     if (selected != null) {
         step = defineStep(d.xpos, d.ypos);
         addStepToStack(step);
@@ -336,7 +334,6 @@ appendButton(svg, nSquaresX * squareSize + 2 * margin, margin, "End Turn", endTu
 // Action selectors
 var selectedAction = null;
 var selectAction = function(d) {
-    console.log("Selecting action: " + d.action)
     selectedAction = d.action;
     d3.selectAll(".action").classed("selected", false);
     d3.select("#" + d.action + "Button").classed("selected", true);
@@ -522,7 +519,6 @@ var processBlock = function(step) {
 }
 
 var processPush = function(step) {
-    console.log("In processPush: ", step)
     // Check if they're being pushed into someone else
     var nextPlayer = playerInPos(step.x1, step.y1);
     // Move the player object
@@ -684,7 +680,6 @@ var postProcessStep = function(step, result) {
         }
         break;
     case "knockDown":
-        console.log(result);
         var player = findPlayer(step.side, step.num);
         if (result.armourRoll.success) {
             if (result.injuryRoll.result == "stunned") {
@@ -906,7 +901,7 @@ var defineKnockDown = function(step, dice, victim) {
         newStep.side = step.side;
     }
     var player = findPlayer(newStep.side, newStep.num);
-    if ((step.dice == "bothDown" && hasSkill(player, "Block")) || (step.dice == "defenderStumbles" && hasSkill(player, "Dodge")) || !onPitch(player)) {
+    if ((dice == "bothDown" && hasSkill(player, "Block")) || (dice == "defenderStumbles" && hasSkill(player, "Dodge")) || !player.onPitch) {
         // Avoid a Both Down result with the block skill, or a Defender Stumbles with the dodge skill. Do nothing if the player has been pushed off the pitch.
         return null;
     } else {
@@ -915,7 +910,6 @@ var defineKnockDown = function(step, dice, victim) {
 }
 
 var definePush = function(lastStep) {
-    console.log("In definePush: ", lastStep);
     var step = {};
     step.stepType = "push";
     step.action = lastStep.action;
@@ -925,7 +919,6 @@ var definePush = function(lastStep) {
     step.y0 = lastStep.y0;
     step.x1 = lastStep.x1;
     step.y1 = lastStep.y1;
-    console.log("Result of definePush: ", step);
     return step
 }
 
@@ -990,7 +983,6 @@ var defineThrowin = function(lastX, lastY) {
 }
 
 var selectPush = function(step) {
-    console.log("In selectPush: ", step)
     var squares = new Array;
     var xB = step.x1 + (step.x1 - step.x0);
     var yB = step.y1 + (step.y1 - step.y0);
