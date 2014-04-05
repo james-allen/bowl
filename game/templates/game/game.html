@@ -508,14 +508,13 @@ var processMove = function(step) {
     }
     // Tell the server
     postStep(step);
-    if (!player.hasBall && ballInPos(step.x1, step.y1)) {
-        // Automatically attempt to pick up the ball
-        var nextStep = definePickUp(player);
-        stepStack[0] = nextStep;
-    } else {
-        stepStack.shift();    
+    if (!step.dodge) {
+        var data1 = {};
+        data1.step = step;
+        data1.result = {"success": true};
+        var data = {"data": data1};
+        postProcessMove(data);
     }
-    processNextStep();
 }
 
 var processBlock = function(step) {
@@ -697,6 +696,11 @@ var postStep = function(step) {
 var postProcessStep = function(step, result) {
     var stepType = (step.stepType == "reroll") ? step.rerollStepType : step.stepType;
     switch (stepType) {
+    case "move":
+        if (step.dodge) {
+            confirmResult(step, result, "Dodge", postProcessMove);
+        }
+        break;
     case "block":
         if (step.selectedDice == null) {
             var message = "Which block dice would you like to use?";
@@ -719,6 +723,8 @@ var postProcessStep = function(step, result) {
         }
         if (player.hasBall) {
             player.hasBall = false;
+        }
+        if (ballInPos(player.xpos, player.ypos)) {
             var nextStep = defineScatter(1);
             stepStack[0] = nextStep;
         } else {
@@ -840,6 +846,25 @@ var postProcessPass = function(data) {
     processNextStep();
 }
 
+var postProcessMove = function(data) {
+    var step = data.data.step;
+    var result = data.data.result;
+    var player = playerInPos(step.x1, step.y1);
+    if (result.success) {
+        if (!player.hasBall && ballInPos(step.x1, step.y1)) {
+            // Automatically attempt to pick up the ball
+            var nextStep = definePickUp(player);
+            stepStack[0] = nextStep;
+        } else {
+            stepStack.shift();    
+        }
+    } else {
+        var nextStep = defineFall(player);
+        stepStack[0] = nextStep;
+    }
+    processNextStep();
+}
+
 var restoreTo = function(restorePosition) {
     console.log("Restoring to " + restorePosition);
     var position;
@@ -893,6 +918,7 @@ var defineStep = function(xpos, ypos) {
     case "move":
         if (playerInPos(xpos, ypos) == null && isAdjacent(xpos, ypos, selected.xpos, selected.ypos)) {
             step.stepType = "move";
+            step.dodge = (nTackleZones(selected) > 0);
         } else {
             step = null;
         }
@@ -996,6 +1022,15 @@ var defineKnockDown = function(step, dice, victim) {
     } else {
         return newStep;
     }
+}
+
+var defineFall = function(player) {
+    var step = {};
+    step.action = selectedAction;
+    step.stepType = "knockDown";
+    step.num = player.num;
+    step.side = player.side;
+    return step;
 }
 
 var definePush = function(lastStep) {
@@ -1397,6 +1432,16 @@ var hasSkill = function(player, skill) {
 
 var onPitch = function(xpos, ypos) {
     return (0 <= xpos && xpos < 26 && 0 <= ypos && ypos < 15);
+}
+
+var nTackleZones = function(player) {
+    var n = 0;
+    for (var i = 0; i < players.length; i++) {
+        if (isAdjacent(player.xpos, player.ypos, players[i].xpos, players[i].ypos) && player.side != players[i].side && players[i].onPitch && !players[i].down) {
+            n += 1;
+        }
+    }
+    return n;
 }
 
 </script>

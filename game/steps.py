@@ -30,8 +30,8 @@ def resolve(match, step_type, data):
             return {}
         player = find_player(match, data)
         # Update the player's position in the database
-        player.xpos = data['x1']
-        player.ypos = data['y1']
+        player.xpos = int(data['x1'])
+        player.ypos = int(data['y1'])
         player.save()
         if player.has_ball:
             # Move the ball too
@@ -47,8 +47,11 @@ def resolve(match, step_type, data):
                 player.casualty = True
             player.save()
             result = {'injuryRoll': injury_roll}
+        elif step_type == 'move' and data['dodge'] == 'true':
+            modifier = 1 - n_tackle_zones(player)
+            result = roll_agility_dice(player, modifier=modifier)
         else:
-            result = {}
+            result = {'success': True}
         return result
     elif step_type == 'block':
         # A block step
