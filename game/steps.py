@@ -13,6 +13,10 @@ def find_player(match, data):
         match=match, player__team=team, player__number=num)
     return player
 
+def set_action(player, action):
+    player.action = action
+    player.save()
+
 def resolve(match, step_type, data):
     if step_type == 'reroll':
         if data['rerollType'] == 'team':
@@ -29,6 +33,7 @@ def resolve(match, step_type, data):
         if step_type == 'followUp' and data['choice'] == 'false':
             return {}
         player = find_player(match, data)
+        set_action(player, data['action'])
         # Update the player's position in the database
         player.xpos = int(data['x1'])
         player.ypos = int(data['y1'])
@@ -68,6 +73,7 @@ def resolve(match, step_type, data):
         attacking_player = PlayerInGame.objects.get(
             match=match, player__team=attacking_team, 
             player__number=attacking_num)
+        set_action(attacking_player, data['action'])
         defending_player = PlayerInGame.objects.get(
             match=match, player__team=defending_team,
             player__number=defending_num)
@@ -121,6 +127,7 @@ def resolve(match, step_type, data):
         attacking_player = PlayerInGame.objects.get(
             match=match, player__team=attacking_team, 
             player__number=attacking_num)
+        set_action(attacking_player, data['action'])
         defending_player = PlayerInGame.objects.get(
             match=match, player__team=defending_team,
             player__number=defending_num)
@@ -199,6 +206,7 @@ def resolve(match, step_type, data):
     elif step_type == 'standUp':
         # A player standing up
         player = find_player(match, data)
+        set_action(player, data['action'])
         player.move_left -= 3
         if player.player.ma < 3:
             dice = roll_dice(6, 1)
@@ -260,6 +268,7 @@ def resolve(match, step_type, data):
     elif step_type == 'pass':
         # Pass the ball
         player = find_player(match, data)
+        set_action(player, data['action'])
         delta_x = abs(int(data['x1']) - int(data['x0']))
         delta_y = abs(int(data['y1']) - int(data['y0']))
         pass_range = find_pass_range(delta_x, delta_y)
@@ -289,6 +298,8 @@ def resolve(match, step_type, data):
     elif step_type == 'handOff':
         # Hand-Off the ball to an adjacent player
         # Always successful
+        player = find_player(match, data)
+        set_action(player, data['action'])
         match.x_ball = int(data['x1'])
         match.y_ball = int(data['y1'])
         match.save()
@@ -348,6 +359,7 @@ def resolve(match, step_type, data):
         match.save()
         for player in PlayerInGame.objects.filter(match=match):
             player.move_left = player.ma
+            player.action = ''
             player.save()
         return {}
 

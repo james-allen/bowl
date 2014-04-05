@@ -331,6 +331,7 @@ var endTurn = function(d) {
     matchData.awayRerollUsedThisTurn = false;
     for (var i = 0; i < players.length; i++) {
         players[i].moveLeft = players[i].ma;
+        players[i].action = "";
     }
     postStep(step);
 }
@@ -339,9 +340,12 @@ appendButton(svg, nSquaresX * squareSize + 2 * margin, margin, "End Turn", endTu
 // Action selectors
 var selectedAction = null;
 var selectAction = function(d) {
-    selectedAction = d.action;
-    d3.selectAll(".action").classed("selected", false);
-    d3.select("#" + d.action + "Button").classed("selected", true);
+    var thisButton = d3.select("#" + d.action + "Button");
+    if (!thisButton.classed("inactive")) {
+        selectedAction = d.action;
+        d3.selectAll(".action").classed("selected", false);
+        thisButton.classed("selected", true);
+    }
 }
 var selectorData = [
     {label: "Move", action: "move"},
@@ -358,6 +362,21 @@ var g = svg.selectAll("g.action")
     .attr("class", "action")
     .attr("id", function(d) { return d.action + "Button"; })
 appendButton(g, nSquaresX * squareSize + 2 * margin, function(d, i) { return margin + (2.0+1.3*i)*buttonHeight; }, function(d) { return d.label; }, selectAction);
+
+var setAction = function(player, action) {
+    if (player != null) {
+        player.action = action;
+    }
+    if (action == "") {
+        selectedAction = null;
+        svg.selectAll("g.action").classed("inactive", false);
+    } else {
+        selectedAction = action;
+        svg.selectAll("g.action").classed("inactive", true).classed("selected", false);
+        svg.select("#" + action + "Button").classed("inactive", false).classed("selected", true);
+    }
+    return;
+}
 
 // Extra buttons
 var g = svg.append("g")
@@ -400,6 +419,7 @@ var clickPlayer = function(d) {
             d3.selectAll("circle").classed("selected", false);
             d3.select(this).classed("selected", true);
             d3.select("#standUpButton").classed("inactive", selected.stunned || !(selected.down))
+            setAction(null, selected.action);
         }
     }
 }
@@ -445,6 +465,7 @@ for (var index = 0; index < players.length; index++) {
 var clearSelection = function() {
     selected = null;
     d3.select("circle.selected").classed("selected", false);
+    setAction(null, "");
 }
 
 var processNextStep = function() {
@@ -456,6 +477,8 @@ var processNextStep = function() {
 var processStep = function(step) {
     console.log("Processing step: ", step);
     if (step != null) {
+        if (selected.action == "");
+        setAction(selected, selectedAction);
         var stepType = (step.stepType == "reroll") ? step.rerollStepType : step.stepType;
         switch (stepType) {
         case "move":
