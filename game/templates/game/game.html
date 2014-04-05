@@ -292,7 +292,7 @@ var svg = d3.select("body").append("svg")
 
 // Make the pitch
 var clickPitch = function(d) {
-    if (selected != null) {
+    if (selected != null && stepStack.length == 0) {
         var stepArray = defineStep(d.xpos, d.ypos);
         for (var i =0; i < stepArray.length; i++) {
             addStepToStack(stepArray[i]);
@@ -438,7 +438,7 @@ var clickPlayer = function(d) {
             var thisPlayer = playerWithId(this.id);
             stepArray = defineStep(thisPlayer.xpos, thisPlayer.ypos);
         }
-        if (stepArray.length > 0) {
+        if (stepArray.length > 0 && stepStack.length == 0) {
             // Valid step involving this player (block, pass...)
             for (var i = 0; i < stepArray.length; i++) {
                 addStepToStack(stepArray[i]);
