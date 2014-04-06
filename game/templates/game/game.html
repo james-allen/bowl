@@ -348,23 +348,9 @@ var endTurn = function(d) {
         "stepType": "endTurn",
         "action": "endTurn",
         "oldSide": currentSide(),
+        "turnover": false
     }
-    clearSelection();
-    matchData.homeRerollUsedThisTurn = false;
-    matchData.awayRerollUsedThisTurn = false;
-    for (var i = 0; i < players.length; i++) {
-        players[i].moveLeft = players[i].ma;
-        players[i].action = "";
-        players[i].finishedAction = false;
-        if (players[i].side == currentSide() && players[i].stunned && !players[i].stunnedThisTurn) {
-            players[i].stunned = false;
-            d3.select("#"+player_id(players[i])+"stunned").data([]).exit().remove();
-            createKnockDownSymbol(players[i].xpos, players[i].ypos, false)
-        }
-        players[i].stunnedThisTurn = false;
-        svg.selectAll("circle").classed("finishedAction", false);
-    }
-    postStep(step);
+    addStepToStack(step);
 }
 appendButton(svg, nSquaresX * squareSize + 2 * margin, margin, "End Turn", endTurn);
 
@@ -578,6 +564,8 @@ var processStep = function(step) {
         case "goForIt":
             processGoForIt(step);
             break;
+        case "endTurn":
+            processEndTurn(step);
         }
     }
 }
@@ -756,6 +744,29 @@ var processGoForIt = function(step) {
     postStep(step);
 }
 
+var processEndTurn = function(step) {
+    clearSelection();
+    matchData.homeRerollUsedThisTurn = false;
+    matchData.awayRerollUsedThisTurn = false;
+    for (var i = 0; i < players.length; i++) {
+        players[i].moveLeft = players[i].ma;
+        players[i].action = "";
+        players[i].finishedAction = false;
+        if (players[i].side == currentSide() && players[i].stunned && !players[i].stunnedThisTurn) {
+            players[i].stunned = false;
+            d3.select("#"+player_id(players[i])+"stunned").data([]).exit().remove();
+            createKnockDownSymbol(players[i].xpos, players[i].ypos, false)
+        }
+        players[i].stunnedThisTurn = false;
+        svg.selectAll("circle").classed("finishedAction", false);
+    }
+    if (step.turnover) {
+        displayMessage("Turnover!", null, function(d){postStep(step);});
+    } else {
+        postStep(step);
+    }
+}
+
 var removeFromPitch = function(player, reason) {
     player.onPitch = false;
     d3.select("#"+player_id(player)).data([]).exit().remove();
@@ -911,6 +922,9 @@ var postProcessStep = function(step, result) {
         break;
     case "goForIt":
         confirmResult(step, result, null, postProcessGoForIt);
+        break;
+    case "endTurn":
+        stepStack = [];
     }
 }
 
