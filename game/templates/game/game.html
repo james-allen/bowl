@@ -517,7 +517,7 @@ var processNextStep = function() {
 var processStep = function(step) {
     console.log("Processing step: ", step);
     if (step != null) {
-        if (selected.action == "") {
+        if (selected != null && selected.action == "") {
             setAction(selected, selectedAction);
         }
         var stepType = (step.stepType == "reroll") ? step.rerollStepType : step.stepType;
@@ -654,6 +654,9 @@ var processPush = function(step) {
     } else if (player.hasBall && step.offPitch) {
         var nextStep = defineThrowin(step.x0, step.y0);
         stepStack[0] = nextStep;
+        if (player.side == currentSide()) {
+            addStepToStack(defineTurnover());
+        }
     } else {
         stepStack.shift();    
     }
@@ -738,7 +741,7 @@ var processHandOff = function(step) {
     moveBall(step.x1, step.y1);
     postStep(step);
     var receivingPlayer = playerInPos(step.x1, step.y1);
-    var nextStep = defineCatch(receivingPlayer, true);
+    var nextStep = defineCatch(receivingPlayer, true, true);
     stepStack[0] = nextStep;
     processNextStep();
 }
@@ -946,12 +949,13 @@ var postProcessPickUp = function(data) {
 }
 
 var postProcessCatch = function(data) {
+    var step = data.data.step;
     if (data.data.result.success) {
-        var player = findPlayer(data.data.step.side, data.data.step.num);
+        var player = findPlayer(step.side, step.num);
         player.hasBall = true;
         stepStack.shift();
     } else {
-        var nextStep = defineScatter(1);
+        var nextStep = defineScatter(1, false, step.potentialTurnover);
         stepStack[0] = nextStep;
     }
     processNextStep();
@@ -967,16 +971,16 @@ var postProcessPass = function(data) {
         moveBall(result.x1, result.y1);
         var receivingPlayer = playerInPos(result.x1, result.y1);
         if (receivingPlayer != null) {
-            nextStep = defineCatch(receivingPlayer, true);
+            nextStep = defineCatch(receivingPlayer, true, true);
         } else {
-            nextStep = defineScatter(1);
+            nextStep = defineScatter(1, false, true);
         }
     } else if (result.fumble) {
         nextStep = defineScatter(1);
         addStepToStack(defineTurnover());
     } else {
         moveBall(result.x1, result.y1);
-        nextStep = defineScatter(3, true);
+        nextStep = defineScatter(3, true, true);
     }
     stepStack[0] = nextStep;
     processNextStep();
@@ -1326,8 +1330,9 @@ var definePickUp = function(player) {
     return step;
 }
 
-var defineScatter = function(nScatter, bounceAgain) {
+var defineScatter = function(nScatter, bounceAgain, potentialTurnover) {
     bounceAgain = (typeof bounceAgain === "undefined") ? false : bounceAgain;
+    potentialTurnover = (typeof potentialTurnover === "undefined") ? false: potentialTurnover;
     var step = {};
     step.stepType = "scatter";
     step.action = selectedAction;
@@ -1335,10 +1340,11 @@ var defineScatter = function(nScatter, bounceAgain) {
     step.y0 = matchData.yBall;
     step.nScatter = nScatter;
     step.bounceAgain = bounceAgain;
+    step.potentialTurnover = potentialTurnover
     return step;
 }
 
-var defineCatch = function(player, accurate) {
+var defineCatch = function(player, accurate, potentialTurnover) {
     var step = {};
     step.stepType = "catch";
     step.side = player.side;
@@ -1347,16 +1353,19 @@ var defineCatch = function(player, accurate) {
     step.ypos = player.ypos;
     step.accurate = accurate;
     step.action = selectedAction;
+    step.potentialTurnover = potentialTurnover;
     return step;
 }
 
-var defineThrowin = function(lastX, lastY) {
+var defineThrowin = function(lastX, lastY, potentialTurnover) {
+    potentialTurnover = (typeof potentialTurnover === "undefined") ? false: potentialTurnover;
     var step = {};
     step.stepType = "throwin";
     step.lastX = lastX;
     step.lastY = lastY;
     step.bounceAgain = true;
     step.action = selectedAction;
+    step.potentialTurnover = potentialTurnover;
     return step;
 }
 
@@ -1604,18 +1613,21 @@ var scatterBall = function(step, result) {
     var ypos = result.y1;
     moveBall(xpos, ypos);
     if (!onPitch(xpos, ypos)) {
-        var nextStep = defineThrowin(result.lastX, result.lastY);
+        var nextStep = defineThrowin(result.lastX, result.lastY, step.potentialTurnover);
         stepStack[0] = nextStep;
     } else {
         var player = playerInPos(xpos, ypos);
         if (player != null) {
-            var nextStep = defineCatch(player, false);
+            var nextStep = defineCatch(player, false, step.potentialTurnover);
             stepStack[0] = nextStep;
         } else {
             if (step.bounceAgain) {
-                var nextStep = defineScatter(1, false);
+                var nextStep = defineScatter(1, false, step.potentialTurnover);
                 stepStack[0] = nextStep;
             } else {
+                if (step.potentialTurnover) {
+                    addStepToStack(defineTurnover());
+                }
                 stepStack.shift()
             }
         }
