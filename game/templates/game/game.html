@@ -347,7 +347,7 @@ var endTurn = function(d) {
     var step = {
         "stepType": "endTurn",
         "action": "endTurn",
-        "oldSide": currentSide(),
+        "oldSide": matchData.currentSide,
         "turnover": false
     }
     addStepToStack(step);
@@ -566,6 +566,7 @@ var processStep = function(step) {
             break;
         case "endTurn":
             processEndTurn(step);
+            break;
         }
     }
 }
@@ -654,7 +655,7 @@ var processPush = function(step) {
     } else if (player.hasBall && step.offPitch) {
         var nextStep = defineThrowin(step.x0, step.y0);
         stepStack[0] = nextStep;
-        if (player.side == currentSide()) {
+        if (isTurn(player)) {
             addStepToStack(defineTurnover());
         }
     } else {
@@ -686,7 +687,7 @@ var processKnockDown = function(step) {
     if (player.onPitch) {
         player.down = true;
         createKnockDownSymbol(player.xpos, player.ypos, false);
-        if (player.side == currentSide()) {
+        if (isTurn(player)) {
             addStepToStack(defineTurnover());
         }
         postStep(step);
@@ -754,11 +755,12 @@ var processEndTurn = function(step) {
     clearSelection();
     matchData.homeRerollUsedThisTurn = false;
     matchData.awayRerollUsedThisTurn = false;
+    matchData.currentSide = otherSide(matchData.currentSide);
     for (var i = 0; i < players.length; i++) {
         players[i].moveLeft = players[i].ma;
         players[i].action = "";
         players[i].finishedAction = false;
-        if (players[i].side == currentSide() && players[i].stunned && !players[i].stunnedThisTurn) {
+        if (isTurn(players[i]) && players[i].stunned && !players[i].stunnedThisTurn) {
             players[i].stunned = false;
             d3.select("#"+player_id(players[i])+"stunned").data([]).exit().remove();
             createKnockDownSymbol(players[i].xpos, players[i].ypos, false)
@@ -1081,19 +1083,19 @@ var restoreTo = function(restorePosition) {
 }
 
 var isTurn = function(player) {
-    return player.side == currentSide();
+    return player.side == matchData.currentSide;
 }
 
-var currentSide = function() {
-    // Check through the history to see which side's turn started most recently
-    for (var index = history.length-1; index >= 0; index--) {
-        if (history[index].stepType == "endTurn") {
-            return otherSide(history[index].oldSide);
-        }
-    }
-    // Check which side kicked off first
-    return matchData.firstKickingTeam;
-}
+// var currentSide = function() {
+//     // Check through the history to see which side's turn started most recently
+//     for (var index = history.length-1; index >= 0; index--) {
+//         if (history[index].stepType == "endTurn") {
+//             return otherSide(history[index].oldSide);
+//         }
+//     }
+//     // Check which side kicked off first
+//     return matchData.firstKickingTeam;
+// }
 
 var usedSkillThisTurn = function(player, skill) {
     // Check to see if a particular skill has been used by the player this turn.
@@ -1373,7 +1375,7 @@ var defineTurnover = function() {
     var step = {
         stepType: "endTurn",
         action: "endTurn",
-        oldSide: currentSide(),
+        oldSide: matchData.currentSide,
         turnover: true
     };
     return step;

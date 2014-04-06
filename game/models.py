@@ -43,7 +43,11 @@ class Player(models.Model):
 class Match(models.Model):
     home_team = models.ForeignKey(Team, related_name='home_match')
     away_team = models.ForeignKey(Team, related_name='away_match')
-    turn = models.IntegerField(default=0)
+    home_score = models.IntegerField(default=0)
+    away_score = models.IntegerField(default=0)
+    turn_number = models.IntegerField(default=0)
+    turn_type = models.CharField(max_length=12, default='placePlayers')
+    current_side = models.CharField(max_length=4)
     first_kicking_team = models.CharField(max_length=4)
     x_ball = models.IntegerField(null=True, default=None)
     y_ball = models.IntegerField(null=True, default=None)
@@ -57,7 +61,11 @@ class Match(models.Model):
             'id': self.id,
             'homeTeam': self.home_team.name,
             'awayTeam': self.away_team.name,
-            'turn': self.turn,
+            'homeScore': self.home_score,
+            'awayScore': self.away_score,
+            'turnNumber': self.turn_number,
+            'turnType': self.turn_type,
+            'currentSide': self.current_side,
             'firstKickingTeam': self.first_kicking_team,
             'xBall': self.x_ball,
             'yBall': self.y_ball,
@@ -67,6 +75,14 @@ class Match(models.Model):
             'awayRerollUsedThisTurn': self.away_reroll_used_this_turn,
         }
         return result_dict
+
+    def team(self, side):
+        if side == 'home':
+            return self.home_team
+        elif side == 'away':
+            return self.away_team
+        else:
+            raise ValueError('Unrecognised side: ' + side)
         
 
 class PlayerInGame(models.Model):

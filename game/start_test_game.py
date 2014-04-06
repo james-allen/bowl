@@ -16,7 +16,7 @@ def start():
     match = Match(
         home_team=reavers, away_team=raiders, first_kicking_team='home', 
         x_ball=3, y_ball=1, home_rerolls=reavers.rerolls, 
-        away_rerolls=raiders.rerolls)
+        away_rerolls=raiders.rerolls, current_side='home')
     match.save()
     xpos = 0
     ypos = 0

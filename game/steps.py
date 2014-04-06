@@ -15,22 +15,15 @@ def find_player(match, data):
 
 def finish_last_action(match):
     active_steps = ['move', 'block', 'standUp', 'pass', 'foul', 'handOff']
-    print('defined active steps')
     step_set = Step.objects.filter(match=match).order_by('-history_position')
-    print('defined step set')
     for step in step_set:
-        print('checking step', step.history_position)
         if step is step_set[0]:
-            print('the current step, discarding')
             continue
         if step.step_type == 'endTurn':
-            print('end of turn, done')
             return
         if step.step_type in active_steps:
-            print('active step!')
             print(step.as_dict())
             player = find_player(match, step.as_dict())
-            print('found player')
             player.finished_action = True
             player.save()
 
@@ -390,12 +383,13 @@ def resolve(match, step_type, data):
     elif step_type == 'endTurn':
         match.home_reroll_used_this_turn = False;
         match.away_reroll_used_this_turn = False;
+        match.current_side = other_side(match.current_side)
         match.save()
         for player in PlayerInGame.objects.filter(match=match):
             player.move_left = player.ma
             player.action = ''
             player.finished_action = False
-            if (player.player.team == current_team(match) 
+            if (player.player.team == match.team(match.current_side)
                 and player.stunned and not player.stunned_this_turn):
                 player.stunned = False
             player.stunned_this_turn = False
@@ -503,21 +497,29 @@ def find_pass_range(delta_x, delta_y):
 def on_pitch(xpos, ypos):
     return 0 <= xpos < 26 and 0 <= ypos < 15
 
-def current_team(match):
-    step_set = Step.objects.filter(match=match).order_by('-history_position')
-    for step in step_set:
-        if step.step_type == 'endTurn':
-            if step.as_dict()['oldSide'] == 'home':
-                side = 'away'
-            else:
-                side = 'home'
-            break
-    else:
-        side = match.first_kicking_team
+def other_side(side):
     if side == 'home':
-        return match.home_team
+        return 'away'
+    elif side == 'away':
+        return 'home'
     else:
-        return match.away_team
+        raise ValueError('Unrecognised side: ' + side)
+
+# def current_team(match):
+#     step_set = Step.objects.filter(match=match).order_by('-history_position')
+#     for step in step_set:
+#         if step.step_type == 'endTurn':
+#             if step.as_dict()['oldSide'] == 'home':
+#                 side = 'away'
+#             else:
+#                 side = 'home'
+#             break
+#     else:
+#         side = match.first_kicking_team
+#     if side == 'home':
+#         return match.home_team
+#     else:
+#         return match.away_team
 
 
 
