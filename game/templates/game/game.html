@@ -28,7 +28,7 @@ circle.selected
     stroke: #BBFFBB;
     stroke-width: 1;
 }
-.pitch.gridOption
+.pitch .gridOption
 {
     stroke: #FF0000;
     stroke-width: 4;
@@ -270,7 +270,7 @@ var moveLine = function(id, deltaX, deltaY) {
         .x(function(d) { return d.x; })
         .y(function(d) { return d.y; })
         .interpolate("linear");
-    path.transition().attr("d", line);    
+    path.transition().attr("d", line);
 }
 
 var standUp = function() {
@@ -305,12 +305,12 @@ for (var xIndex = 0; xIndex < nSquaresX; xIndex++) {
         coords[yIndex*nSquaresX + xIndex] = {"xpos": xIndex, "ypos": yIndex};
     }
 }
-var pitch = svg.selectAll("rect.pitch").data(coords).enter().append("rect")
+var pitch = svg.append("g").attr("class", "pitch")
+    .selectAll("rect.pitch").data(coords).enter().append("rect")
     .attr("x", function(d) { return d.xpos*squareSize + margin; })
     .attr("y", function(d) { return d.ypos*squareSize + margin; })
     .attr("width", squareSize)
     .attr("height", squareSize)
-    .attr("class", "pitch")
     .attr("id", gridId)
 pitch.on("click", clickPitch)
 
@@ -358,10 +358,11 @@ appendButton(svg, nSquaresX * squareSize + 2 * margin, margin, "End Turn", endTu
 var selectedAction = null;
 var selectAction = function(d) {
     var thisButton = d3.select("#" + d.action + "Button");
-    if (!thisButton.classed("inactive")) {
+    if (!thisButton.classed("inactive") && selected != null) {
         selectedAction = d.action;
         d3.selectAll(".action").classed("selected", false);
         thisButton.classed("selected", true);
+        d3.select("#standUpButton").classed("inactive", d.action == "block" || selected.stunned || !(selected.down));
     }
 }
 var selectorData = [
@@ -457,7 +458,7 @@ var selectPlayer = function(player) {
     selected = player;
     d3.selectAll("circle").classed("selected", false);
     d3.select("#" + player_id(player)).classed("selected", true);
-    d3.select("#standUpButton").classed("inactive", selected.stunned || !(selected.down))
+    d3.select("#standUpButton").classed("inactive", true);
     setAction(null, selected.action);
 }
 
@@ -699,7 +700,7 @@ var processKnockDown = function(step) {
 }
 
 var processStandUp = function(step) {
-    var player = playerInPos(step.x0, step.y0);
+    var player = findPlayer(step.side, step.num);
     player.moveLeft -= 3;
     if (player.moveLeft <= -2) {
         finishAction(player);
@@ -934,6 +935,8 @@ var postProcessStep = function(step, result) {
         break;
     case "endTurn":
         stepStack = [];
+        setAction(null, "");
+        break;
     }
 }
 
