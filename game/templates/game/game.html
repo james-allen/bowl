@@ -683,7 +683,10 @@ var processKnockDown = function(step) {
     if (player.onPitch) {
         player.down = true;
         createKnockDownSymbol(player.xpos, player.ypos, false);
-        postStep(step);        
+        if (player.side == currentSide()) {
+            addStepToStack(defineTurnover());
+        }
+        postStep(step);
     } else {
         // The player must have just been pushed off the pitch
         stepStack.shift();
@@ -891,7 +894,6 @@ var postProcessStep = function(step, result) {
         }
         break;
     case "foul":
-        stepStack.shift();
         if (result.armourRoll.success) {
             var victim = playerInPos(step.x1, step.y1);
             if (result.injuryRoll.result == "stunned") {
@@ -908,6 +910,7 @@ var postProcessStep = function(step, result) {
             var player = findPlayer(step.side, step.num);
             removeFromPitch(player, "sentOff");
             player.sentOff = true;
+            addStepToStack(defineTurnover());
         }
         var message = "Armour roll: ";
         if (result.armourRoll.success) {
@@ -918,7 +921,8 @@ var postProcessStep = function(step, result) {
         if (result.sentOff) {
             message = message + "<br/>Sent off!";
         }
-        displayMessage(message, null, function(d) {processNextStep;});
+        stepStack.shift();
+        displayMessage(message, null, function(d) {processNextStep();});
         break;
     case "goForIt":
         confirmResult(step, result, null, postProcessGoForIt);
@@ -936,6 +940,7 @@ var postProcessPickUp = function(data) {
     } else {
         var nextStep = defineScatter(1);
         stepStack[0] = nextStep;
+        addStepToStack(defineTurnover());
     }
     processNextStep();
 }
@@ -968,6 +973,7 @@ var postProcessPass = function(data) {
         }
     } else if (result.fumble) {
         nextStep = defineScatter(1);
+        addStepToStack(defineTurnover());
     } else {
         moveBall(result.x1, result.y1);
         nextStep = defineScatter(3, true);
@@ -1351,6 +1357,16 @@ var defineThrowin = function(lastX, lastY) {
     step.lastY = lastY;
     step.bounceAgain = true;
     step.action = selectedAction;
+    return step;
+}
+
+var defineTurnover = function() {
+    var step = {
+        stepType: "endTurn",
+        action: "endTurn",
+        oldSide: currentSide(),
+        turnover: true
+    };
     return step;
 }
 
