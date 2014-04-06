@@ -411,7 +411,6 @@ def roll_armour_dice(player, modifier=0):
     raw_result = sum(dice['dice'])
     modified_result = raw_result + modifier
     success = (modified_result > player.player.av)
-    success = True
     return {'dice': dice, 'rawResult': raw_result, 
             'modifiedResult': modified_result, 'success': success}
 
@@ -425,7 +424,6 @@ def roll_injury_dice(modifier=0):
         result = 'knockedOut'
     else:
         result = 'casualty'
-    result = 'stunned'
     return {'dice': dice, 'rawResult': raw_result, 
             'modifiedResult': modified_result, 'result': result}
 

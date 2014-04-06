@@ -815,7 +815,7 @@ var postProcessStep = function(step, result) {
             var message = "Which block dice would you like to use?";
             var teamReroll = (teamRerollAvailable(step.side) && step.stepType != "reroll") ? "active" : "inactive";
             var data = {"step": step, "result": result}
-            selectFromOptions(result.dice, message, data, blockDice, teamReroll, false, false);
+            selectFromOptions(result.dice, message, data, blockDice, teamReroll, false, false, null);
         }
         break;
     case "knockDown":
@@ -1053,6 +1053,19 @@ var currentSide = function() {
     }
     // Check which side kicked off first
     return matchData.firstKickingTeam;
+}
+
+var usedSkillThisTurn = function(player, skill) {
+    // Check to see if a particular skill has been used by the player this turn.
+    for (var index = history.length-1; index >= 0; index--) {
+        if (history[index].stepType == "endTurn") {
+            return false;
+        }
+        if (history[index].stepType == "reroll" && history[index].rerollType == "skill" && history[index].rerollSkill == skill) {
+            return true;
+        }
+    }
+    return false;
 }
 
 var isAdjacent = function(xpos_0, ypos_0, xpos_1, ypos_1) {
@@ -1377,36 +1390,36 @@ var confirmResult = function(step, result, rerollSkill, callback) {
         var player = findPlayer(step.side, step.num);
         teamReroll = (teamRerollAvailable(step.side) && step.stepType != "reroll") ? "active" : "inactive";
         if (rerollSkill != null) {
-            skillReroll = (hasSkill(player, rerollSkill) && step.stepType != "reroll") ? "active" : "inactive";        
+            skillReroll = (hasSkill(player, rerollSkill) && step.stepType != "reroll" && !(rerollSkill == "Dodge" && usedSkillThisTurn(player, rerollSkill))) ? "active" : "inactive";        
         } else {
             skillReroll = false;
         }
         proReroll = false;
     }
-    selectFromOptions(["OK"], message, data, callback, teamReroll, skillReroll, proReroll);
+    selectFromOptions(["OK"], message, data, callback, teamReroll, skillReroll, proReroll, rerollSkill);
 }
 
 var selectFollowUp = function(step) {
     var message = "Do you want to follow up?"
-    selectFromOptions(["Yes", "No"], message, step, followUp, false, false, false);
+    selectFromOptions(["Yes", "No"], message, step, followUp, false, false, false, null);
 }
 
 var displayMessage = function(message, data, callback) {
-    selectFromOptions(["OK"], message, data, callback, false, false, false);
+    selectFromOptions(["OK"], message, data, callback, false, false, false, null);
 }
 
-var selectFromOptions = function(options, message, data, callback, teamReroll, skillReroll, proReroll) {
+var selectFromOptions = function(options, message, data, callback, teamReroll, skillReroll, proReroll, rerollSkill) {
     var selectOption = function(d) {
         if (d.inactive) { return; }
         svg.selectAll("rect.optionsWindow").style("visibility", "hidden");
         svg.selectAll("text.optionsText").style("visibility", "hidden");
         svg.selectAll("g.option").data([]).exit().remove();
         if (d.option == "Use team re-roll") {
-            reroll(d, "team");
+            reroll(d, "team", null);
         } else if (d.option == "Use skill re-roll") {
-            reroll(d, "skill");
+            reroll(d, "skill", rerollSkill);
         } else if (d.option == "Use Pro re-roll") {
-            reroll(d, "pro");
+            reroll(d, "pro", null);
         } else {
             callback(d);            
         }
@@ -1577,11 +1590,14 @@ var teamRerollAvailable = function(side) {
     return available;
 }
 
-var reroll = function(data, rerollType) {
+var reroll = function(data, rerollType, rerollSkill) {
     var step = $.extend({}, data.data.step);
     step.rerollStepType = step.stepType;
     step.stepType = "reroll";
     step.rerollType = rerollType;
+    if (rerollType == "skill") {
+        step.rerollSkill = rerollSkill;
+    }
     step.historyPosition = null;
     if (rerollType == "team") {
         if (step.side == "home") {
