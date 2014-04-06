@@ -379,12 +379,12 @@ var selectAction = function(d) {
     }
 }
 var selectorData = [
-    {label: "Move", action: "move"},
-    {label: "Block", action: "block"},
-    {label: "Blitz", action: "blitz"},
-    {label: "Pass", action: "pass"},
-    {label: "Hand-off", action: "handOff"},
-    {label: "Foul", action: "foul"}
+    {label: "Move", action: "move", singular: false},
+    {label: "Block", action: "block", singular: false},
+    {label: "Blitz", action: "blitz", singular: true},
+    {label: "Pass", action: "pass", singular: true},
+    {label: "Hand-off", action: "handOff", singular: true},
+    {label: "Foul", action: "foul", singular: true}
 ];
 var g = svg.selectAll("g.action")
     .data(selectorData)
@@ -400,7 +400,7 @@ var setAction = function(player, action) {
     }
     if (action == "") {
         selectedAction = null;
-        svg.selectAll("g.action").classed("inactive", false).classed("selected", false);
+        svg.selectAll("g.action").classed("inactive", function(d){return (d.singular && usedActionThisTurn(d.action));}).classed("selected", false);
     } else {
         selectedAction = action;
         svg.selectAll("g.action").classed("inactive", true).classed("selected", false);
@@ -1068,6 +1068,19 @@ var usedSkillThisTurn = function(player, skill) {
     return false;
 }
 
+var usedActionThisTurn = function(action) {
+    // Check to see if a particular action has been used this turn.
+    for (var index = history.length-1; index >= 0; index--) {
+        if (history[index].stepType == "endTurn") {
+            return false;
+        }
+        if (history[index].action == action) {
+            return true;
+        }
+    }
+    return false;
+}
+
 var isAdjacent = function(xpos_0, ypos_0, xpos_1, ypos_1) {
     return (Math.abs(xpos_0 - xpos_1) <= 1 && Math.abs(ypos_0 - ypos_1) <= 1)
 }
@@ -1634,6 +1647,8 @@ var nTackleZones = function(player) {
     }
     return n;
 }
+
+setAction(null, "");
 
 </script>
 </body>
