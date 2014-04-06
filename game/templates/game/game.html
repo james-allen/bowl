@@ -356,6 +356,12 @@ var endTurn = function(d) {
         players[i].moveLeft = players[i].ma;
         players[i].action = "";
         players[i].finishedAction = false;
+        if (players[i].side == currentSide() && players[i].stunned && !players[i].stunnedThisTurn) {
+            players[i].stunned = false;
+            d3.select("#"+player_id(players[i])+"stunned").data([]).exit().remove();
+            createKnockDownSymbol(players[i].xpos, players[i].ypos, false)
+        }
+        players[i].stunnedThisTurn = false;
         svg.selectAll("circle").classed("finishedAction", false);
     }
     postStep(step);
@@ -863,6 +869,7 @@ var postProcessStep = function(step, result) {
             var victim = playerInPos(step.x1, step.y1);
             if (result.injuryRoll.result == "stunned") {
                 victim.stunned = true;
+                victim.stunnedThisTurn = true;
                 d3.select("#"+player_id(victim)+"knockDown")
                     .data([]).exit().remove();
                 createKnockDownSymbol(victim.xpos, victim.ypos, true);
@@ -965,6 +972,7 @@ var postProcessKnockDown = function(data) {
     if (result.armourRoll.success) {
         if (result.injuryRoll.result == "stunned") {
             player.stunned = true;
+            player.stunnedThisTurn = true;
             d3.select("#"+player_id(player)+"knockDown")
                 .data([]).exit().remove();
             createKnockDownSymbol(player.xpos, player.ypos, true);

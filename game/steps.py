@@ -1,4 +1,4 @@
-from game.models import PlayerInGame
+from game.models import PlayerInGame, Step
 
 import random
 
@@ -160,6 +160,7 @@ def resolve(match, step_type, data):
             injury_roll = roll_injury_dice()
             if injury_roll['result'] == 'stunned':
                 defending_player.stunned = True
+                defending_player.stunned_this_turn = True
             elif injury_roll['result'] == 'knockedOut':
                 defending_player.knocked_out = True
                 defending_player.on_pitch = False
@@ -195,6 +196,7 @@ def resolve(match, step_type, data):
             injury_roll = roll_injury_dice()
             if injury_roll['result'] == 'stunned':
                 player.stunned = True
+                player.stunned_this_turn = True
             elif injury_roll['result'] == 'knockedOut':
                 player.knocked_out = True
                 player.on_pitch = False
@@ -371,6 +373,10 @@ def resolve(match, step_type, data):
             player.move_left = player.ma
             player.action = ''
             player.finished_action = False
+            if (player.player.team == current_team(match) 
+                and player.stunned and not player.stunned_this_turn):
+                player.stunned = False
+            player.stunned_this_turn = False
             player.save()
         return {}
 
@@ -405,6 +411,7 @@ def roll_armour_dice(player, modifier=0):
     raw_result = sum(dice['dice'])
     modified_result = raw_result + modifier
     success = (modified_result > player.player.av)
+    success = True
     return {'dice': dice, 'rawResult': raw_result, 
             'modifiedResult': modified_result, 'success': success}
 
@@ -418,6 +425,7 @@ def roll_injury_dice(modifier=0):
         result = 'knockedOut'
     else:
         result = 'casualty'
+    result = 'stunned'
     return {'dice': dice, 'rawResult': raw_result, 
             'modifiedResult': modified_result, 'result': result}
 
@@ -474,5 +482,22 @@ def find_pass_range(delta_x, delta_y):
 
 def on_pitch(xpos, ypos):
     return 0 <= xpos < 26 and 0 <= ypos < 15
+
+def current_team(match):
+    step_set = Step.objects.filter(match=match).order_by('-history_position')
+    for step in step_set:
+        if step.step_type == 'endTurn':
+            if step.as_dict()['oldSide'] == 'home':
+                side = 'away'
+            else:
+                side = 'home'
+            break
+    else:
+        side = match.first_kicking_team
+    if side == 'home':
+        return match.home_team
+    else:
+        return match.away_team
+
 
 

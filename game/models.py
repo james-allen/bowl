@@ -84,6 +84,7 @@ class PlayerInGame(models.Model):
     finished_action = models.BooleanField(default=False)
     down = models.BooleanField(default=False)
     stunned = models.BooleanField(default=False)
+    stunned_this_turn = models.BooleanField(default=False)
     has_ball = models.BooleanField(default=False)
     on_pitch = models.BooleanField(default=False)
     knocked_out = models.BooleanField(default=False)
@@ -105,6 +106,7 @@ class PlayerInGame(models.Model):
             'finishedAction': self.finished_action,
             'down': self.down,
             'stunned': self.stunned,
+            'stunnedThisTurn': self.stunned_this_turn,
             'hasBall': self.has_ball,
             'onPitch': self.on_pitch,
             'knockedOut': self.knocked_out,
