@@ -13,9 +13,31 @@ def find_player(match, data):
         match=match, player__team=team, player__number=num)
     return player
 
+def finish_last_action(match):
+    active_steps = ['move', 'block', 'standUp', 'pass', 'foul', 'handOff']
+    print('defined active steps')
+    step_set = Step.objects.filter(match=match).order_by('-history_position')
+    print('defined step set')
+    for step in step_set:
+        print('checking step', step.history_position)
+        if step is step_set[0]:
+            print('the current step, discarding')
+            continue
+        if step.step_type == 'endTurn':
+            print('end of turn, done')
+            return
+        if step.step_type in active_steps:
+            print('active step!')
+            print(step.as_dict())
+            player = find_player(match, step.as_dict())
+            print('found player')
+            player.finished_action = True
+            player.save()
+
 def set_action(player, action):
     player.action = action
     player.save()
+    finish_last_action(player.match)
 
 def resolve(match, step_type, data):
     if step_type == 'reroll':
