@@ -285,6 +285,80 @@ var standUp = function() {
     }
 }
 
+var defineButtonData = function(turnType) {
+    var buttonData;
+    if (turnType == "normal") {
+        buttonData = [
+            {label: "End Turn",
+             data: null,
+             func: endTurn,
+             cl: "",
+             id: "endTurnButton",
+             group: 0},
+            {label: "Move",
+             data: {action: "move", singular: false},
+             func: selectAction,
+             cl: "action",
+             id: "moveButton",
+             group: 1},
+            {label: "Block",
+             data: {action: "block", singular: false},
+             func: selectAction,
+             cl: "action",
+             id: "blockButton",
+             group: 1},
+            {label: "Blitz",
+             data: {action: "blitz", singular: true},
+             func: selectAction,
+             cl: "action",
+             id: "blitzButton",
+             group: 1},
+            {label: "Pass",
+             data: {action: "pass", singular: true},
+             func: selectAction,
+             cl: "action",
+             id: "passButton",
+             group: 1},
+            {label: "Hand-off",
+             data: {action: "handOff", singular: true},
+             func: selectAction,
+             cl: "action",
+             id: "handOffButton",
+             group: 1},
+            {label: "Foul",
+             data: {action: "foul", singular: true},
+             func: selectAction,
+             cl: "action",
+             id: "foulButton",
+             group: 1}
+        ];
+    }
+    return buttonData;
+}
+
+var refreshButtonColumn = function() {
+    var g = svg.selectAll("g.buttonColumn").data(viewData.buttonData);
+    var newButton = g.enter()
+        .append("g")
+        .attr("class", function(d) {return d.cl;})
+        .attr("id", function(d) {return d.id;})
+        .classed("buttonColumn", true)
+    newButton.append("rect")
+        .attr("x", nSquaresX * squareSize + 2*margin)
+        .attr("y", function(d, i) {return (1+i+2*d.group)*margin + i*buttonHeight;})
+        .attr("width", buttonWidth)
+        .attr("height", buttonHeight)
+        .classed("button", true)
+        .on("click", function(d) {d.func(d.data);})
+    newButton.append("text")
+        .attr("x", nSquaresX * squareSize + 2*margin + 0.5*buttonWidth)
+        .attr("y", function(d, i) {return (1+i+2*d.group)*margin + (i+0.5)*buttonHeight;})
+        .classed("buttonText", true)
+        .text(function(d) {return d.label;})
+        .on("click", function(d) {d.func(d.data);});
+    g.exit().remove();
+}
+
 // Make the SVG container
 var svg = d3.select("body").append("svg")
     .attr("width", width)
@@ -352,7 +426,7 @@ var endTurn = function(d) {
     }
     addStepToStack(step);
 }
-appendButton(svg, nSquaresX * squareSize + 2 * margin, margin, "End Turn", endTurn);
+// appendButton(svg, nSquaresX * squareSize + 2 * margin, margin, "End Turn", endTurn);
 
 // Action selectors
 var selectedAction = null;
@@ -373,13 +447,13 @@ var selectorData = [
     {label: "Hand-off", action: "handOff", singular: true},
     {label: "Foul", action: "foul", singular: true}
 ];
-var g = svg.selectAll("g.action")
-    .data(selectorData)
-    .enter()
-    .append("g")
-    .attr("class", "action")
-    .attr("id", function(d) { return d.action + "Button"; })
-appendButton(g, nSquaresX * squareSize + 2 * margin, function(d, i) { return margin + (2.0+1.3*i)*buttonHeight; }, function(d) { return d.label; }, selectAction);
+// var g = svg.selectAll("g.action")
+//     .data(selectorData)
+//     .enter()
+//     .append("g")
+//     .attr("class", "action")
+//     .attr("id", function(d) { return d.action + "Button"; })
+// appendButton(g, nSquaresX * squareSize + 2 * margin, function(d, i) { return margin + (2.0+1.3*i)*buttonHeight; }, function(d) { return d.label; }, selectAction);
 
 var finishLastAction = function() {
     var player = lastActivePlayer();
@@ -410,10 +484,10 @@ var finishAction = function(player) {
 }
 
 // Extra buttons
-var g = svg.append("g")
-    .attr("id", "standUpButton")
-g.classed("inactive", true);
-appendButton(g, nSquaresX * squareSize + 2 * margin, margin + (3.0+1.3*selectorData.length)*buttonHeight, "Stand Up", standUp);
+// var g = svg.append("g")
+//     .attr("id", "standUpButton")
+// g.classed("inactive", true);
+// appendButton(g, nSquaresX * squareSize + 2 * margin, margin + (3.0+1.3*selectorData.length)*buttonHeight, "Stand Up", standUp);
 
 // Make a background for selecting options
 var optionsWindow = svg.append("rect")
@@ -1727,6 +1801,12 @@ var nTackleZones = function(player) {
     }
     return n;
 }
+
+console.log("About to do the buttons")
+viewData.buttonData = defineButtonData("normal");
+console.log("Defined the button data")
+refreshButtonColumn();
+console.log("Made the buttons")
 
 selectPlayer(lastActivePlayer());
 
