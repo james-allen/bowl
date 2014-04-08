@@ -282,6 +282,7 @@ var standUp = function() {
             "num": selected.num
         }
         addStepToStack(step);
+        d3.select("#standUpButton").classed("inactive", true);
     }
 }
 
@@ -359,6 +360,21 @@ var refreshButtonColumn = function() {
     g.exit().remove();
 }
 
+var addButtonToColumn = function(buttonData) {
+    viewData.buttonData[viewData.buttonData.length] = buttonData;
+    refreshButtonColumn();
+}
+
+var removeButtonFromColumn = function(id) {
+    for (var i = 0; i < viewData.buttonData.length; i++) {
+        if (viewData.buttonData[i].id == id) {
+            viewData.buttonData.splice(i, 1);
+            break;
+        }
+    }
+    refreshButtonColumn();
+}
+
 // Make the SVG container
 var svg = d3.select("body").append("svg")
     .attr("width", width)
@@ -388,33 +404,6 @@ var pitch = svg.append("g").attr("class", "pitch")
     .attr("id", gridId)
 pitch.on("click", clickPitch)
 
-var appendButton = function(svgItem, x, y, text, func) {
-    svgItem.append("rect")
-        .attr("x", x)
-        .attr("y", y)
-        .attr("width", buttonWidth)
-        .attr("height", buttonHeight)
-        .classed("button", true)
-        .on("click", func);
-    var xText, yText;
-    if (typeof(x) == "function") {
-        xText = function(d, i) { return x(d, i) + 0.5 * buttonWidth; };
-    } else {
-        xText = x + 0.5 * buttonWidth;
-    }
-    if (typeof(y) == "function") {
-        yText = function(d, i) { return y(d, i) + 0.5 * buttonHeight; };
-    } else {
-        yText = y + 0.5 * buttonHeight;
-    }
-    svgItem.append("text")
-        .attr("x", xText)
-        .attr("y", yText)
-        .classed("buttonText", true)
-        .text(text)
-        .on("click", func);
-}
-
 // Make the control buttons
 // End Turn
 var endTurn = function(d) {
@@ -426,7 +415,6 @@ var endTurn = function(d) {
     }
     addStepToStack(step);
 }
-// appendButton(svg, nSquaresX * squareSize + 2 * margin, margin, "End Turn", endTurn);
 
 // Action selectors
 var selectedAction = null;
@@ -439,21 +427,6 @@ var selectAction = function(d) {
         d3.select("#standUpButton").classed("inactive", d.action == "block" || selected.stunned || !(selected.down));
     }
 }
-var selectorData = [
-    {label: "Move", action: "move", singular: false},
-    {label: "Block", action: "block", singular: false},
-    {label: "Blitz", action: "blitz", singular: true},
-    {label: "Pass", action: "pass", singular: true},
-    {label: "Hand-off", action: "handOff", singular: true},
-    {label: "Foul", action: "foul", singular: true}
-];
-// var g = svg.selectAll("g.action")
-//     .data(selectorData)
-//     .enter()
-//     .append("g")
-//     .attr("class", "action")
-//     .attr("id", function(d) { return d.action + "Button"; })
-// appendButton(g, nSquaresX * squareSize + 2 * margin, function(d, i) { return margin + (2.0+1.3*i)*buttonHeight; }, function(d) { return d.label; }, selectAction);
 
 var finishLastAction = function() {
     var player = lastActivePlayer();
@@ -482,12 +455,6 @@ var finishAction = function(player) {
     player.finishedAction = true;
     svg.select("#" + player_id(player)).classed("finishedAction", true);
 }
-
-// Extra buttons
-// var g = svg.append("g")
-//     .attr("id", "standUpButton")
-// g.classed("inactive", true);
-// appendButton(g, nSquaresX * squareSize + 2 * margin, margin + (3.0+1.3*selectorData.length)*buttonHeight, "Stand Up", standUp);
 
 // Make a background for selecting options
 var optionsWindow = svg.append("rect")
@@ -532,7 +499,21 @@ var selectPlayer = function(player) {
     selected = player;
     d3.selectAll("circle").classed("selected", false);
     d3.select("#" + player_id(player)).classed("selected", true);
-    d3.select("#standUpButton").classed("inactive", true);
+    if (player.down) {
+        if (d3.select("#standUpButton")[0][0] == null) {
+            addButtonToColumn({
+                label: "Stand Up",
+                data: null,
+                func: standUp,
+                cl: "",
+                id: "standUpButton",
+                group: 2
+            });
+            d3.select("#standUpButton").classed("inactive", true);
+        }
+    } else {
+        removeButtonFromColumn("standUpButton");
+    }
     setAction(null, selected.action);
 }
 
