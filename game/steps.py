@@ -395,6 +395,17 @@ def resolve(match, step_type, data):
             player.stunned_this_turn = False
             player.save()
         return {}
+    elif step_type == 'placeBall':
+        match.x_ball = int(data['x1'])
+        match.y_ball = int(data['y1'])
+        match.save()
+        return {}
+    elif step_type == 'placePlayer':
+        player = find_player(match, data)
+        player.xpos = int(data['x1'])
+        player.ypos = int(data['y1'])
+        player.save()
+        return {}
 
 def n_tackle_zones(player):
     opponents = PlayerInGame.objects.filter(

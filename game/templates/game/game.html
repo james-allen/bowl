@@ -333,6 +333,24 @@ var defineButtonData = function(turnType) {
              id: "foulButton",
              group: 1}
         ];
+    } else if (turnType == "placeBall") {
+        buttonData = [
+            {label: "Submit",
+             data: {},
+             func: submitBallPosition,
+             cl: "",
+             id: "submitButton",
+             group: 0}
+        ];
+    } else if (turnType == "placePlayers") {
+        buttonData = [
+            {label: "Submit",
+             data: {},
+             func: submitPlayerPosition,
+             cl: "",
+             id: "submitButton",
+             group: 0}
+        ];
     }
     return buttonData;
 }
@@ -382,7 +400,7 @@ var svg = d3.select("body").append("svg")
 
 // Make the pitch
 var clickPitch = function(d) {
-    if (selected != null && stepStack.length == 0) {
+    if (stepStack.length == 0) {
         var stepArray = defineStep(d.xpos, d.ypos);
         for (var i =0; i < stepArray.length; i++) {
             addStepToStack(stepArray[i]);
@@ -436,6 +454,9 @@ var finishLastAction = function() {
 }
 
 var setAction = function(player, action) {
+    if (matchData.turnType == "placeBall" || matchData.turnType == "placePlayers") {
+        return;
+    }
     if (player != null) {
         player.action = action;
         finishLastAction();
@@ -622,6 +643,12 @@ var processStep = function(step) {
             break;
         case "endTurn":
             processEndTurn(step);
+            break;
+        case "placeBall":
+            processPlaceBall(step);
+            break;
+        case "placePlayer":
+            processPlacePlayer(step);
             break;
         }
     }
@@ -829,6 +856,26 @@ var processEndTurn = function(step) {
     } else {
         postStep(step);
     }
+}
+
+var processPlaceBall = function(step) {
+    moveBall(step.x1, step.y1);
+    postStep(step);
+    stepStack.shift();
+    processNextStep();
+}
+
+var processPlacePlayer = function(step) {
+    var player = findPlayer(step.side, step.num);
+    player.xpos = step.x1;
+    player.ypos = step.y1;
+    d3.select('#'+player_id(player))
+        .transition()
+        .attr("cx", cx)
+        .attr("cy", cy)
+        postStep(step);
+    stepStack.shift();
+    processNextStep();    
 }
 
 var removeFromPitch = function(player, reason) {
@@ -1203,7 +1250,7 @@ var isAdjacent = function(xpos_0, ypos_0, xpos_1, ypos_1) {
 }
 
 var defineStep = function(xpos, ypos) {
-    if (selected == null || selected.finishedAction || selected.down) {
+    if (matchData.turnType != "placeBall" && (selected == null || selected.finishedAction || selected.down)) {
         return [];
     }
     var step = {};
@@ -1300,6 +1347,18 @@ var defineStep = function(xpos, ypos) {
             step = null;
         }
         break;
+    case "placeBall":
+        // Need to put in a test that the ball is in the correct half
+        step.stepType = "placeBall";
+        break;
+    case "placePlayer":
+        // Need to put in a test that the player is in the correct half
+        if (playerInPos(xpos, ypos) == null) {
+            step.stepType = "placePlayer";            
+        } else {
+            step = null;
+        }
+        break;
     default:
         step = null;
     }
@@ -1311,10 +1370,12 @@ var defineStep = function(xpos, ypos) {
         stepArray[stepArray.length] = step;
         for (var i = 0; i < stepArray.length; i++) {
             stepArray[i].action = selectedAction;
-            stepArray[i].side = selected.side;
-            stepArray[i].num = selected.num;
-            stepArray[i].x0 = selected.xpos;
-            stepArray[i].y0 = selected.ypos;
+            if (step.stepType != "placeBall") {
+                stepArray[i].side = selected.side;
+                stepArray[i].num = selected.num;
+                stepArray[i].x0 = selected.xpos;
+                stepArray[i].y0 = selected.ypos;
+            }
             stepArray[i].x1 = xpos;
             stepArray[i].y1 = ypos;            
         }
@@ -1783,13 +1844,20 @@ var nTackleZones = function(player) {
     return n;
 }
 
-console.log("About to do the buttons")
-viewData.buttonData = defineButtonData("normal");
-console.log("Defined the button data")
-refreshButtonColumn();
-console.log("Made the buttons")
+var submitPlayerPosition = function() {
+    return;
+}
 
-selectPlayer(lastActivePlayer());
+viewData.buttonData = defineButtonData(matchData.turnType);
+refreshButtonColumn();
+
+if (matchData.turnType == "normal") {
+    selectPlayer(lastActivePlayer());
+} else if (matchData.turnType == "placeBall") {
+    selectedAction = "placeBall";
+} else if (matchData.turnType == "placePlayers") {
+    selectedAction = "placePlayer";
+}
 
 </script>
 </body>
