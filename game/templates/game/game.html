@@ -497,7 +497,7 @@ var clickPlayer = function(d) {
         clearSelection()
     } else {
         var stepArray = [];
-        if (selected != null) {
+        if (selected != null || matchData.turnType == "placeBall") {
             var thisPlayer = playerWithId(this.id);
             stepArray = defineStep(thisPlayer.xpos, thisPlayer.ypos);
         }
@@ -1845,6 +1845,10 @@ var nTackleZones = function(player) {
 }
 
 var submitPlayerPosition = function() {
+    return;
+}
+
+var submitBallPosition = function() {
     return;
 }
 
