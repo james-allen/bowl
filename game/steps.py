@@ -406,6 +406,13 @@ def resolve(match, step_type, data):
         player.ypos = int(data['y1'])
         player.save()
         return {}
+    elif step_type == 'submitPlayers':
+        match.n_to_place -= 1
+        if match.n_to_place == 0:
+            match.turn_type = 'placeBall'
+        match.current_side = other_side(match.current_side)
+        match.save()
+        return {}
 
 def n_tackle_zones(player):
     opponents = PlayerInGame.objects.filter(

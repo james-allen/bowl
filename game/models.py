@@ -56,6 +56,8 @@ class Match(models.Model):
     away_rerolls = models.IntegerField(default=0)
     home_reroll_used_this_turn = models.BooleanField(default=False)
     away_reroll_used_this_turn = models.BooleanField(default=False)
+    n_to_place = models.IntegerField(default=0)
+    kicking_team = models.CharField(max_length=4)
 
     def as_dict(self):
         result_dict = {
@@ -75,6 +77,8 @@ class Match(models.Model):
             'awayRerolls': self.away_rerolls,
             'homeRerollUsedThisTurn': self.home_reroll_used_this_turn,
             'awayRerollUsedThisTurn': self.away_reroll_used_this_turn,
+            'nToPlace': self.n_to_place,
+            'kickingTeam': self.kicking_team,
         }
         return result_dict
 
@@ -105,24 +109,41 @@ def start_match(home_team, away_team, first_kicking_team=None,
         away_rerolls=away_team.rerolls,
         )
     match.save()
-    if home_first_direction == 'right':
+    for home_player in home_team.player_set.all():
+        create_pig(home_player, match=match, xpos=0, ypos=0,
+                   on_pitch=True).save()
+    for away_player in away_team.player_set.all():
+        create_pig(away_player, match=match, xpos=0, ypos=0,
+                   on_pitch=True).save()
+    set_kickoff(match, first_kicking_team)
+
+def set_kickoff(match, kicking_team):
+    """Set a kickoff for this match."""
+    if ((match.home_first_direction == 'right' and match.turn_number <= 8) or
+        (match.home_first_direction == 'left' and match.turn_number >= 9)):
         xpos_home = 0
         xpos_away = 25
     else:
         xpos_home = 25
         xpos_away = 0
-    ypos = 0
-    for home_player, away_player in zip(
-            home_team.player_set.all(), away_team.player_set.all()):
-        create_pig(
-            home_player, match=match, xpos=xpos_home, ypos=ypos,
-            on_pitch=True).save()
-        create_pig(
-            away_player, match=match, xpos=xpos_away, ypos=ypos,
-            on_pitch=True).save()
-        ypos += 1
-    return match
-        
+    ypos_home = 0
+    ypos_away = 0
+    for pig in match.playeringame_set.all():
+        if pig.player.team == match.home_team:
+            pig.xpos = xpos_home
+            pig.ypos = ypos_home
+            ypos_home += 1
+        else:
+            pig.xpos = xpos_away
+            pig.ypos = ypos_away
+            ypos_away += 1
+        pig.save()
+    match.n_to_place = 2
+    match.kicking_team = kicking_team
+    match.x_ball = None
+    match.y_ball = None
+    match.save()
+
 
 class PlayerInGame(models.Model):
     player = models.ForeignKey(Player)

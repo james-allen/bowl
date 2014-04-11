@@ -650,6 +650,12 @@ var processStep = function(step) {
         case "placePlayer":
             processPlacePlayer(step);
             break;
+        case "submitBall":
+            processSubmitBall(step);
+            break;
+        case "submitPlayers":
+            processSubmitPlayers(step);
+            break;
         }
     }
 }
@@ -876,6 +882,25 @@ var processPlacePlayer = function(step) {
         postStep(step);
     stepStack.shift();
     processNextStep();    
+}
+
+var processSubmitBall = function(step) {
+
+}
+
+var processSubmitPlayers = function(step) {
+    clearSelection();
+    matchData.nToPlace -= 1;
+    if (matchData.nToPlace == 0) {
+        matchData.turnType = "placeBall";
+        selectedAction = "placeBall";
+        viewData.buttonData = defineButtonData("placeBall");
+        refreshButtonColumn();
+    }
+    matchData.currentSide = otherSide(matchData.currentSide);
+    postStep(step);
+    stepStack = [];
+    return;
 }
 
 var removeFromPitch = function(player, reason) {
@@ -1354,7 +1379,17 @@ var defineStep = function(xpos, ypos) {
     case "placePlayer":
         // Need to put in a test that the player is in the correct half
         if (playerInPos(xpos, ypos) == null) {
-            step.stepType = "placePlayer";            
+            var expectedHalf;
+            if ((selected.side == "home" && matchData.turnNumber <= 8) || (player.side == "away" && matchData.turnNumber > 8)) {
+                expectedHalf = (matchData.homeFirstDirection == "right") ? "left" : "right";
+            } else {
+                expectedHalf = matchData.homeFirstDirection;
+            }
+            if ((expectedHalf == "left" && xpos < 13) || (expectedHalf == "right" && xpos >= 13)) {
+                step.stepType = "placePlayer";
+            } else {
+                step = null;
+            }
         } else {
             step = null;
         }
@@ -1845,10 +1880,50 @@ var nTackleZones = function(player) {
 }
 
 var submitPlayerPosition = function() {
+    var nScrimmage = 0;
+    var nWideUpper = 0;
+    var nWideLower = 0;
+    var nOnPitch = 0;
+    var nAvailable = 0;
+    var player;
+    for (var i = 0; i < players.length; i++) {
+        player = players[i];
+        if (player.side == matchData.currentSide && !player.knockedOut && !player.casualty && !player.sentOff) {
+            nAvailable += 1;
+            if (player.onPitch) {
+                nOnPitch += 1;
+                if (player.ypos <= 3) {
+                    nWideUpper += 1;
+                } else if (player.ypos >= 11) {
+                    nWideLower += 1;
+                } else if (player.xpos == 12 || player.xpos == 13) {
+                    nScrimmage += 1;
+                }
+            }
+        }
+    }
+    var message = null;
+    if (nOnPitch > 11) {
+        message = "No more than 11 players on the pitch!";
+    } else if (nScrimmage < 3 && nScrimmage < nAvailable) {
+        message = "At least " + Math.min(nAvailable, 3) + " players on the line of scrimmage!";
+    } else if (Math.max(nWideLower, nWideUpper) > 2) {
+        message = "No more than 2 players in each wide zone!";
+    }
+    if (message != null) {
+        displayMessage(message, null, function(){});
+    } else {
+        var step = {action: "placePlayers", stepType: "submitPlayers"};
+        addStepToStack(step);
+    }
     return;
 }
 
 var submitBallPosition = function() {
+    if (matchData.xBall != null && matchData.yBall != null) {
+        var step = {action: "placeBall", stepType: "submitBall"};
+        addStepToStack(step);
+    }
     return;
 }
 
