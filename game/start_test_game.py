@@ -1,4 +1,4 @@
-from game.models import Race, Team, Player, Match, PlayerInGame, create_pig
+from game.models import Race, Team, Player, Match, PlayerInGame, create_pig, start_match
 
 def start():
     # Make races
@@ -13,26 +13,30 @@ def start():
     raiders = Team(race=orc, name='Orcland Raiders')
     raiders.save()
     populate_orcs(raiders)
-    match = Match(
-        home_team=reavers, away_team=raiders, first_kicking_team='home', 
-        x_ball=3, y_ball=1, home_rerolls=reavers.rerolls, 
-        away_rerolls=raiders.rerolls, current_side='home')
-    match.save()
-    xpos = 0
-    ypos = 0
-    for player in reavers.player_set.all():
-        pig = create_pig(
-            player, match=match, xpos=xpos, ypos=ypos, on_pitch=True)
-        pig.save()
-        xpos += 1
-        ypos += 1
-    ypos = 0
-    for player in raiders.player_set.all():
-        pig = create_pig(
-            player, match=match, xpos=xpos, ypos=ypos, on_pitch=True)
-        pig.save()
-        xpos += 1
-        ypos += 1
+    match = start_match(reavers, raiders)
+    # match.save()
+    # match = Match(
+    #     home_team=reavers, away_team=raiders, first_kicking_team='home', 
+    #     x_ball=3, y_ball=1, home_rerolls=reavers.rerolls, 
+    #     away_rerolls=raiders.rerolls, current_side='home',
+    #     home_first_direction='right')
+    # match.save()
+    # xpos = 0
+    # ypos = 0
+    # for player in reavers.player_set.all():
+    #     pig = create_pig(
+    #         player, match=match, xpos=xpos, ypos=ypos, on_pitch=True)
+    #     pig.save()
+    #     xpos += 1
+    #     ypos += 1
+    # xpos = 13
+    # ypos = 0
+    # for player in raiders.player_set.all():
+    #     pig = create_pig(
+    #         player, match=match, xpos=xpos, ypos=ypos, on_pitch=True)
+    #     pig.save()
+    #     xpos += 1
+    #     ypos += 1
         
 
 def populate_humans(team):

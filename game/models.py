@@ -49,6 +49,7 @@ class Match(models.Model):
     turn_type = models.CharField(max_length=12, default='placePlayers')
     current_side = models.CharField(max_length=4)
     first_kicking_team = models.CharField(max_length=4)
+    home_first_direction = models.CharField(max_length=5)
     x_ball = models.IntegerField(null=True, default=None)
     y_ball = models.IntegerField(null=True, default=None)
     home_rerolls = models.IntegerField(default=0)
@@ -67,6 +68,7 @@ class Match(models.Model):
             'turnType': self.turn_type,
             'currentSide': self.current_side,
             'firstKickingTeam': self.first_kicking_team,
+            'homeFirstDirection': self.home_first_direction,
             'xBall': self.x_ball,
             'yBall': self.y_ball,
             'homeRerolls': self.home_rerolls,
@@ -83,6 +85,43 @@ class Match(models.Model):
             return self.away_team
         else:
             raise ValueError('Unrecognised side: ' + side)
+
+def start_match(home_team, away_team, first_kicking_team=None,
+                home_first_direction=None):
+    """Create a match between the two sides."""
+    if first_kicking_team is None:
+        # Replace this with a random selection
+        first_kicking_team = 'home'
+    if home_first_direction is None:
+        # Replace this with a random selection
+        home_first_direction = 'right'
+    match = Match(
+        home_team=home_team,
+        away_team=away_team,
+        current_side=first_kicking_team,
+        first_kicking_team=first_kicking_team,
+        home_first_direction=home_first_direction,
+        home_rerolls=home_team.rerolls,
+        away_rerolls=away_team.rerolls,
+        )
+    match.save()
+    if home_first_direction == 'right':
+        xpos_home = 0
+        xpos_away = 25
+    else:
+        xpos_home = 25
+        xpos_away = 0
+    ypos = 0
+    for home_player, away_player in zip(
+            home_team.player_set.all(), away_team.player_set.all()):
+        create_pig(
+            home_player, match=match, xpos=xpos_home, ypos=ypos,
+            on_pitch=True).save()
+        create_pig(
+            away_player, match=match, xpos=xpos_away, ypos=ypos,
+            on_pitch=True).save()
+        ypos += 1
+    return match
         
 
 class PlayerInGame(models.Model):
