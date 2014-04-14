@@ -22,7 +22,6 @@ def finish_last_action(match):
         if step.step_type == 'endTurn':
             return
         if step.step_type in active_steps:
-            print(step.as_dict())
             player = find_player(match, step.as_dict())
             player.finished_action = True
             player.save()
@@ -413,6 +412,48 @@ def resolve(match, step_type, data):
         match.current_side = other_side(match.current_side)
         match.save()
         return {}
+    elif step_type == 'submitBall':
+        distance_dice = roll_dice(6, 1)
+        distance = distance_dice['dice'][0]
+        direction_dice = roll_dice(8, 1)
+        direction = direction_dice['dice'][0]
+        x_ball = match.x_ball
+        y_ball = match.y_ball
+        if direction in [1, 4, 6]:
+            x_ball -= distance
+        elif direction in [3, 5, 8]:
+            x_ball += distance
+        if direction in [1, 2, 3]:
+            y_ball -= distance
+        elif direction in [6, 7, 8]:
+            y_ball += distance
+        if not on_pitch(x_ball, y_ball):
+            match.x_ball = None
+            match.y_ball = None
+            match.turn_type = 'touchback'
+            match.current_side = other_side(match.current_side)
+        else:
+            match.x_ball = x_ball
+            match.y_ball = y_ball
+        match.save()
+        return {'dice': direction_dice, 'direction': direction, 
+                'distanceDice': distance_dice, 'distance': distance,
+                'x1': x_ball, 'y1': y_ball}
+    elif step_type == 'touchback':
+        match.x_ball = int(data['x1'])
+        match.y_ball = int(data['y1'])
+        match.save()
+        player = find_player(match, data)
+        player.has_ball = True
+        player.save()
+        return {}
+    elif step_type == 'submitTouchback' or step_type == 'endKickoff':
+        match.turn_type = 'normal'
+        if data['touchback'] == 'false':
+            match.current_side = other_side(match.current_side)
+        match.save()
+        return {}
+
 
 def n_tackle_zones(player):
     opponents = PlayerInGame.objects.filter(

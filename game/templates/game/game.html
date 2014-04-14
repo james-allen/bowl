@@ -351,6 +351,15 @@ var defineButtonData = function(turnType) {
              id: "submitButton",
              group: 0}
         ];
+    } else if (turnType == "touchback") {
+        buttonData = [
+            {label: "Submit",
+             data: {},
+             func: submitTouchback,
+             cl: "",
+             id: "submitButton",
+             group: 0}
+        ];
     }
     return buttonData;
 }
@@ -497,7 +506,7 @@ var clickPlayer = function(d) {
         clearSelection()
     } else {
         var stepArray = [];
-        if (selected != null || matchData.turnType == "placeBall") {
+        if (selected != null || matchData.turnType == "placeBall" || matchData.turnType == "touchback") {
             var thisPlayer = playerWithId(this.id);
             stepArray = defineStep(thisPlayer.xpos, thisPlayer.ypos);
         }
@@ -655,6 +664,15 @@ var processStep = function(step) {
             break;
         case "submitPlayers":
             processSubmitPlayers(step);
+            break;
+        case "touchback":
+            processTouchback(step);
+            break;
+        case "submitTouchback":
+            processSubmitTouchback(step);
+            break;
+        case "endKickoff":
+            processEndKickoff(step);
             break;
         }
     }
@@ -885,7 +903,8 @@ var processPlacePlayer = function(step) {
 }
 
 var processSubmitBall = function(step) {
-
+    postStep(step);
+    return;
 }
 
 var processSubmitPlayers = function(step) {
@@ -901,6 +920,24 @@ var processSubmitPlayers = function(step) {
     postStep(step);
     stepStack = [];
     return;
+}
+
+var processTouchback = function(step) {
+    moveBall(step.x1, step.y1);
+    playerInPos(step.x1, step.y1).hasBall = true;
+    postStep(step);
+    stepStack.shift();
+    processNextStep();
+}
+
+var processSubmitTouchback = function(step) {
+    postStep(step);
+    stepStack = [];
+}
+
+var processEndKickoff = function(step) {
+    postStep(step);
+    stepStack = [];
 }
 
 var removeFromPitch = function(player, reason) {
@@ -1063,6 +1100,12 @@ var postProcessStep = function(step, result) {
     case "endTurn":
         stepStack = [];
         setAction(null, "");
+        break;
+    case "submitBall":
+        scatterBall(step, result);
+        break;
+    case "submitTouchback":
+        endKickoff(true);
         break;
     }
 }
@@ -1373,14 +1416,23 @@ var defineStep = function(xpos, ypos) {
         }
         break;
     case "placeBall":
-        // Need to put in a test that the ball is in the correct half
-        step.stepType = "placeBall";
+        var expectedHalf;
+        if ((matchData.kickingTeam == "home" && matchData.turnNumber <= 8) || (matchData.kickingTeam == "away" && matchData.turnNumber >= 9)) {
+            expectedHalf = matchData.homeFirstDirection;
+        } else {
+            expectedHalf = (matchData.homeFirstDirection == "right") ? "left" : "right";
+        }
+        if ((expectedHalf == "left" && xpos < 13) || (expectedHalf == "right" && xpos >= 13)) {
+            step.stepType = "placeBall";
+            step.bounceAgain = true;
+        } else {
+            step = null;
+        }
         break;
     case "placePlayer":
-        // Need to put in a test that the player is in the correct half
         if (playerInPos(xpos, ypos) == null) {
             var expectedHalf;
-            if ((selected.side == "home" && matchData.turnNumber <= 8) || (player.side == "away" && matchData.turnNumber > 8)) {
+            if ((selected.side == "home" && matchData.turnNumber <= 8) || (selected.side == "away" && matchData.turnNumber >= 9)) {
                 expectedHalf = (matchData.homeFirstDirection == "right") ? "left" : "right";
             } else {
                 expectedHalf = matchData.homeFirstDirection;
@@ -1394,6 +1446,15 @@ var defineStep = function(xpos, ypos) {
             step = null;
         }
         break;
+    case "touchback":
+        var player = playerInPos(xpos, ypos);
+        if (player != null && player.side == matchData.currentSide) {
+            step.stepType = "touchback";
+            step.side = player.side;
+            step.num = player.num;
+        } else {
+            step = null;
+        }
     default:
         step = null;
     }
@@ -1405,7 +1466,7 @@ var defineStep = function(xpos, ypos) {
         stepArray[stepArray.length] = step;
         for (var i = 0; i < stepArray.length; i++) {
             stepArray[i].action = selectedAction;
-            if (step.stepType != "placeBall") {
+            if (step.stepType != "placeBall" && step.stepType != "toucback") {
                 stepArray[i].side = selected.side;
                 stepArray[i].num = selected.num;
                 stepArray[i].x0 = selected.xpos;
@@ -1768,7 +1829,16 @@ var scatterBall = function(step, result) {
     var xpos = result.x1;
     var ypos = result.y1;
     moveBall(xpos, ypos);
-    if (!onPitch(xpos, ypos)) {
+    if (matchData.turnType == "placeBall" && (!onPitch(xpos, ypos) || (step.x0 < 13 && result.x1 >= 13) || (step.x0 >= 13 && result.x1 < 13))) {
+        matchData.turnType = "touchback";
+        selectedAction = "touchback";
+        matchData.currentSide = otherSide(matchData.currentSide);
+        matchData.xBall = null;
+        matchData.yBall = null;
+        displayMessage("Touchback!", null, function(){});
+        viewData.buttonData = defineButtonData("touchback");
+        refreshButtonColumn();
+    } else if (!onPitch(xpos, ypos)) {
         var nextStep = defineThrowin(result.lastX, result.lastY, step.potentialTurnover);
         stepStack[0] = nextStep;
     } else {
@@ -1780,6 +1850,8 @@ var scatterBall = function(step, result) {
             if (step.bounceAgain) {
                 var nextStep = defineScatter(1, false, step.potentialTurnover);
                 stepStack[0] = nextStep;
+            } else if (matchData.turnType == "placeBall") {
+                endKickoff(false);
             } else {
                 if (step.potentialTurnover) {
                     addStepToStack(defineTurnover());
@@ -1802,20 +1874,29 @@ var otherSide = function(side) {
     }
 }
 
-var moveBall = function(xpos, ypos) {
+var moveBall = function(xpos, ypos, destroy) {
+    destroy = (typeof destroy === "undefined") ? false : destroy;
+    var onPitch = (matchData.xBall != null && matchData.yBall != null);
     matchData.xBall = xpos;
     matchData.yBall = ypos;
-    var base;
-    if (viewData.nBallTransition > 0) {
-        base = viewData.ballTransition;
+    if (onPitch) {
+        var base;
+        if (viewData.nBallTransition > 0) {
+            base = viewData.ballTransition;
+        } else {
+            base = d3.select("#ball");
+        }
+        viewData.ballTransition = base.transition()
+            .attr("cx", cxBall())
+            .attr("cy", cyBall())
+            .each("end", function(){viewData.nBallTransition -= 1;});
+        viewData.nBallTransition += 1;
+        if (destroy) {
+            viewData.ballTransition.each("end", function(){d3.select("#ball").data([]).exit().remove();})
+        }
     } else {
-        base = d3.select("#ball");
+        drawBall();
     }
-    viewData.ballTransition = base.transition()
-        .attr("cx", cxBall())
-        .attr("cy", cyBall())
-        .each("end", function(){viewData.nBallTransition -= 1;});
-    viewData.nBallTransition += 1;
 }
 
 var inPassRange = function(xpos, ypos) {
@@ -1921,10 +2002,33 @@ var submitPlayerPosition = function() {
 
 var submitBallPosition = function() {
     if (matchData.xBall != null && matchData.yBall != null) {
-        var step = {action: "placeBall", stepType: "submitBall"};
+        var step = {action: "placeBall", stepType: "submitBall", x0: matchData.xBall, y0: matchData.yBall};
         addStepToStack(step);
     }
     return;
+}
+
+var submitTouchback = function() {
+    if (matchData.xBall != null && matchData.yBall != null) {
+        var step = {action: "touchback", stepType: "submitTouchback"};
+        addStepToStack(step);
+    }
+    return;
+}
+
+var endKickoff = function(touchback) {
+    stepStack = [];
+    matchData.turnType = "normal";
+    if (!touchback) {
+        matchData.currentSide = otherSide(matchData.currentSide);
+    }
+    viewData.buttonData = defineButtonData(matchData.turnType);
+    refreshButtonColumn();
+    processStep({
+        stepType: "endKickoff",
+        action: "endKickoff",
+        touchback: touchback
+    });
 }
 
 viewData.buttonData = defineButtonData(matchData.turnType);
