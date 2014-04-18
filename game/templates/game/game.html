@@ -551,19 +551,22 @@ var selectPlayer = function(player) {
 }
 
 // Make the circles that represent the players
-svg.selectAll("circle")
-    .data(playersOnPitch())
-    .enter()
-    .append("circle")
-    .attr("cx", cx)
-    .attr("cy", cy)
-    .attr("r", 0.5*squareSize)
-    .attr("class", function(d) {
-        return d.side
-    })
-    .attr("id", player_id)
-    .classed("selected", false)
-    .on("click", clickPlayer)
+var drawPlayers = function() {
+    svg.selectAll("circle")
+        .data(playersOnPitch())
+        .enter()
+        .append("circle")
+        .attr("cx", cx)
+        .attr("cy", cy)
+        .attr("r", 0.5*squareSize)
+        .attr("class", function(d) {
+            return d.side
+        })
+        .attr("id", player_id)
+        .classed("selected", false)
+        .on("click", clickPlayer)
+}
+drawPlayers();
 
 var drawBall = function() {
     svg.append("circle")
@@ -684,27 +687,12 @@ var processStep = function(step) {
 var processMove = function(step) {
     // Move the player object
     var player = findPlayer(step.side, step.num);
-    player.xpos = step.x1;
-    player.ypos = step.y1;
+    movePlayer(player, step.x1, step.y1);
     if (step.stepType == "move") {
         player.moveLeft -= 1;
         if (player.moveLeft == -2) {
             finishAction(player);
         }
-    }
-    // Move the circle on screen
-    d3.select('#'+player_id(player))
-        .transition()
-        .attr("cx", cx)
-        .attr("cy", cy)
-    if (player.hasBall) {
-        // Move the ball too
-        moveBall(step.x1, step.y1);
-    }
-    if (player.down) {
-        // Move their down/stunned symbol
-        var id = (player.stunned) ? player_id(player) + "stunned" : player_id(player) + "knockDown";
-        moveLine(id, squareSize * (step.x1 - step.x0), squareSize * (step.y1 - step.y0));
     }
     // Tell the server
     postStep(step);
@@ -735,22 +723,8 @@ var processPush = function(step) {
     var nextPlayer = playerInPos(step.x1, step.y1);
     // Move the player object
     var player = findPlayer(step.side, step.num);
-    player.xpos = step.x1;
-    player.ypos = step.y1;
-    var playerSymbol = d3.select("#" + player_id(player));
-    if (step.offPitch) {
-        playerSymbol = playerSymbol.data([]).exit();
-    }
-    // Move the circle on screen
-    var transition = playerSymbol.transition()
-        .attr("cx", cx)
-        .attr("cy", cy)
-    if (step.offPitch) {
-        transition.remove();
-    }
+    movePlayer(player, step.x1, step.y1, step.offPitch);
     if (player.hasBall) {
-        // Move the ball too
-        moveBall(step.x1, step.y1);
         var possibleTouchdown = true;
         for (var index = 0; index < stepStack.length; index++) {
             if (stepStack[index].stepType == "knockDown" && stepStack[index].side == player.side && stepStack[index].num == player.num) {
@@ -937,13 +911,8 @@ var processPlaceBall = function(step) {
 
 var processPlacePlayer = function(step) {
     var player = findPlayer(step.side, step.num);
-    player.xpos = step.x1;
-    player.ypos = step.y1;
-    d3.select('#'+player_id(player))
-        .transition()
-        .attr("cx", cx)
-        .attr("cy", cy)
-        postStep(step);
+    movePlayer(player, step.x1, step.y1);
+    postStep(step);
     stepStack.shift();
     processNextStep();    
 }
@@ -1292,12 +1261,7 @@ var restoreTo = function(restorePosition) {
                     break;
                 }
             }
-            player.xpos = step.x0;
-            player.ypos = step.y0;
-            d3.select("#"+player_id(player))
-                .transition()
-                .attr("cx", cx)
-                .attr("cy", cy)
+            movePlayer(player, step.x0, step.y0);
             break;
         }
         history.splice(-1, 1);
@@ -1307,17 +1271,6 @@ var restoreTo = function(restorePosition) {
 var isTurn = function(player) {
     return player.side == matchData.currentSide;
 }
-
-// var currentSide = function() {
-//     // Check through the history to see which side's turn started most recently
-//     for (var index = history.length-1; index >= 0; index--) {
-//         if (history[index].stepType == "endTurn") {
-//             return otherSide(history[index].oldSide);
-//         }
-//     }
-//     // Check which side kicked off first
-//     return matchData.firstKickingTeam;
-// }
 
 var usedSkillThisTurn = function(player, skill) {
     // Check to see if a particular skill has been used by the player this turn.
@@ -1962,6 +1915,44 @@ var moveBall = function(xpos, ypos, destroy) {
     }
 }
 
+var movePlayer = function(player, xpos, ypos, destroy) {
+    destroy = (typeof destroy === "undefined") ? false : destroy;
+    var x0 = player.xpos;
+    var y0 = player.ypos;
+    player.xpos = xpos;
+    player.ypos = ypos;
+    if (player.onPitch) {
+        var playerSymbol = d3.select("#" + player_id(player));
+        if (destroy) {
+            playerSymbol.data([]);
+        }
+        var transition = playerSymbol.transition()
+            .attr("cx", cx)
+            .attr("cy", cy);
+        if (player.hasBall) {
+            // Move the ball too
+            moveBall(xpos, ypos);
+        }
+        if (player.down) {
+            // Move their down/stunned symbol
+            var id = (player.stunned) ? player_id(player) + "stunned" : player_id(player) + "knockDown";
+            moveLine(id, squareSize * (xpos - x0), squareSize * (ypos - y0));
+        }
+        if (destroy) {
+            transition.remove();
+            if (player.down) {
+                d3.select("#"+player_id(player)+"knockDown").data([]).exit().remove();
+            }
+            if (player.stunned) {
+                d3.select("#"+player_id(player)+"stunned").data([]).exit().remove();
+            }
+        }
+    } else {
+        player.onPitch = true;
+        drawPlayers();
+    }
+}
+
 var inPassRange = function(xpos, ypos) {
     var deltaX = Math.abs(xpos - selected.xpos);
     var deltaY = Math.abs(ypos - selected.ypos);
@@ -2055,12 +2046,7 @@ var setKickoff = function(kickingTeam) {
             ypos = yposAway;
             yposAway += 1;
         }
-        player.xpos = xpos;
-        player.ypos = ypos;
-        d3.select('#'+player_id(player))
-            .transition()
-            .attr("cx", cx)
-            .attr("cy", cy)
+        movePlayer(player, xpos, ypos);
     }
     matchData.nToPlace = 2;
     matchData.kickingTeam = kickingTeam;
