@@ -530,7 +530,7 @@ var selectPlayer = function(player) {
         return;
     }
     selected = player;
-    d3.selectAll("circle").classed("selected", false);
+    d3.selectAll(".player").classed("selected", false);
     d3.select("#" + player_id(player)).classed("selected", true);
     if (player.down) {
         if (d3.select("#standUpButton")[0][0] == null) {
@@ -552,7 +552,7 @@ var selectPlayer = function(player) {
 
 // Make the circles that represent the players
 var drawPlayers = function() {
-    svg.selectAll("circle")
+    svg.selectAll(".player")
         .data(playersOnPitch())
         .enter()
         .append("circle")
@@ -563,6 +563,7 @@ var drawPlayers = function() {
             return d.side
         })
         .attr("id", player_id)
+        .classed("player", true)
         .classed("selected", false)
         .on("click", clickPlayer)
 }
@@ -596,7 +597,7 @@ for (var index = 0; index < players.length; index++) {
 
 var clearSelection = function() {
     selected = null;
-    d3.select("circle.selected").classed("selected", false);
+    d3.select(".player.selected").classed("selected", false);
     setAction(null, "");
 }
 
@@ -870,7 +871,7 @@ var processEndTurn = function(step) {
             createKnockDownSymbol(players[i].xpos, players[i].ypos, false)
         }
         players[i].stunnedThisTurn = false;
-        svg.selectAll("circle").classed("finishedAction", false);
+        svg.selectAll(".player").classed("finishedAction", false);
     }
     if ((matchData.firstKickingTeam != matchData.currentSide && matchData.turnNumber <= 8) || (matchData.firstKickingTeam == matchData.currentSide && matchData.turnNumber >= 9) || skipTurn) {
         matchData.turnNumber += 1;
@@ -1639,7 +1640,7 @@ var selectPush = function(step) {
     }
     if (squares.length > 0) {
         pitch.on("click", null);
-        svg.selectAll("circle").on("click", null);
+        svg.selectAll(".player").on("click", null);
         for (var index = 0; index < squares.length; index++) {
             var xpos = squares[index][0];
             var ypos = squares[index][1];
@@ -1826,7 +1827,7 @@ var push = function(step, xpos, ypos) {
     svg.selectAll(".gridOption")
         .classed("gridOption", false)
     pitch.on("click", clickPitch)
-    svg.selectAll("circle").on("click", clickPlayer);
+    svg.selectAll(".player").on("click", clickPlayer);
     var player = findPlayer(step.side, step.num);
     var newStep = {};
     newStep.action = step.action;
@@ -2135,7 +2136,7 @@ var endMatch = function() {
     matchData.turnType = null;
     viewData.buttonData = defineButtonData(matchData.turnType);
     refreshButtonColumn();
-    svg.selectAll("circle").on("click", null);
+    svg.selectAll(".player").on("click", null);
     pitch.on("click", null);
 }
 
