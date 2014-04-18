@@ -367,6 +367,7 @@ var defineButtonData = function(turnType) {
 }
 
 var refreshButtonColumn = function() {
+    svg.selectAll("g.buttonColumn").data([]).exit().remove();
     var g = svg.selectAll("g.buttonColumn").data(viewData.buttonData);
     var newButton = g.enter()
         .append("g")
@@ -728,6 +729,8 @@ var processBlock = function(step) {
 }
 
 var processPush = function(step) {
+    // Tell the server
+    postStep(step);
     // Check if they're being pushed into someone else
     var nextPlayer = playerInPos(step.x1, step.y1);
     // Move the player object
@@ -748,9 +751,16 @@ var processPush = function(step) {
     if (player.hasBall) {
         // Move the ball too
         moveBall(step.x1, step.y1);
+        var possibleTouchdown = true;
+        for (var index = 0; index < stepStack.length; index++) {
+            if (stepStack[index].stepType == "knockDown" && stepStack[index].side == player.side && stepStack[index].num == player.num) {
+                possibleTouchdown = false;
+            }
+            if (possibleTouchdown) {
+                checkForTouchdown(player);
+            }
+        }
     }
-    // Tell the server
-    postStep(step);
     if (nextPlayer != null) {
         // Push the next player too
         step.targetSide = nextPlayer.side;
@@ -861,10 +871,21 @@ var processGoForIt = function(step) {
 }
 
 var processEndTurn = function(step) {
+    var messageArray = [];
     clearSelection();
     matchData.homeRerollUsedThisTurn = false;
     matchData.awayRerollUsedThisTurn = false;
-    matchData.currentSide = otherSide(matchData.currentSide);
+    var skipTurn = false;
+    if (step.touchdown) {
+        matchData[step.side+"Score"] += 1;
+        if (step.side != matchData.currentSide) {
+            skipTurn = true;
+        }
+        matchData.currentSide = step.side;
+        messageArray[messageArray.length] = "Touchdown!";
+    } else {
+        matchData.currentSide = otherSide(matchData.currentSide);
+    }
     for (var i = 0; i < players.length; i++) {
         players[i].moveLeft = players[i].ma;
         players[i].action = "";
@@ -877,12 +898,11 @@ var processEndTurn = function(step) {
         players[i].stunnedThisTurn = false;
         svg.selectAll("circle").classed("finishedAction", false);
     }
-    var endFunc = function(){postStep(step);};
-    if ((matchData.firstKickingTeam != matchData.currentSide && matchData.turnNumber <= 8) || (matchData.firstKickingTeam == matchData.currentSide && matchData.turnNumber >= 9)) {
+    if ((matchData.firstKickingTeam != matchData.currentSide && matchData.turnNumber <= 8) || (matchData.firstKickingTeam == matchData.currentSide && matchData.turnNumber >= 9) || skipTurn) {
         matchData.turnNumber += 1;
         if (matchData.turnNumber == 9) {
             setKickoff(otherSide(matchData.firstKickingTeam));
-            endFunc = function(){displayMessage("Second half", null, function(){postStep(step);})};
+            messageArray[messageArray.length] = "Second half";
         } else if (matchData.turnNumber == 17) {
             endMatch();
             var message;
@@ -891,15 +911,20 @@ var processEndTurn = function(step) {
             } else {
                 message = teamName(currentLeader()) + " win!";
             }
-            endFunc = function(){displayMessage(message, null, function(){postStep(step);})};
+            messageArray[messageArray.length] = message;
         }
+    } else if (step.touchdown) {
+        setKickoff(step.side);
     }
     stepStack = [];
     setAction(null, "");
     if (step.turnover) {
-        displayMessage("Turnover!", null, endFunc);
+        messageArray[messageArray.length] = "Turnover!"
+    }
+    if (messageArray.length > 0) {
+        displayMessage(messageArray, null, function(){postStep(step);});
     } else {
-        endFunc();
+        postStep(step);
     }
 }
 
@@ -1133,6 +1158,7 @@ var postProcessPickUp = function(data) {
     if (data.data.result.success) {
         var player = findPlayer(data.data.step.side, data.data.step.num);
         player.hasBall = true;
+        checkForTouchdown(player);
         stepStack.shift();
     } else {
         var nextStep = defineScatter(1);
@@ -1147,6 +1173,7 @@ var postProcessCatch = function(data) {
     if (data.data.result.success) {
         var player = findPlayer(step.side, step.num);
         player.hasBall = true;
+        checkForTouchdown(player);
         stepStack.shift();
     } else {
         var nextStep = defineScatter(1, false, step.potentialTurnover);
@@ -1185,6 +1212,9 @@ var postProcessMove = function(data) {
     var result = data.data.result;
     var player = playerInPos(step.x1, step.y1);
     if (result.success) {
+        if (player.hasBall) {
+            checkForTouchdown(player);
+        }
         if (!player.hasBall && ballInPos(step.x1, step.y1)) {
             // Automatically attempt to pick up the ball
             var nextStep = definePickUp(player);
@@ -1726,7 +1756,21 @@ var selectFollowUp = function(step) {
 }
 
 var displayMessage = function(message, data, callback) {
-    selectFromOptions(["OK"], message, data, callback, false, false, false, null);
+    var thisMessage, nextMessage, func;
+    if (typeof message === "object") {
+        thisMessage = message[0];
+        if (message.length == 1) {
+            func = callback;
+        } else {
+            nextMessage = message;
+            nextMessage.shift();
+            func = function(){displayMessage(nextMessage, data, callback);};
+        }
+    } else {
+        thisMessage = message;
+        func = callback;
+    }
+    selectFromOptions(["OK"], thisMessage, data, func, false, false, false, null);
 }
 
 var selectFromOptions = function(options, message, data, callback, teamReroll, skillReroll, proReroll, rerollSkill) {
@@ -2024,7 +2068,10 @@ var setKickoff = function(kickingTeam) {
     matchData.xBall = null;
     matchData.yBall = null;
     matchData.turnType = "placePlayers";
+    selectedAction = "placePlayers";
     d3.select("#ball").data([]).exit().remove();
+    viewData.buttonData = defineButtonData(matchData.turnType);
+    refreshButtonColumn();
 }
 
 var submitPlayerPosition = function() {
@@ -2118,6 +2165,27 @@ var currentLeader = function() {
 
 var teamName = function(side) {
     return matchData[side+"Team"];
+}
+
+var checkForTouchdown = function(player) {
+    // The player is already known to be holding the ball
+    var endZone;
+    if ((player.side == "home" && matchData.turnNumber <= 8) || (player.side == "away" && matchData.turnNumber >= 9)) {
+        endZone = (matchData.homeFirstDirection == "right") ? 25 : 0;
+    } else {
+        endZone = (matchData.homeFirstDirection == "right") ? 0 : 25;
+    }
+    if (player.xpos == endZone) {
+        stepStack = [];
+        addStepToStack({
+            stepType: "endTurn",
+            action: "endTurn",
+            oldSide: matchData.currentSide,
+            touchdown: true,
+            side: player.side,
+            num: player.num
+        });
+    }
 }
 
 viewData.buttonData = defineButtonData(matchData.turnType);
