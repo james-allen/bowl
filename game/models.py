@@ -6,6 +6,7 @@ from django.db import models
 class Race(models.Model):
     singular = models.CharField(max_length=50)
     plural = models.CharField(max_length=50)
+    reroll_cost = models.IntegerField()
 
 
 class Team(models.Model):
@@ -16,10 +17,26 @@ class Team(models.Model):
     cash = models.IntegerField(default=0)
 
 
+class Position(models.Model):
+    title = models.CharField(max_length=30)
+    team_race = models.ForeignKey(Race)
+    race = models.CharField(max_length=50)
+    max_quantity = models.IntegerField()
+    cost = models.IntegerField()
+    ma = models.IntegerField()
+    st = models.IntegerField()
+    ag = models.IntegerField()
+    av = models.IntegerField()
+    skills = models.TextField()
+    normal_skills = models.CharField(max_length=5)
+    double_skills = models.CharField(max_length=5)
+
+
 class Player(models.Model):
     name = models.CharField(max_length=100)
-    race = models.ForeignKey(Race)
+    race = models.CharField(max_length=50)
     team = models.ForeignKey(Team)
+    position = models.ForeignKey(Position)
     number = models.IntegerField()
     value = models.IntegerField()
     ma = models.IntegerField()
@@ -38,6 +55,26 @@ class Player(models.Model):
     mvps = models.IntegerField(default=0)
     niggles = models.IntegerField(default=0)
     dead = models.BooleanField(default=False)
+
+def create_player(team, position_title, name, number):
+    position = Position.objects.get(
+        title=position_title, team_race=team.race)
+    player = Player(
+        name=name,
+        race=position.race,
+        team=team,
+        position=position,
+        number=number,
+        value=position.cost,
+        ma=position.ma,
+        st=position.st,
+        ag=position.ag,
+        av=position.av,
+        skills=position.skills,
+        normal_skills=position.normal_skills,
+        double_skills=position.double_skills,
+        )
+    return player
 
 
 class Match(models.Model):
@@ -180,6 +217,8 @@ class PlayerInGame(models.Model):
         result_dict = {
             'side': side,
             'num': self.player.number,
+            'position': self.player.position.title,
+            'race': self.player.race,
             'xpos': self.xpos,
             'ypos': self.ypos,
             'ma': self.ma,
