@@ -390,6 +390,8 @@ def resolve(match, step_type, data):
             match.turn_number += 1
             if match.turn_number == 9:
                 set_kickoff(match, other_side(match.first_kicking_team))
+            if match.turn_number == 17:
+                match.turn_type = None
         match.save()
         for player in PlayerInGame.objects.filter(match=match):
             player.move_left = player.ma
