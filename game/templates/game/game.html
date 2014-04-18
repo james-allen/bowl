@@ -360,6 +360,8 @@ var defineButtonData = function(turnType) {
              id: "submitButton",
              group: 0}
         ];
+    } else if (turnType == null) {
+        buttonData = [];
     }
     return buttonData;
 }
@@ -881,6 +883,15 @@ var processEndTurn = function(step) {
         if (matchData.turnNumber == 9) {
             setKickoff(otherSide(matchData.firstKickingTeam));
             endFunc = function(){displayMessage("Second half", null, function(){postStep(step);})};
+        } else if (matchData.turnNumber == 17) {
+            endMatch();
+            var message;
+            if (currentLeader() == null) {
+                message = "Draw!";
+            } else {
+                message = teamName(currentLeader()) + " win!";
+            }
+            endFunc = function(){displayMessage(message, null, function(){postStep(step);})};
         }
     }
     stepStack = [];
@@ -2085,6 +2096,28 @@ var endKickoff = function(touchback) {
         action: "endKickoff",
         touchback: touchback
     });
+}
+
+var endMatch = function() {
+    matchData.turnType = null;
+    viewData.buttonData = defineButtonData(matchData.turnType);
+    refreshButtonColumn();
+    svg.selectAll("circle").on("click", null);
+    pitch.on("click", null);
+}
+
+var currentLeader = function() {
+    if (matchData.homeScore > matchData.awayScore) {
+        return "home";
+    } else if (matchData.homeScore < matchData.awayScore) {
+        return "away";
+    } else {
+        return null;
+    }
+}
+
+var teamName = function(side) {
+    return matchData[side+"Team"];
 }
 
 viewData.buttonData = defineButtonData(matchData.turnType);
