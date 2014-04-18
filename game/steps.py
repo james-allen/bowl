@@ -1,4 +1,4 @@
-from game.models import PlayerInGame, Step
+from game.models import PlayerInGame, Step, set_kickoff
 
 import random
 
@@ -383,6 +383,13 @@ def resolve(match, step_type, data):
         match.home_reroll_used_this_turn = False;
         match.away_reroll_used_this_turn = False;
         match.current_side = other_side(match.current_side)
+        if ((match.current_side != match.first_kicking_team and 
+             match.turn_number <= 8) or
+            (match.current_side == match.first_kicking_team and
+             match.turn_number >= 9)):
+            match.turn_number += 1
+            if match.turn_number == 9:
+                set_kickoff(match, other_side(match.first_kicking_team))
         match.save()
         for player in PlayerInGame.objects.filter(match=match):
             player.move_left = player.ma

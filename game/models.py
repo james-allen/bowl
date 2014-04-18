@@ -137,11 +137,20 @@ def set_kickoff(match, kicking_team):
             pig.xpos = xpos_away
             pig.ypos = ypos_away
             ypos_away += 1
+        pig.down = False
+        pig.stunned = False
+        pig.stunned_this_turn = False
+        pig.has_ball = False
+        pig.move_left = pig.ma
+        pig.action = ''
+        pig.finished_action = False
         pig.save()
     match.n_to_place = 2
     match.kicking_team = kicking_team
+    match.current_side = kicking_team
     match.x_ball = None
     match.y_ball = None
+    match.turn_type = 'placePlayers'
     match.save()
 
 

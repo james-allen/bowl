@@ -875,10 +875,20 @@ var processEndTurn = function(step) {
         players[i].stunnedThisTurn = false;
         svg.selectAll("circle").classed("finishedAction", false);
     }
+    var endFunc = function(){postStep(step);};
+    if ((matchData.firstKickingTeam != matchData.currentSide && matchData.turnNumber <= 8) || (matchData.firstKickingTeam == matchData.currentSide && matchData.turnNumber >= 9)) {
+        matchData.turnNumber += 1;
+        if (matchData.turnNumber == 9) {
+            setKickoff(otherSide(matchData.firstKickingTeam));
+            endFunc = function(){displayMessage("Second half", null, function(){postStep(step);})};
+        }
+    }
+    stepStack = [];
+    setAction(null, "");
     if (step.turnover) {
-        displayMessage("Turnover!", null, function(d){postStep(step);});
+        displayMessage("Turnover!", null, endFunc);
     } else {
-        postStep(step);
+        endFunc();
     }
 }
 
@@ -1098,8 +1108,6 @@ var postProcessStep = function(step, result) {
         confirmResult(step, result, null, postProcessGoForIt);
         break;
     case "endTurn":
-        stepStack = [];
-        setAction(null, "");
         break;
     case "submitBall":
         scatterBall(step, result);
@@ -1958,6 +1966,54 @@ var nTackleZones = function(player) {
         }
     }
     return n;
+}
+
+var setKickoff = function(kickingTeam) {
+    d3.selectAll(".knockDownSymbol").data([]).exit().remove();
+    d3.selectAll(".stunnedSymbol").data([]).exit().remove();
+    var xposHome, xposAway;
+    if ((matchData.homeFirstDirection == "right" && matchData.turnNumber <= 8) || (matchData.homeFirstDirection == "left" && matchData.turnNumber >= 9)) {
+        xposHome = 0;
+        xposAway = 25;
+    } else {
+        xposHome = 25;
+        xposAway = 0;
+    }
+    var yposHome = 0;
+    var yposAway = 0;
+    var xpos, ypos, player;
+    for (var index = 0; index < players.length; index++) {
+        player = players[index];
+        player.down = false;
+        player.stunned = false;
+        player.stunnedThisTurn = false;
+        player.hasBall = false;
+        player.moveLeft = player.ma;
+        player.action = "";
+        player.finishedAction = false;
+        if (player.side == "home") {
+            xpos = xposHome;
+            ypos = yposHome;
+            yposHome += 1;
+        } else {
+            xpos = xposAway;
+            ypos = yposAway;
+            yposAway += 1;
+        }
+        player.xpos = xpos;
+        player.ypos = ypos;
+        d3.select('#'+player_id(player))
+            .transition()
+            .attr("cx", cx)
+            .attr("cy", cy)
+    }
+    matchData.nToPlace = 2;
+    matchData.kickingTeam = kickingTeam;
+    matchData.currentSide = kickingTeam;
+    matchData.xBall = null;
+    matchData.yBall = null;
+    matchData.turnType = "placePlayers";
+    d3.select("#ball").data([]).exit().remove();
 }
 
 var submitPlayerPosition = function() {
