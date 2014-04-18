@@ -17,7 +17,20 @@
 {
     fill: rgba(0,0,255,0.5);
 }
-.selected.player
+.playerNumber
+{
+    text-anchor: middle;
+    dominant-baseline: middle;
+}
+.home .playerNumber
+{
+    fill: rgba(0,0,0,1.0);
+}
+.away .playerNumber
+{
+    fill: rgba(255,255,0,1.0);
+}
+.selected.player .playerSymbol
 {
     stroke: #000000;
     stroke-width: 4;
@@ -552,20 +565,29 @@ var selectPlayer = function(player) {
 
 // Make the circles that represent the players
 var drawPlayers = function() {
-    svg.selectAll(".player")
+    var g = svg.selectAll(".player")
         .data(playersOnPitch())
         .enter()
-        .append("circle")
-        .attr("cx", cx)
-        .attr("cy", cy)
-        .attr("r", 0.5*squareSize)
+        .append("g")
         .attr("class", function(d) {
             return d.side
         })
-        .attr("id", player_id)
         .classed("player", true)
         .classed("selected", false)
-        .on("click", clickPlayer)
+        .attr("id", player_id)
+        .on("click", clickPlayer);
+    g.append("circle")
+        .attr("cx", cx)
+        .attr("cy", cy)
+        .attr("r", 0.5*squareSize)
+        .classed("playerSymbol", true)
+        .attr("id", function(d){return player_id(d)+"Symbol";})
+    g.append("text")
+        .attr("x", cx)
+        .attr("y", cy)
+        .classed("playerNumber", true)
+        .attr("id", function(d){return player_id(d)+"Number";})
+        .text(function(d){return d.num;})
 }
 drawPlayers();
 
@@ -1923,13 +1945,18 @@ var movePlayer = function(player, xpos, ypos, destroy) {
     player.xpos = xpos;
     player.ypos = ypos;
     if (player.onPitch) {
-        var playerSymbol = d3.select("#" + player_id(player));
+        var playerG = d3.select("#" + player_id(player));
+        var playerSymbol = d3.select("#" + player_id(player) + "Symbol");
+        var playerNumber = d3.select("#" + player_id(player) + "Number");
         if (destroy) {
-            playerSymbol.data([]);
+            playerG.data([]);
         }
-        var transition = playerSymbol.transition()
+        var symbolTransition = playerSymbol.transition()
             .attr("cx", cx)
             .attr("cy", cy);
+        var numberTransition = playerNumber.transition()
+            .attr("x", cx)
+            .attr("y", cy)
         if (player.hasBall) {
             // Move the ball too
             moveBall(xpos, ypos);
@@ -1940,7 +1967,8 @@ var movePlayer = function(player, xpos, ypos, destroy) {
             moveLine(id, squareSize * (xpos - x0), squareSize * (ypos - y0));
         }
         if (destroy) {
-            transition.remove();
+            symbolTransition.remove();
+            numberTransition.remove();
             if (player.down) {
                 d3.select("#"+player_id(player)+"knockDown").data([]).exit().remove();
             }
