@@ -132,7 +132,7 @@ $.ajaxSetup({
     }
 });
 
-var player_id = function(d) {
+var playerId = function(d) {
     return d.side + d.num;
 }
 
@@ -256,10 +256,10 @@ var createKnockDownSymbol = function(xpos, ypos, stunned) {
     var player = playerInPos(xpos, ypos);
     var id, symbolClass;
     if (stunned) {
-        id = player_id(player) + "stunned";
+        id = playerId(player) + "stunned";
         symbolClass = "stunnedSymbol"
     } else {
-        id = player_id(player) + "knockDown";
+        id = playerId(player) + "knockDown";
         symbolClass = "knockDownSymbol"
     }
     var line = d3.svg.line()
@@ -501,7 +501,7 @@ var setAction = function(player, action) {
 
 var finishAction = function(player) {
     player.finishedAction = true;
-    svg.select("#" + player_id(player)).classed("finishedAction", true);
+    svg.select("#" + playerId(player)).classed("finishedAction", true);
 }
 
 // Make a background for selecting options
@@ -546,7 +546,7 @@ var selectPlayer = function(player) {
     }
     selected = player;
     d3.selectAll(".player").classed("selected", false);
-    d3.select("#" + player_id(player)).classed("selected", true);
+    d3.select("#" + playerId(player)).classed("selected", true);
     if (player.down) {
         if (d3.select("#standUpButton")[0][0] == null) {
             addButtonToColumn({
@@ -576,19 +576,19 @@ var drawPlayers = function() {
         })
         .classed("player", true)
         .classed("selected", false)
-        .attr("id", player_id)
+        .attr("id", playerId)
         .on("click", clickPlayer);
     g.append("circle")
         .attr("cx", cx)
         .attr("cy", cy)
         .attr("r", 0.5*viewData.squareSize)
         .classed("playerSymbol", true)
-        .attr("id", function(d){return player_id(d)+"Symbol";})
+        .attr("id", function(d){return playerId(d)+"Symbol";})
     g.append("text")
         .attr("x", cx)
         .attr("y", cy)
         .classed("playerNumber", true)
-        .attr("id", function(d){return player_id(d)+"Number";})
+        .attr("id", function(d){return playerId(d)+"Number";})
         .text(function(d){return d.num;})
 }
 drawPlayers();
@@ -615,7 +615,7 @@ for (var index = 0; index < players.length; index++) {
         createKnockDownSymbol(player.xpos, player.ypos, player.stunned);
     }
     if (player.onPitch && player.finishedAction) {
-        d3.select("#" + player_id(player)).classed("finishedAction", true);
+        d3.select("#" + playerId(player)).classed("finishedAction", true);
     }
 }
 
@@ -891,7 +891,7 @@ var processEndTurn = function(step) {
         players[i].finishedAction = false;
         if (isTurn(players[i]) && players[i].stunned && !players[i].stunnedThisTurn) {
             players[i].stunned = false;
-            d3.select("#"+player_id(players[i])+"stunned").data([]).exit().remove();
+            d3.select("#"+playerId(players[i])+"stunned").data([]).exit().remove();
             createKnockDownSymbol(players[i].xpos, players[i].ypos, false)
         }
         players[i].stunnedThisTurn = false;
@@ -982,9 +982,9 @@ var processEndKickoff = function(step) {
 
 var removeFromPitch = function(player, reason) {
     player.onPitch = false;
-    d3.select("#"+player_id(player)).data([]).exit().remove();
-    d3.select("#"+player_id(player)+"knockDown").data([]).exit().remove();
-    d3.select("#"+player_id(player)+"stunned").data([]).exit().remove();
+    d3.select("#"+playerId(player)).data([]).exit().remove();
+    d3.select("#"+playerId(player)+"knockDown").data([]).exit().remove();
+    d3.select("#"+playerId(player)+"stunned").data([]).exit().remove();
     if (reason == "knockedOut") {
         player.knockedOut = true;
     } else if (reason == "casualty") {
@@ -1072,7 +1072,7 @@ var postProcessStep = function(step, result) {
         if (result.success) {
             var player = findPlayer(step.side, step.num);
             player.down = false;
-            d3.select("#"+player_id(player)+"knockDown")
+            d3.select("#"+playerId(player)+"knockDown")
                 .data([]).exit().remove();
         }
         stepStack.shift();
@@ -1109,7 +1109,7 @@ var postProcessStep = function(step, result) {
             if (result.injuryRoll.result == "stunned") {
                 victim.stunned = true;
                 victim.stunnedThisTurn = true;
-                d3.select("#"+player_id(victim)+"knockDown")
+                d3.select("#"+playerId(victim)+"knockDown")
                     .data([]).exit().remove();
                 createKnockDownSymbol(victim.xpos, victim.ypos, true);
             } else {
@@ -1231,7 +1231,7 @@ var postProcessKnockDown = function(data) {
         if (result.injuryRoll.result == "stunned") {
             player.stunned = true;
             player.stunnedThisTurn = true;
-            d3.select("#"+player_id(player)+"knockDown")
+            d3.select("#"+playerId(player)+"knockDown")
                 .data([]).exit().remove();
             createKnockDownSymbol(player.xpos, player.ypos, true);
         } else {
@@ -1278,11 +1278,11 @@ var restoreTo = function(restorePosition) {
         step = history[position];
         switch (step.stepType) {
         case "move":
-            var player_index;
-            for (player_index = 0; player_index < players.length; player_index++) {
-                if (players[player_index].side == step.side &&
-                    players[player_index].num == step.num) {
-                    var player = players[player_index];
+            var index;
+            for (index = 0; index < players.length; index++) {
+                if (players[index].side == step.side &&
+                    players[index].num == step.num) {
+                    var player = players[index];
                     break;
                 }
             }
@@ -1340,8 +1340,8 @@ var lastActivePlayer = function() {
     return null;
 }
 
-var isAdjacent = function(xpos_0, ypos_0, xpos_1, ypos_1) {
-    return (Math.abs(xpos_0 - xpos_1) <= 1 && Math.abs(ypos_0 - ypos_1) <= 1)
+var isAdjacent = function(xpos0, ypos0, xpos1, ypos1) {
+    return (Math.abs(xpos0 - xpos1) <= 1 && Math.abs(ypos0 - ypos1) <= 1)
 }
 
 var defineStep = function(xpos, ypos) {
@@ -1673,7 +1673,7 @@ var selectPush = function(step) {
                 .on("click", function(d) {push(step, d.xpos, d.ypos);})
             var player = playerInPos(xpos, ypos);
             if (player != null) {
-                svg.select("#" + player_id(player))
+                svg.select("#" + playerId(player))
                     .on("click", function(d) {push(step, d.xpos, d.ypos);})
             }
         }
@@ -1947,9 +1947,9 @@ var movePlayer = function(player, xpos, ypos, destroy) {
     player.xpos = xpos;
     player.ypos = ypos;
     if (player.onPitch) {
-        var playerG = d3.select("#" + player_id(player));
-        var playerSymbol = d3.select("#" + player_id(player) + "Symbol");
-        var playerNumber = d3.select("#" + player_id(player) + "Number");
+        var playerG = d3.select("#" + playerId(player));
+        var playerSymbol = d3.select("#" + playerId(player) + "Symbol");
+        var playerNumber = d3.select("#" + playerId(player) + "Number");
         if (destroy) {
             playerG.data([]);
         }
@@ -1965,17 +1965,17 @@ var movePlayer = function(player, xpos, ypos, destroy) {
         }
         if (player.down) {
             // Move their down/stunned symbol
-            var id = (player.stunned) ? player_id(player) + "stunned" : player_id(player) + "knockDown";
+            var id = (player.stunned) ? playerId(player) + "stunned" : playerId(player) + "knockDown";
             moveLine(id, viewData.squareSize * (xpos - x0), viewData.squareSize * (ypos - y0));
         }
         if (destroy) {
             symbolTransition.remove();
             numberTransition.remove();
             if (player.down) {
-                d3.select("#"+player_id(player)+"knockDown").data([]).exit().remove();
+                d3.select("#"+playerId(player)+"knockDown").data([]).exit().remove();
             }
             if (player.stunned) {
-                d3.select("#"+player_id(player)+"stunned").data([]).exit().remove();
+                d3.select("#"+playerId(player)+"stunned").data([]).exit().remove();
             }
         }
     } else {
