@@ -33,24 +33,24 @@
 .selected.player .playerSymbol
 {
     stroke: #000000;
-    stroke-viewData.width: 4;
+    stroke-width: 4;
 }
 .pitch
 {
     fill: #DDFFDD;
     stroke: #BBFFBB;
-    stroke-viewData.width: 1;
+    stroke-width: 1;
 }
 .pitch .gridOption
 {
     stroke: #FF0000;
-    stroke-viewData.width: 4;
+    stroke-width: 4;
 }
 .button
 {
     fill: #00BB00;
     stroke: #008800;
-    stroke-viewData.width: 1;
+    stroke-width: 1;
 }
 .buttonText
 {
@@ -61,7 +61,7 @@
 .selected .button
 {
     stroke: #000000;
-    stroke-viewData.width: 4;
+    stroke-width: 4;
 }
 .inactive .button
 {
@@ -82,19 +82,19 @@
 .knockDownSymbol
 {
     stroke: black;
-    stroke-viewData.width: 1;
+    stroke-width: 1;
     fill: yellow;
 }
 .stunnedSymbol
 {
     stroke: black;
-    stroke-viewData.width: 1;
+    stroke-width: 1;
     fill: red;
 }
 .ball
 {
     stroke: black;
-    stroke-viewData.width: 1;
+    stroke-width: 1;
     fill: brown;
 }
 </style>
@@ -266,7 +266,7 @@ var createKnockDownSymbol = function(xpos, ypos, stunned) {
         .x(function(d) { return d.x; })
         .y(function(d) { return d.y; })
         .interpolate("linear");
-    var symbol = svg.append("path")
+    var symbol = d3.select("#"+playerId(player)).append("path")
         .attr("class", symbolClass)
         .attr("id", id)
         .data([knockDownSymbolGenerator(xpos, ypos, stunned)])
@@ -525,8 +525,7 @@ var clickPlayer = function(d) {
     } else {
         var stepArray = [];
         if (selected != null || matchData.turnType == "placeBall" || matchData.turnType == "touchback") {
-            var thisPlayer = playerWithId(this.id);
-            stepArray = defineStep(thisPlayer.xpos, thisPlayer.ypos);
+            stepArray = defineStep(d.xpos, d.ypos);
         }
         if (stepArray.length > 0 && stepStack.length == 0) {
             // Valid step involving this player (block, pass...)
@@ -567,29 +566,11 @@ var selectPlayer = function(player) {
 
 // Make the circles that represent the players
 var drawPlayers = function() {
-    var g = svg.selectAll(".player")
-        .data(playersOnPitch())
-        .enter()
-        .append("g")
-        .attr("class", function(d) {
-            return d.side
-        })
-        .classed("player", true)
-        .classed("selected", false)
-        .attr("id", playerId)
-        .on("click", clickPlayer);
-    g.append("circle")
-        .attr("cx", cx)
-        .attr("cy", cy)
-        .attr("r", 0.5*viewData.squareSize)
-        .classed("playerSymbol", true)
-        .attr("id", function(d){return playerId(d)+"Symbol";})
-    g.append("text")
-        .attr("x", cx)
-        .attr("y", cy)
-        .classed("playerNumber", true)
-        .attr("id", function(d){return playerId(d)+"Number";})
-        .text(function(d){return d.num;})
+    for (var i = 0; i < players.length; i++) {
+        if (players[i].onPitch) {
+            drawPlayer(players[i], svg);
+        }
+    }
 }
 drawPlayers();
 
@@ -1944,21 +1925,15 @@ var movePlayer = function(player, xpos, ypos, destroy) {
     destroy = (typeof destroy === "undefined") ? false : destroy;
     var x0 = player.xpos;
     var y0 = player.ypos;
+    var deltaX = viewData.squareSize * (xpos - x0);
+    var deltaY = viewData.squareSize * (ypos - y0);
     player.xpos = xpos;
     player.ypos = ypos;
     if (player.onPitch) {
-        var playerG = d3.select("#" + playerId(player));
-        var playerSymbol = d3.select("#" + playerId(player) + "Symbol");
-        var playerNumber = d3.select("#" + playerId(player) + "Number");
-        if (destroy) {
-            playerG.data([]);
-        }
-        var symbolTransition = playerSymbol.transition()
-            .attr("cx", cx)
-            .attr("cy", cy);
-        var numberTransition = playerNumber.transition()
-            .attr("x", cx)
-            .attr("y", cy)
+        var symbolId = playerId(player) + "Symbol";
+        var numberId = playerId(player) + "Number";
+        var symbolTransition = moveShape(symbolId, deltaX, deltaY, player.interpolate);
+        var numberTransition = moveText(numberId, deltaX, deltaY)
         if (player.hasBall) {
             // Move the ball too
             moveBall(xpos, ypos);
@@ -1966,22 +1941,23 @@ var movePlayer = function(player, xpos, ypos, destroy) {
         if (player.down) {
             // Move their down/stunned symbol
             var id = (player.stunned) ? playerId(player) + "stunned" : playerId(player) + "knockDown";
-            moveLine(id, viewData.squareSize * (xpos - x0), viewData.squareSize * (ypos - y0));
+            moveShape(id, deltaX, deltaY, "linear");
         }
         if (destroy) {
-            symbolTransition.remove();
-            numberTransition.remove();
-            if (player.down) {
-                d3.select("#"+playerId(player)+"knockDown").data([]).exit().remove();
-            }
-            if (player.stunned) {
-                d3.select("#"+playerId(player)+"stunned").data([]).exit().remove();
-            }
+            var playerG = d3.select("#" + playerId(player));
+            symbolTransition.each("end", function(){playerG.remove();})
         }
     } else {
         player.onPitch = true;
         drawPlayers();
     }
+}
+
+var moveText = function(id, deltaX, deltaY) {
+    var text = d3.select("#" + id);
+    var x = parseInt(text.attr("x")) + deltaX;
+    var y = parseInt(text.attr("y")) + deltaY;
+    return text.transition().attr("x", x).attr("y", y);
 }
 
 var inPassRange = function(xpos, ypos) {
