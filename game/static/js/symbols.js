@@ -111,7 +111,7 @@ var drawPlayer = function(player, parent) {
         .classed("selected", false)
         .attr("id", playerId(player))
         .on("click", function(){clickPlayer(player);})
-        .on("mouseover", function(){updateInfoBox("infoBoxHighlighted", player);})
+        .on("mouseover", function(){updateInfoBox("infoBoxHighlighted", player);highlightStep(player);})
         .on("mouseout", function(){updateInfoBox("infoBoxHighlighted", null);});
     player.interpolate = createShape(
         shapeSelector(player), x0, y0, viewData.playerSize, g, "playerSymbol", 
