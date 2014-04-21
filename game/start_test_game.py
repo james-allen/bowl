@@ -17,7 +17,8 @@ def populate_humans(team):
     positions = {
         'Lineman': 5,
         'Thrower': 1,
-        'Blitzer': 4,
+        'Blitzer': 2,
+        'Catcher': 2,
         'Ogre': 1,
     }
     number = 1
@@ -29,8 +30,8 @@ def populate_humans(team):
                 'Human player ' + str(number), 
                 number).save()
             number += 1
-    team.rerolls = 3
-    team.cash = 30
+    team.rerolls = 4
+    team.cash = 20
     team.save()
 
 def populate_orcs(team):

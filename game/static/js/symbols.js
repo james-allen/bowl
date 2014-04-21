@@ -6,9 +6,9 @@ var shapeGenerator = function(shape) {
         coords = [
             {x: -0.5, y: -0.5},
             {x: -0.5, y: 0.5},
-            {x: 0.5, y:0.5},
-            {x: 0.5, y:-0.5},
-            {x: -0.5, y:-0.5}
+            {x: 0.5, y: 0.5},
+            {x: 0.5, y: -0.5},
+            {x: -0.5, y: -0.5}
         ];
         interpolate = "linear";
         break;
@@ -20,6 +20,51 @@ var shapeGenerator = function(shape) {
             coords[i] = {x: 0.5*Math.cos(theta), y: 0.5*Math.sin(theta)};
         }
         interpolate = "basis";
+        break;
+    case "rising":
+        coords = [
+            {x: -0.5, y: 0.5},
+            {x: -0.5, y: 0},
+            {x: 0, y: -0.5},
+            {x: 0.5, y: -0.5},
+            {x: 0.5, y: 0},
+            {x: 0, y: 0.5},
+            {x: -0.5, y: 0.5}
+        ];
+        interpolate = "linear";
+        break;
+    case "rectangleHorizontal":
+        coords = [
+            {x: -0.5, y: -0.35},
+            {x: -0.5, y: 0.35},
+            {x: 0.5, y: 0.35},
+            {x: 0.5, y: -0.35},
+            {x: -0.5, y: -0.35}
+        ];
+        interpolate = "linear";
+        break;
+    case "diamond":
+        coords = [
+            {x: -0.5, y: 0},
+            {x: 0, y: 0.5},
+            {x: 0.5, y: 0},
+            {x: 0, y: -0.5},
+            {x: -0.5, y: 0}
+        ];
+        interpolate = "linear";
+        break;
+    case "chevron":
+        coords = [
+            {x: -0.5, y: 0.5},
+            {x: -0.5, y: -0.25},
+            {x: 0, y: -0.5},
+            {x: 0.5, y: -0.25},
+            {x: 0.5, y: 0.5},
+            {x: 0, y: 0.25},
+            {x: -0.5, y: 0.5}
+        ];
+        interpolate = "linear";
+        break;
     }
     return {coordinates: coords, interpolate: interpolate};
 }
@@ -67,7 +112,7 @@ var drawPlayer = function(player, parent) {
         .attr("id", playerId(player))
         .on("click", function(){clickPlayer(player);});
     player.interpolate = createShape(
-        "circle", x0, y0, viewData.squareSize, g, "playerSymbol", 
+        shapeSelector(player), x0, y0, viewData.squareSize, g, "playerSymbol", 
         playerId(player)+"Symbol");
     g.append("text")
         .attr("x", x0)
@@ -75,4 +120,26 @@ var drawPlayer = function(player, parent) {
         .attr("class", "playerNumber")
         .attr("id", playerId(player)+"Number")
         .text(player.num);
+}
+
+var shapeSelector = function(player) {
+    return shapeDatabase[player.race][player.position];
+}
+
+var shapeDatabase = {
+    "human": {
+        "Lineman": "circle",
+        "Thrower": "rising",
+        "Catcher": "diamond",
+        "Blitzer": "chevron",
+    },
+    "ogre": {
+        "Ogre": "square"
+    },
+    "orc": {
+        "Lineman": "circle",
+        "Thrower": "rising",
+        "Black Orc Blocker": "rectangleHorizontal",
+        "Blitzer": "chevron"
+    }
 }
