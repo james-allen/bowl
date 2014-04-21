@@ -200,7 +200,8 @@ var viewData = {
     buttonWidth: 100,
     buttonHeight: 30,
     infoWidth: 200,
-    lineHeight: 20
+    lineHeight: 20,
+    activityType: "normal"
 };
 viewData.buttonX = nSquaresX * viewData.squareSize + 2*viewData.margin;
 viewData.infoX = viewData.buttonX + viewData.buttonWidth + viewData.margin;
@@ -506,8 +507,6 @@ var svg = d3.select("body").append("svg")
 
 // Make the pitch
 var clickPitch = function(d) {
-    console.log("Pitch clicked:");
-    console.log(d);
     if (stepStack.length == 0) {
         var stepArray = defineStep(d.xpos, d.ypos);
         for (var i =0; i < stepArray.length; i++) {
@@ -692,8 +691,7 @@ var optionsText = svg.append("text")
     .style("visibility", "hidden");
 
 var clickPlayer = function(d) {
-    console.log("Player clicked:");
-    console.log(d);
+    if (viewData.activityType != "normal") {return;}
     if (selected == d) {
         // Was already selected. Unselect.
         clearSelection()
@@ -1821,8 +1819,8 @@ var selectPush = function(step) {
         squares[2] = [xC, yC];
     }
     if (squares.length > 0) {
+        viewData.activityType = "selectPush";
         pitch.on("click", null);
-        svg.selectAll(".player").on("click", null);
         for (var index = 0; index < squares.length; index++) {
             var xpos = squares[index][0];
             var ypos = squares[index][1];
@@ -1910,8 +1908,10 @@ var displayMessage = function(message, data, callback) {
 }
 
 var selectFromOptions = function(options, message, data, callback, teamReroll, skillReroll, proReroll, rerollSkill) {
+    viewData.activityType = "selectFromOptions";
     var selectOption = function(d) {
         if (d.inactive) { return; }
+        viewData.activityType = "normal";
         svg.selectAll("rect.optionsWindow").style("visibility", "hidden");
         svg.selectAll("text.optionsText").style("visibility", "hidden");
         svg.selectAll("g.option").data([]).exit().remove();
@@ -2008,8 +2008,8 @@ var followUp = function(data) {
 var push = function(step, xpos, ypos) {
     svg.selectAll(".gridOption")
         .classed("gridOption", false)
-    pitch.on("click", clickPitch)
-    svg.selectAll(".player").on("click", clickPlayer);
+    viewData.activityType = "normal";
+    pitch.on("click", clickPitch);
     var player = findPlayer(step.side, step.num);
     var newStep = {};
     newStep.action = step.action;
