@@ -676,20 +676,6 @@ var finishAction = function(player) {
     svg.select("#" + playerId(player)).classed("finishedAction", true);
 }
 
-// Make a background for selecting options
-var optionsWindow = svg.append("rect")
-    .attr("class", "optionsWindow")
-    .attr("x", 0.4 * nSquaresX * viewData.squareSize + viewData.margin)
-    .attr("y", 0.4 * nSquaresY * viewData.squareSize + viewData.margin)
-    .attr("width", 0.2 * nSquaresX * viewData.squareSize)
-    .attr("height", 0.2 * nSquaresY * viewData.squareSize)
-    .style("visibility", "hidden");
-var optionsText = svg.append("text")
-    .attr("class", "optionsText")
-    .attr("x", 0.5 * nSquaresX * viewData.squareSize + viewData.margin)
-    .attr("y", 0.42 * nSquaresY * viewData.squareSize + viewData.margin)
-    .style("visibility", "hidden");
-
 var clickPlayer = function(d) {
     if (viewData.activityType != "normal") {return;}
     if (selected == d) {
@@ -773,6 +759,20 @@ for (var index = 0; index < players.length; index++) {
         d3.select("#" + playerId(player)).classed("finishedAction", true);
     }
 }
+
+// Make a background for selecting options
+var optionsWindow = svg.append("rect")
+    .attr("class", "optionsWindow")
+    .attr("x", 0.4 * nSquaresX * viewData.squareSize + viewData.margin)
+    .attr("y", 0.4 * nSquaresY * viewData.squareSize + viewData.margin)
+    .attr("width", 0.2 * nSquaresX * viewData.squareSize)
+    .attr("height", 0.2 * nSquaresY * viewData.squareSize)
+    .style("visibility", "hidden");
+var optionsText = svg.append("text")
+    .attr("class", "optionsText")
+    .attr("x", 0.5 * nSquaresX * viewData.squareSize + viewData.margin)
+    .attr("y", 0.42 * nSquaresY * viewData.squareSize + viewData.margin)
+    .style("visibility", "hidden");
 
 var clearSelection = function() {
     selected = null;
