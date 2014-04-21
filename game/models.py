@@ -216,6 +216,7 @@ class PlayerInGame(models.Model):
     def as_dict(self, side):
         result_dict = {
             'side': side,
+            'name': self.player.name,
             'num': self.player.number,
             'position': self.player.position.title,
             'race': self.player.race,

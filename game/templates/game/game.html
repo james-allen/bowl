@@ -97,6 +97,12 @@
     stroke-width: 1;
     fill: brown;
 }
+.infoBox .background
+{
+    stroke: black;
+    stroke-width: 2;
+    fill: antiquewhite;
+}
 </style>
 <body>
 <script type="text/javascript" src="/static/js/d3.v3.min.js"></script>
@@ -163,8 +169,13 @@ var viewData = {
     margin: 10,
     squareSize: 40,
     buttonWidth: 100,
-    buttonHeight: 30
+    buttonHeight: 30,
+    infoWidth: 200,
+    lineHeight: 20
 };
+viewData.buttonX = nSquaresX * viewData.squareSize + 2*viewData.margin;
+viewData.infoX = viewData.buttonX + viewData.buttonWidth + viewData.margin;
+viewData.infoHeight = 0.5*(nSquaresY * viewData.squareSize - viewData.margin);
 
 var selected = null;
 
@@ -390,14 +401,14 @@ var refreshButtonColumn = function() {
         .attr("id", function(d) {return d.id;})
         .classed("buttonColumn", true)
     newButton.append("rect")
-        .attr("x", nSquaresX * viewData.squareSize + 2*viewData.margin)
+        .attr("x", viewData.buttonX)
         .attr("y", function(d, i) {return (1+i+2*d.group)*viewData.margin + i*viewData.buttonHeight;})
         .attr("width", viewData.buttonWidth)
         .attr("height", viewData.buttonHeight)
         .classed("button", true)
         .on("click", function(d) {d.func(d.data);})
     newButton.append("text")
-        .attr("x", nSquaresX * viewData.squareSize + 2*viewData.margin + 0.5*viewData.buttonWidth)
+        .attr("x", viewData.buttonX + 0.5*viewData.buttonWidth)
         .attr("y", function(d, i) {return (1+i+2*d.group)*viewData.margin + (i+0.5)*viewData.buttonHeight;})
         .classed("buttonText", true)
         .text(function(d) {return d.label;})
@@ -448,6 +459,97 @@ var pitch = svg.append("g").attr("class", "pitch")
     .attr("height", viewData.squareSize)
     .attr("id", gridId)
 pitch.on("click", clickPitch)
+
+// Make info screens
+var drawInfoBox = function(parent, id, y) {
+    var infoBox = svg.append("g")
+        .attr("class", "infoBox")
+        .attr("id", id)
+    infoBox.append("rect")
+        .attr("x", viewData.infoX)
+        .attr("y", y)
+        .attr("width", viewData.infoWidth)
+        .attr("height", viewData.infoHeight)
+        .classed("background", true)
+    infoBox.append("text")
+        .attr("x", viewData.infoX + viewData.margin)
+        .attr("y", y + viewData.margin + viewData.lineHeight)
+        .text("")
+        .attr("id", id + "Name")
+    infoBox.append("text")
+        .attr("x", viewData.infoX + viewData.margin)
+        .attr("y", y + viewData.margin + 2*viewData.lineHeight)
+        .text("")
+        .attr("id", id + "Team")
+    infoBox.append("text")
+        .attr("x", viewData.infoX + viewData.margin)
+        .attr("y", y + viewData.margin + 3*viewData.lineHeight)
+        .text("")
+        .attr("id", id + "Position")
+    infoBox.append("text")
+        .attr("x", viewData.infoX + viewData.margin)
+        .attr("y", y + viewData.margin + 4*viewData.lineHeight)
+        .text("MA: ")
+        .attr("id", id + "MA")
+    infoBox.append("text")
+        .attr("x", viewData.infoX + viewData.margin + 0.5*viewData.infoWidth)
+        .attr("y", y + viewData.margin + 4*viewData.lineHeight)
+        .text("ST: ")
+        .attr("id", id + "ST")
+    infoBox.append("text")
+        .attr("x", viewData.infoX + viewData.margin)
+        .attr("y", y + viewData.margin + 5*viewData.lineHeight)
+        .text("AG: ")
+        .attr("id", id + "AG")
+    infoBox.append("text")
+        .attr("x", viewData.infoX + viewData.margin + 0.5*viewData.infoWidth)
+        .attr("y", y + viewData.margin + 5*viewData.lineHeight)
+        .text("AV: ")
+        .attr("id", id + "AV")
+    infoBox.append("text")
+        .attr("x", viewData.infoX + viewData.margin)
+        .attr("y", y + viewData.margin + 6*viewData.lineHeight)
+        .text("Skills:")
+    for (var i = 0; i < 7; i++) {
+        infoBox.append("text")
+            .attr("x", viewData.infoX + 2*viewData.margin)
+            .attr("y", y + viewData.margin + (7+i)*viewData.lineHeight)
+            .text("")
+            .attr("id", id + "Skill" + i)
+    }
+}
+
+var updateInfoBox = function(infoBoxId, player) {
+    if (player == null) {
+        d3.select("#"+infoBoxId+"Name").text("");
+        d3.select("#"+infoBoxId+"Team").text("");
+        d3.select("#"+infoBoxId+"Position").text("");
+        d3.select("#"+infoBoxId+"MA").text("MA: ");
+        d3.select("#"+infoBoxId+"ST").text("ST: ");
+        d3.select("#"+infoBoxId+"AG").text("AG: ");
+        d3.select("#"+infoBoxId+"AV").text("AV: ");
+        for (var i = 0; i < 7; i++) {
+            d3.select("#"+infoBoxId+"Skill"+i).text("");
+        }
+    } else {
+        d3.select("#"+infoBoxId+"Name").text(player.name);
+        d3.select("#"+infoBoxId+"Team").text(matchData[player.side+"Team"]);
+        d3.select("#"+infoBoxId+"Position").text(player.num+" "+player.position);
+        d3.select("#"+infoBoxId+"MA").text("MA: "+player.ma);
+        d3.select("#"+infoBoxId+"ST").text("ST: "+player.st);
+        d3.select("#"+infoBoxId+"AG").text("AG: "+player.ag);
+        d3.select("#"+infoBoxId+"AV").text("AV: "+player.av);
+        for (var i = 0; i < player.skills.length; i++) {
+            d3.select("#"+infoBoxId+"Skill"+i).text(player.skills[i]);
+        }
+        for (var i = player.skills.length; i < 7; i++) {
+            d3.select("#"+infoBoxId+"Skill"+i).text("");
+        }
+    }
+}
+
+drawInfoBox(svg, "infoBoxSelected", viewData.margin);
+drawInfoBox(svg, "infoBoxHighlighted", 2*viewData.margin+viewData.infoHeight);
 
 // Make the control buttons
 // End Turn
@@ -546,6 +648,7 @@ var selectPlayer = function(player) {
     selected = player;
     d3.selectAll(".player").classed("selected", false);
     d3.select("#" + playerId(player)).classed("selected", true);
+    updateInfoBox("infoBoxSelected", player);
     if (player.down) {
         if (d3.select("#standUpButton")[0][0] == null) {
             addButtonToColumn({
@@ -603,6 +706,7 @@ for (var index = 0; index < players.length; index++) {
 var clearSelection = function() {
     selected = null;
     d3.select(".player.selected").classed("selected", false);
+    updateInfoBox("infoBoxSelected", null);
     setAction(null, "");
 }
 

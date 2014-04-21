@@ -47,7 +47,7 @@ def populate_orcs(team):
             create_player(
                 team, 
                 position_title, 
-                'Human player ' + str(number), 
+                'Orc player ' + str(number), 
                 number).save()
             number += 1
     team.rerolls = 3
