@@ -110,9 +110,11 @@ var drawPlayer = function(player, parent) {
         .classed("player", true)
         .classed("selected", false)
         .attr("id", playerId(player))
-        .on("click", function(){clickPlayer(player);});
+        .on("click", function(){clickPlayer(player);})
+        .on("mouseover", function(){updateInfoBox("infoBoxHighlighted", player);})
+        .on("mouseout", function(){updateInfoBox("infoBoxHighlighted", null);});
     player.interpolate = createShape(
-        shapeSelector(player), x0, y0, viewData.squareSize, g, "playerSymbol", 
+        shapeSelector(player), x0, y0, viewData.playerSize, g, "playerSymbol", 
         playerId(player)+"Symbol");
     g.append("text")
         .attr("x", x0)
