@@ -40,6 +40,11 @@
     stroke: darkred;
     stroke-width: 4;
 }
+.highlightPass .playerSymbol
+{
+    stroke: skyblue;
+    stroke-width: 4;
+}
 .pitch
 {
     fill: #DDFFDD;
@@ -56,9 +61,19 @@
     stroke: darkgreen;
     stroke-width: 4;
 }
+.pitch .highlightDodge
+{
+    stroke: darkred;
+    stroke-width: 4;
+}
 .pitch .highlightGoForIt
 {
-    border-style: dashed;
+    stroke-dasharray: 5,5;
+}
+.pitch .highlightPass
+{
+    stroke: skyblue;
+    stroke-width: 4;
 }
 .button
 {
@@ -447,15 +462,22 @@ var removeButtonFromColumn = function(id) {
 }
 
 var highlightStep = function(d) {
-    pitch.classed("highlightMove", false);
-    pitch.classed("highlightGoForIt", false);
-    d3.selectAll(".player").classed("highlightBlock", false);
+    pitch.classed("highlightMove", false)
+        .classed("highlightDodge", false)
+        .classed("highlightGoForIt", false)
+        .classed("highlightPass", false);
+    d3.selectAll(".player").classed("highlightBlock", false)
+        .classed("highlightPass", false);
     var stepArray = defineStep(d.xpos, d.ypos);
     if (stepArray.length != 0) {
         var step = stepArray[stepArray.length - 1];
-        var pitchSquare = d3.select("#"+gridId(d));
         if (step.stepType == "move" || step.stepType == "placeBall" || step.stepType == "placePlayer") {
-            pitchSquare.classed("highlightMove", true);
+            var pitchSquare = d3.select("#"+gridId(d));
+            if (step.dodge) {
+                pitchSquare.classed("highlightDodge", true);
+            } else {
+                pitchSquare.classed("highlightMove", true);
+            }
             if (stepArray[0].stepType == "goForIt") {
                 pitchSquare.classed("highlightGoForIt", true);
             }
@@ -463,6 +485,16 @@ var highlightStep = function(d) {
         } else if (step.stepType == "block" || step.stepType == "foul") {
             var player = d3.select("#"+playerId(playerInPos(d.xpos, d.ypos)));
             player.classed("highlightBlock", true);
+        } else if (step.stepType == "pass" || step.stepType == "handOff") {
+            var playerData = playerInPos(d.xpos, d.ypos);
+            if (playerData == null) {
+                var pitchSquare = d3.select("#"+gridId(d));
+                pitchSquare.classed("highlightPass", true);
+                pitch.sort(function(a, b){return (a == d) ? 1 : -1});
+            } else {
+                var player = d3.select("#"+playerId(playerData));
+                player.classed("highlightPass", true);
+            }
         }
     }
 }
@@ -474,6 +506,8 @@ var svg = d3.select("body").append("svg")
 
 // Make the pitch
 var clickPitch = function(d) {
+    console.log("Pitch clicked:");
+    console.log(d);
     if (stepStack.length == 0) {
         var stepArray = defineStep(d.xpos, d.ypos);
         for (var i =0; i < stepArray.length; i++) {
@@ -658,6 +692,8 @@ var optionsText = svg.append("text")
     .style("visibility", "hidden");
 
 var clickPlayer = function(d) {
+    console.log("Player clicked:");
+    console.log(d);
     if (selected == d) {
         // Was already selected. Unselect.
         clearSelection()
