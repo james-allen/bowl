@@ -1057,6 +1057,7 @@ var processEndTurn = function(step) {
     var skipTurn = false;
     if (step.touchdown) {
         matchData[step.side+"Score"] += 1;
+        d3.select("#"+step.side+"Score").text(matchData[step.side+"Score"]);
         if (step.side != matchData.currentSide) {
             skipTurn = true;
         }
