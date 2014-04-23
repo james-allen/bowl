@@ -621,6 +621,30 @@ var updateInfoBox = function(infoBoxId, player) {
 drawInfoBox(svg, "infoBoxSelected", viewData.margin);
 drawInfoBox(svg, "infoBoxHighlighted", 2*viewData.margin+viewData.infoHeight);
 
+// Print the team names and current score
+svg.append("text")
+    .attr("x", viewData.margin+11*viewData.squareSize)
+    .attr("y", 2*viewData.margin+15*viewData.squareSize+viewData.lineHeight)
+    .attr("text-anchor", "end")
+    .text(matchData.homeTeam)
+svg.append("text")
+    .attr("x", viewData.margin+15*viewData.squareSize)
+    .attr("y", 2*viewData.margin+15*viewData.squareSize+viewData.lineHeight)
+    .text(matchData.awayTeam)
+svg.append("text")
+    .attr("x", 13*viewData.squareSize)
+    .attr("y", viewData.margin+15*viewData.squareSize+1.5*viewData.squareSize)
+    .attr("text-anchor", "end")
+    .attr("font-size", 1.5*viewData.squareSize)
+    .text(matchData.homeScore)
+    .attr("id", "homeScore")
+svg.append("text")
+    .attr("x", 2*viewData.margin+13*viewData.squareSize)
+    .attr("y", viewData.margin+15*viewData.squareSize+1.5*viewData.squareSize)
+    .attr("font-size", 1.5*viewData.squareSize)
+    .text(matchData.awayScore)
+    .attr("id", "awayScore")
+
 // Make the control buttons
 // End Turn
 var endTurn = function(d) {
