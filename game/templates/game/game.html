@@ -681,22 +681,26 @@ svg.append("text")
     .attr("y", 2*viewData.margin+15*viewData.squareSize+viewData.lineHeight)
     .attr("text-anchor", "end")
     .text(matchData.homeTeam)
+    .attr("class", "home")
 svg.append("text")
     .attr("x", viewData.margin+15*viewData.squareSize)
     .attr("y", 2*viewData.margin+15*viewData.squareSize+viewData.lineHeight)
     .text(matchData.awayTeam)
+    .attr("class", "away")
 svg.append("text")
     .attr("x", 13*viewData.squareSize)
     .attr("y", viewData.margin+15*viewData.squareSize+1.5*viewData.squareSize)
     .attr("text-anchor", "end")
     .attr("font-size", 1.5*viewData.squareSize)
     .text(matchData.homeScore)
+    .attr("class", "home")
     .attr("id", "homeScore")
 svg.append("text")
     .attr("x", 2*viewData.margin+13*viewData.squareSize)
     .attr("y", viewData.margin+15*viewData.squareSize+1.5*viewData.squareSize)
     .attr("font-size", 1.5*viewData.squareSize)
     .text(matchData.awayScore)
+    .attr("class", "away")
     .attr("id", "awayScore")
 svg.append("text")
     .attr("x", viewData.margin+13*viewData.squareSize)
@@ -705,6 +709,20 @@ svg.append("text")
     .text("Turn " + matchData.turnNumber)
     .attr("id", "turnIndicator")
     .attr("class", matchData.currentSide);
+
+var updateTurnIndicator = function() {
+    var turnIndicator = d3.select("#turnIndicator");
+    if (matchData.turnType == "normal") {
+        turnIndicator.text("Turn " + matchData.turnNumber);
+    } else if (matchData.turnType == "placePlayers") {
+        turnIndicator.text("Place players");
+    } else if (matchData.turnType == "placeBall") {
+        turnIndicator.text("Place ball");
+    } else if (matchData.turnType == "touchback") {
+        turnIndicator.text("Touchback");
+    }
+    turnIndicator.attr("class", matchData.currentSide);
+}
 
 // Make the control buttons
 // End Turn
@@ -1127,7 +1145,6 @@ var processEndTurn = function(step) {
     } else {
         matchData.currentSide = otherSide(matchData.currentSide);
     }
-    d3.select("#turnIndicator").attr("class", matchData.currentSide);
     for (var i = 0; i < players.length; i++) {
         players[i].moveLeft = players[i].ma;
         players[i].action = "";
@@ -1143,7 +1160,6 @@ var processEndTurn = function(step) {
     var endOfHalf = false;
     if ((matchData.firstKickingTeam != matchData.currentSide && matchData.turnNumber <= 8) || (matchData.firstKickingTeam == matchData.currentSide && matchData.turnNumber >= 9) || skipTurn) {
         matchData.turnNumber += 1;
-        d3.select("#turnIndicator").text("Turn " + matchData.turnNumber);
         if (matchData.turnNumber == 9) {
             setKickoff(otherSide(matchData.firstKickingTeam));
             messageArray[messageArray.length] = "Second half";
@@ -1160,6 +1176,7 @@ var processEndTurn = function(step) {
             endOfHalf = true;
         }
     }
+    updateTurnIndicator();
     if (step.touchdown && !endOfHalf) {
         setKickoff(step.side);
     }
@@ -1205,7 +1222,7 @@ var processSubmitPlayers = function(step) {
         refreshButtonColumn();
     }
     matchData.currentSide = otherSide(matchData.currentSide);
-    d3.select("#turnIndicator").attr("class", matchData.currentSide);
+    updateTurnIndicator();
     postStep(step);
     stepStack = [];
     return;
@@ -2125,7 +2142,7 @@ var scatterBall = function(step, result) {
         matchData.turnType = "touchback";
         selectedAction = "touchback";
         matchData.currentSide = otherSide(matchData.currentSide);
-        d3.select("#turnIndicator").attr("class", matchData.currentSide);
+        updateTurnIndicator();
         matchData.xBall = null;
         matchData.yBall = null;
         displayMessage("Touchback!", null, function(){});
@@ -2335,7 +2352,7 @@ var setKickoff = function(kickingTeam) {
     selectedAction = "placePlayers";
     d3.select("#ball").data([]).exit().remove();
     viewData.buttonData = defineButtonData(matchData.turnType);
-    d3.select("#turnIndicator").attr("class", matchData.currentSide);
+    updateTurnIndicator();
     refreshButtonColumn();
 }
 
@@ -2400,7 +2417,7 @@ var endKickoff = function(touchback) {
     matchData.turnType = "normal";
     if (!touchback) {
         matchData.currentSide = otherSide(matchData.currentSide);
-        d3.select("#turnIndicator").attr("class", matchData.currentSide);
+        updateTurnIndicator();
     }
     viewData.buttonData = defineButtonData(matchData.turnType);
     refreshButtonColumn();
