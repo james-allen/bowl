@@ -393,6 +393,7 @@ def resolve(match, step_type, data):
             match.current_side = data['side']
         else:
             match.current_side = other_side(match.current_side)
+        end_of_half = False
         if ((match.current_side != match.first_kicking_team and 
              match.turn_number <= 8) or
             (match.current_side == match.first_kicking_team and
@@ -400,9 +401,12 @@ def resolve(match, step_type, data):
             match.turn_number += 1
             if match.turn_number == 9:
                 set_kickoff(match, other_side(match.first_kicking_team))
+                end_of_half = True
             if match.turn_number == 17:
                 match.turn_type = None
-        elif 'touchdown' in data and data['touchdown'] == 'true':
+                end_of_half = True
+        if ('touchdown' in data and data['touchdown'] == 'true' and 
+            not end_of_half):
             set_kickoff(match, data['side'])
         match.save()
         for player in PlayerInGame.objects.filter(match=match):
