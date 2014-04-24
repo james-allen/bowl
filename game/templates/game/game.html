@@ -75,6 +75,17 @@
     stroke: skyblue;
     stroke-width: 4;
 }
+.mainBorder
+{
+    stroke: tan;
+    stroke-width: 3;
+}
+.secondaryBorder
+{
+    stroke: tan;
+    stroke-width: 3;
+    stroke-dasharray: 9,9;
+}
 .button
 {
     fill: #00BB00;
@@ -514,19 +525,62 @@ var clickPitch = function(d) {
         }
     }
 }
-var coords = new Array(nSquaresX * nSquaresY);
-for (var xIndex = 0; xIndex < nSquaresX; xIndex++) {
-    for (var yIndex = 0; yIndex < nSquaresY; yIndex++) {
-        coords[yIndex*nSquaresX + xIndex] = {"xpos": xIndex, "ypos": yIndex};
+
+var drawPitch = function() {
+    var coords = new Array(nSquaresX * nSquaresY);
+    for (var xIndex = 0; xIndex < nSquaresX; xIndex++) {
+        for (var yIndex = 0; yIndex < nSquaresY; yIndex++) {
+            coords[yIndex*nSquaresX + xIndex] = {"xpos": xIndex, "ypos": yIndex};
+        }
     }
+    var pitch = svg.append("g").attr("class", "pitch")
+        .selectAll("rect.pitch").data(coords).enter().append("rect")
+        .attr("x", function(d) { return d.xpos*viewData.squareSize + viewData.margin; })
+        .attr("y", function(d) { return d.ypos*viewData.squareSize + viewData.margin; })
+        .attr("width", viewData.squareSize)
+        .attr("height", viewData.squareSize)
+        .attr("id", gridId)
+    var line = d3.svg.line()
+        .x(function(d) { return d.x; })
+        .y(function(d) { return d.y; })
+        .interpolate("linear");
+    var top = viewData.margin;
+    var bottom = top + nSquaresY*viewData.squareSize;
+    var left = viewData.margin;
+    var right = left + nSquaresX*viewData.squareSize;
+    var centre = 0.5 * (left + right);
+    var endLeft = left + viewData.squareSize;
+    var endRight = right - viewData.squareSize;
+    var wideTop = top + 4*viewData.squareSize;
+    var wideBottom = bottom - 4*viewData.squareSize;
+    var mainBorderData = [
+        [{x: left, y: top}, {x: right, y: top}],
+        [{x: right, y: top}, {x: right, y: bottom}],
+        [{x: right, y: bottom}, {x: left, y: bottom}],
+        [{x: left, y: bottom}, {x: left, y: top}],
+        [{x: endLeft, y: top}, {x: endLeft, y: bottom}],
+        [{x: centre, y: top}, {x: centre, y: bottom}],
+        [{x: endRight, y: top}, {x: endRight, y: bottom}]
+    ];
+    var secondaryBorderData = [
+        [{x: endLeft, y: wideTop}, {x: endRight, y: wideTop}],
+        [{x: endLeft, y: wideBottom}, {x: endRight, y: wideBottom}]
+    ];
+    svg.selectAll("path.mainBorder")
+        .data(mainBorderData)
+        .enter()
+        .append("path")
+        .attr("class", "mainBorder")
+        .attr("d", line);
+    svg.selectAll("path.secondaryBorder")
+        .data(secondaryBorderData)
+        .enter()
+        .append("path")
+        .attr("class", "secondaryBorder")
+        .attr("d", line);
+    return pitch;    
 }
-var pitch = svg.append("g").attr("class", "pitch")
-    .selectAll("rect.pitch").data(coords).enter().append("rect")
-    .attr("x", function(d) { return d.xpos*viewData.squareSize + viewData.margin; })
-    .attr("y", function(d) { return d.ypos*viewData.squareSize + viewData.margin; })
-    .attr("width", viewData.squareSize)
-    .attr("height", viewData.squareSize)
-    .attr("id", gridId)
+var pitch = drawPitch();
 pitch.on("click", clickPitch)
 pitch.on("mouseover", highlightStep)
 
