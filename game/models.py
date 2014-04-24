@@ -153,6 +153,7 @@ def start_match(home_team, away_team, first_kicking_team=None,
         create_pig(away_player, match=match, xpos=0, ypos=0,
                    on_pitch=True).save()
     set_kickoff(match, first_kicking_team)
+    return match
 
 def set_kickoff(match, kicking_team):
     """Set a kickoff for this match."""

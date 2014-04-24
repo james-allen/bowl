@@ -21,7 +21,7 @@ def place_players(match, side, positions_dict):
         team = match.away_team
     for position, coordinates in positions_dict.items():
         players = PlayerInGame.objects.filter(
-            match=match, player__team=team, player__position=position)
+            match=match, player__team=team, player__position__title=position)
         for player, (xpos, ypos) in zip(players, coordinates):
             player.xpos = xpos
             player.ypos = ypos
@@ -51,7 +51,7 @@ def start_after_kickoff():
     match.turn_type = 'normal'
     match.current_side = 'away'
     match.save()
-    return
+    return match
         
 
 def populate_humans(team):

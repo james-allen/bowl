@@ -3,7 +3,7 @@ from time import sleep
 from random import randint
 
 from django.http import HttpResponse, Http404
-from django.shortcuts import render
+from django.shortcuts import render, get_object_or_404
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.db.utils import IntegrityError
 
@@ -12,8 +12,8 @@ from game.steps import resolve
 
 # Create your views here.
 @ensure_csrf_cookie
-def game_view(request):
-    match = Match.objects.all()[0]
+def game_view(request, match_id):
+    match = get_object_or_404(Match, id=match_id)
     home_players = PlayerInGame.objects.filter(
         match=match, player__team=match.home_team).all()
     away_players = PlayerInGame.objects.filter(
