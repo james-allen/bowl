@@ -1140,12 +1140,14 @@ var processEndTurn = function(step) {
         players[i].stunnedThisTurn = false;
         svg.selectAll(".player").classed("finishedAction", false);
     }
+    var endOfHalf = false;
     if ((matchData.firstKickingTeam != matchData.currentSide && matchData.turnNumber <= 8) || (matchData.firstKickingTeam == matchData.currentSide && matchData.turnNumber >= 9) || skipTurn) {
         matchData.turnNumber += 1;
         d3.select("#turnIndicator").text("Turn " + matchData.turnNumber);
         if (matchData.turnNumber == 9) {
             setKickoff(otherSide(matchData.firstKickingTeam));
             messageArray[messageArray.length] = "Second half";
+            endOfHalf = true;
         } else if (matchData.turnNumber == 17) {
             endMatch();
             var message;
@@ -1155,8 +1157,10 @@ var processEndTurn = function(step) {
                 message = teamName(currentLeader()) + " win!";
             }
             messageArray[messageArray.length] = message;
+            endOfHalf = true;
         }
-    } else if (step.touchdown) {
+    }
+    if (step.touchdown && !endOfHalf) {
         setKickoff(step.side);
     }
     stepStack = [];
