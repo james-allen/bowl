@@ -698,6 +698,13 @@ svg.append("text")
     .attr("font-size", 1.5*viewData.squareSize)
     .text(matchData.awayScore)
     .attr("id", "awayScore")
+svg.append("text")
+    .attr("x", viewData.margin+13*viewData.squareSize)
+    .attr("y", viewData.margin+15*viewData.squareSize+1.5*viewData.squareSize+viewData.lineHeight)
+    .attr("text-anchor", "middle")
+    .text("Turn " + matchData.turnNumber)
+    .attr("id", "turnIndicator")
+    .attr("class", matchData.currentSide);
 
 // Make the control buttons
 // End Turn
@@ -1120,6 +1127,7 @@ var processEndTurn = function(step) {
     } else {
         matchData.currentSide = otherSide(matchData.currentSide);
     }
+    d3.select("#turnIndicator").attr("class", matchData.currentSide);
     for (var i = 0; i < players.length; i++) {
         players[i].moveLeft = players[i].ma;
         players[i].action = "";
@@ -1134,6 +1142,7 @@ var processEndTurn = function(step) {
     }
     if ((matchData.firstKickingTeam != matchData.currentSide && matchData.turnNumber <= 8) || (matchData.firstKickingTeam == matchData.currentSide && matchData.turnNumber >= 9) || skipTurn) {
         matchData.turnNumber += 1;
+        d3.select("#turnIndicator").text("Turn " + matchData.turnNumber);
         if (matchData.turnNumber == 9) {
             setKickoff(otherSide(matchData.firstKickingTeam));
             messageArray[messageArray.length] = "Second half";
@@ -1192,6 +1201,7 @@ var processSubmitPlayers = function(step) {
         refreshButtonColumn();
     }
     matchData.currentSide = otherSide(matchData.currentSide);
+    d3.select("#turnIndicator").attr("class", matchData.currentSide);
     postStep(step);
     stepStack = [];
     return;
@@ -2111,6 +2121,7 @@ var scatterBall = function(step, result) {
         matchData.turnType = "touchback";
         selectedAction = "touchback";
         matchData.currentSide = otherSide(matchData.currentSide);
+        d3.select("#turnIndicator").attr("class", matchData.currentSide);
         matchData.xBall = null;
         matchData.yBall = null;
         displayMessage("Touchback!", null, function(){});
@@ -2320,6 +2331,7 @@ var setKickoff = function(kickingTeam) {
     selectedAction = "placePlayers";
     d3.select("#ball").data([]).exit().remove();
     viewData.buttonData = defineButtonData(matchData.turnType);
+    d3.select("#turnIndicator").attr("class", matchData.currentSide);
     refreshButtonColumn();
 }
 
@@ -2384,6 +2396,7 @@ var endKickoff = function(touchback) {
     matchData.turnType = "normal";
     if (!touchback) {
         matchData.currentSide = otherSide(matchData.currentSide);
+        d3.select("#turnIndicator").attr("class", matchData.currentSide);
     }
     viewData.buttonData = defineButtonData(matchData.turnType);
     refreshButtonColumn();
