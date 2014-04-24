@@ -49,6 +49,7 @@ def start_after_kickoff():
     match.x_ball = 17
     match.y_ball = 5
     match.turn_type = 'normal'
+    match.turn_number = 1
     match.current_side = 'away'
     match.save()
     return match
