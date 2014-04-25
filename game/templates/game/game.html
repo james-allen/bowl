@@ -635,11 +635,16 @@ var drawInfoBox = function(parent, id, y) {
     infoBox.append("text")
         .attr("x", viewData.infoX + viewData.margin)
         .attr("y", y + viewData.margin + 6*viewData.lineHeight)
+        .text("Moves left: ")
+        .attr("id", id + "MoveLeft")
+    infoBox.append("text")
+        .attr("x", viewData.infoX + viewData.margin)
+        .attr("y", y + viewData.margin + 7*viewData.lineHeight)
         .text("Skills:")
-    for (var i = 0; i < 7; i++) {
+    for (var i = 0; i < 6; i++) {
         infoBox.append("text")
             .attr("x", viewData.infoX + 2*viewData.margin)
-            .attr("y", y + viewData.margin + (7+i)*viewData.lineHeight)
+            .attr("y", y + viewData.margin + (8+i)*viewData.lineHeight)
             .text("")
             .attr("id", id + "Skill" + i)
     }
@@ -654,7 +659,8 @@ var updateInfoBox = function(infoBoxId, player) {
         d3.select("#"+infoBoxId+"ST").text("ST: ");
         d3.select("#"+infoBoxId+"AG").text("AG: ");
         d3.select("#"+infoBoxId+"AV").text("AV: ");
-        for (var i = 0; i < 7; i++) {
+        d3.select("#"+infoBoxId+"MoveLeft").text("Moves left: ");
+        for (var i = 0; i < 6; i++) {
             d3.select("#"+infoBoxId+"Skill"+i).text("");
         }
     } else {
@@ -665,10 +671,11 @@ var updateInfoBox = function(infoBoxId, player) {
         d3.select("#"+infoBoxId+"ST").text("ST: "+player.st);
         d3.select("#"+infoBoxId+"AG").text("AG: "+player.ag);
         d3.select("#"+infoBoxId+"AV").text("AV: "+player.av);
-        for (var i = 0; i < player.skills.length; i++) {
+        d3.select("#"+infoBoxId+"MoveLeft").text("Moves left: "+player.moveLeft);
+        for (var i = 0; i < player.skills.length && i < 6; i++) {
             d3.select("#"+infoBoxId+"Skill"+i).text(player.skills[i]);
         }
-        for (var i = player.skills.length; i < 7; i++) {
+        for (var i = player.skills.length; i < 6; i++) {
             d3.select("#"+infoBoxId+"Skill"+i).text("");
         }
     }
@@ -793,7 +800,11 @@ var setAction = function(player, action) {
 
 var finishAction = function(player) {
     player.finishedAction = true;
+    player.moveLeft = 0;
     svg.select("#" + playerId(player)).classed("finishedAction", true);
+    if (player == selected) {
+        updateInfoBox("infoBoxSelected", player);
+    }
 }
 
 var clickPlayer = function(d) {
@@ -999,6 +1010,9 @@ var processMove = function(step) {
         if (player.moveLeft == -2) {
             finishAction(player);
         }
+        if (player == selected) {
+            updateInfoBox("infoBoxSelected", player);
+        }
     }
     // Tell the server
     postStep(step);
@@ -1015,6 +1029,9 @@ var processBlock = function(step) {
     var player = playerInPos(step.x0, step.y0);
     if (step.action == "blitz") {
         player.moveLeft -= 1;
+        if (player == selected) {
+            updateInfoBox("infoBoxSelected", player);
+        }
     }
     if (player.moveLeft == -2 || step.action != "blitz") {
         finishAction(player);
@@ -1100,6 +1117,9 @@ var processKnockDown = function(step) {
 var processStandUp = function(step) {
     var player = findPlayer(step.side, step.num);
     player.moveLeft -= 3;
+    if (player == selected) {
+        updateInfoBox("infoBoxSelected", player);
+    }
     if (player.moveLeft <= -2) {
         finishAction(player);
     }
@@ -2353,6 +2373,7 @@ var nTackleZones = function(player) {
 }
 
 var setKickoff = function(kickingTeam) {
+    clearSelection();
     d3.selectAll(".knockDownSymbol").data([]).exit().remove();
     d3.selectAll(".stunnedSymbol").data([]).exit().remove();
     var xposHome, xposAway;
