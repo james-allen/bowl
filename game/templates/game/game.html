@@ -111,13 +111,13 @@
 {
     fill: #444444;
 }
-.optionsWindow
+#optionsWindow
 {
     fill: #FFFFFF;
 }
-.optionsText
+#optionsHtml
 {
-    text-anchor: middle;
+    text-align: center;
 }
 .knockDownSymbol
 {
@@ -880,17 +880,22 @@ for (var index = 0; index < players.length; index++) {
 
 // Make a background for selecting options
 var optionsWindow = svg.append("rect")
-    .attr("class", "optionsWindow")
+    .attr("id", "optionsWindow")
     .attr("x", 0.4 * nSquaresX * viewData.squareSize + viewData.margin)
     .attr("y", 0.4 * nSquaresY * viewData.squareSize + viewData.margin)
     .attr("width", 0.2 * nSquaresX * viewData.squareSize)
     .attr("height", 0.2 * nSquaresY * viewData.squareSize)
     .style("visibility", "hidden");
-var optionsText = svg.append("text")
-    .attr("class", "optionsText")
-    .attr("x", 0.5 * nSquaresX * viewData.squareSize + viewData.margin)
-    .attr("y", 0.42 * nSquaresY * viewData.squareSize + viewData.margin)
+var optionsForeignObject = svg.append("foreignObject")
+    .attr("id", "optionsForeignObject")
+    .attr("x", 0.4 * nSquaresX * viewData.squareSize + viewData.margin)
+    .attr("y", 0.4 * nSquaresY * viewData.squareSize + viewData.margin)
+    .attr("width", 0.2 * nSquaresX * viewData.squareSize)
+    .attr("height", viewData.height - (0.4 * nSquaresY * viewData.squareSize + viewData.margin))
     .style("visibility", "hidden");
+var optionsHtml = optionsForeignObject.append("xhtml:body")
+    .attr("id", "optionsHtml")
+    .html("Placeholder");
 
 var clearSelection = function() {
     selected = null;
@@ -2037,8 +2042,8 @@ var selectFromOptions = function(options, message, data, callback, teamReroll, s
     var selectOption = function(d) {
         if (d.inactive) { return; }
         viewData.activityType = "normal";
-        svg.selectAll("rect.optionsWindow").style("visibility", "hidden");
-        svg.selectAll("text.optionsText").style("visibility", "hidden");
+        svg.select("#optionsWindow").style("visibility", "hidden");
+        svg.select("#optionsForeignObject").style("visibility", "hidden");
         svg.selectAll("g.option").data([]).exit().remove();
         if (d.option == "Use team re-roll") {
             reroll(d, "team", null);
@@ -2063,8 +2068,9 @@ var selectFromOptions = function(options, message, data, callback, teamReroll, s
     if (proReroll) {
         optionsData[optionsData.length] = {"option": "Use Pro re-roll", "data": data, "inactive": (proReroll == "inactive")};
     }
-    svg.selectAll("rect.optionsWindow").style("visibility", "visible");
-    svg.selectAll("text.optionsText").text(message).style("visibility", "visible");
+    svg.select("#optionsWindow").style("visibility", "visible");
+    svg.select("#optionsForeignObject").style("visibility", "visible");
+    svg.select("#optionsHtml").html(message);
     var g = svg.selectAll("g.option")
         .data(optionsData)
         .enter()
