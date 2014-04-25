@@ -403,7 +403,7 @@ def resolve(match, step_type, data):
                 set_kickoff(match, other_side(match.first_kicking_team))
                 end_of_half = True
             if match.turn_number == 17:
-                match.turn_type = None
+                match.turn_type = 'end'
                 end_of_half = True
         if ('touchdown' in data and data['touchdown'] == 'true' and 
             not end_of_half):

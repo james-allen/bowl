@@ -428,7 +428,7 @@ var defineButtonData = function(turnType) {
              id: "submitButton",
              group: 0}
         ];
-    } else if (turnType == null) {
+    } else if (turnType == "end") {
         buttonData = [];
     }
     return buttonData;
@@ -720,9 +720,24 @@ var updateTurnIndicator = function() {
         turnIndicator.text("Place ball");
     } else if (matchData.turnType == "touchback") {
         turnIndicator.text("Touchback");
+    } else if (matchData.turnType == "end") {
+        turnIndicator.text("End of match")
     }
-    turnIndicator.attr("class", matchData.currentSide);
+    if (matchData.turnType == "end") {
+        // Colour by whoever won
+        if (matchData.homeScore > matchData.awayScore) {
+            turnIndicator.attr("class", "home");
+        } else if (matchData.awayScore > matchData.homeScore) {
+            turnIndicator.attr("class", "away");
+        } else {
+            turnIndicator.attr("class", "");
+        }
+    } else {
+        turnIndicator.attr("class", matchData.currentSide);
+    }
 }
+
+updateTurnIndicator();
 
 // Make the control buttons
 // End Turn
@@ -2429,7 +2444,8 @@ var endKickoff = function(touchback) {
 }
 
 var endMatch = function() {
-    matchData.turnType = null;
+    matchData.turnType = "end";
+    updateTurnIndicator();
     viewData.buttonData = defineButtonData(matchData.turnType);
     refreshButtonColumn();
     svg.selectAll(".player").on("click", null);
