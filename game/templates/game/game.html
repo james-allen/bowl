@@ -1990,19 +1990,26 @@ var selectPush = function(step) {
 }
 
 var confirmResult = function(step, result, rerollSkill, callback) {
+    var stepType = (step.stepType == "reroll") ? step.rerollStepType: step.stepType;
     var message;
+    if (stepType == "move") { message = "Dodge: "; }
+    else if (stepType == "pickUp") { message = "Pick up ball: "; }
+    else if (stepType == "catch") { message = "Catch: "; }
+    else if (stepType == "pass") { message = "Pass: "; }
+    else if (stepType == "goForIt") { message = "Go for it: "; }
+    else { message = ""; }
     var teamReroll, skillReroll, proReroll;
     var data = {"step": step, "result": result};
     if (result.success) {
-        message = "Success!";
+        message = message + "Success!";
         teamReroll = false;
         skillReroll = false;
         proReroll = false;
     } else {
         if (result.fumble) {
-            message = "Fumbled!";
+            message = message + "Fumbled!";
         } else {
-            message = "Failed!";
+            message = message + "Failed!";
         }
         var player = findPlayer(step.side, step.num);
         teamReroll = (teamRerollAvailable(step.side) && step.stepType != "reroll") ? "active" : "inactive";
@@ -2012,6 +2019,11 @@ var confirmResult = function(step, result, rerollSkill, callback) {
             skillReroll = false;
         }
         proReroll = false;
+    }
+    if (stepType == "move" || stepType == "pickUp" || stepType == "catch" || stepType == "pass") {
+        message = message + "<br/>Rolled: " + result.rawResult + "<br/>Modified: " + result.modifiedResult + "<br/>Required: " + result.requiredResult
+    } else if (stepType == "goForIt") {
+        message = message + "<br/>Rolled: " + result.dice[0];
     }
     selectFromOptions(["OK"], message, data, callback, teamReroll, skillReroll, proReroll, rerollSkill);
 }
@@ -2073,7 +2085,7 @@ var selectFromOptions = function(options, message, data, callback, teamReroll, s
     svg.select("#optionsWindow").style("visibility", "visible");
     svg.select("#optionsForeignObject").style("visibility", "visible");
     svg.select("#optionsHtml").html(message);
-    var optionsWindowHeight = 3*viewData.margin + $("#optionsHtml").height()+ 1.3*viewData.buttonHeight*options.length;
+    var optionsWindowHeight = 3*viewData.margin + $("#optionsHtml").height()+ 1.3*viewData.buttonHeight*optionsData.length;
     var optionsWindowTop = viewData.margin + 0.5*nSquaresY*viewData.squareSize - 0.5*optionsWindowHeight;
     svg.select("#optionsWindow")
         .attr("height", optionsWindowHeight)

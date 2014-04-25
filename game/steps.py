@@ -528,6 +528,7 @@ def roll_injury_dice(modifier=0):
             'modifiedResult': modified_result, 'result': result}
 
 def roll_agility_dice(player, modifier=0):
+    required_result = 7 - min(player.player.ag, 6)
     dice = roll_dice(6, 1)
     raw_result = sum(dice['dice'])
     modified_result = raw_result + modifier
@@ -536,9 +537,10 @@ def roll_agility_dice(player, modifier=0):
     elif raw_result == 6:
         success = True
     else:
-        success = ((modified_result + min(player.player.ag, 6)) >= 7)
+        success = (modified_result >= required_result)
     return {'dice': dice, 'rawResult': raw_result, 
-            'modifiedResult': modified_result, 'success': success}
+            'modifiedResult': modified_result, 
+            'requiredResult': required_result, 'success': success}
 
 def roll_dice(n_sides, n_dice):
     return {"nDice": n_dice,
