@@ -1363,6 +1363,7 @@ var postProcessStep = function(step, result) {
             var message = "Which block dice would you like to use?";
             var teamReroll = (teamRerollAvailable(step.side) && step.stepType != "reroll") ? "active" : "inactive";
             var data = {"step": step, "result": result}
+            var options = [];
             selectFromOptions(result.dice, message, data, blockDice, teamReroll, false, false, null);
         }
         break;
@@ -2071,7 +2072,8 @@ var displayMessage = function(message, data, callback) {
     selectFromOptions(["OK"], thisMessage, data, func, false, false, false, null);
 }
 
-var selectFromOptions = function(options, message, data, callback, teamReroll, skillReroll, proReroll, rerollSkill) {
+var selectFromOptions = function(options, message, data, callback, teamReroll, skillReroll, proReroll, rerollSkill, labels) {
+    labels = (typeof labels === "undefined") ? options : labels
     viewData.activityType = "selectFromOptions";
     var selectOption = function(d) {
         if (d.inactive) { return; }
@@ -2079,11 +2081,11 @@ var selectFromOptions = function(options, message, data, callback, teamReroll, s
         svg.select("#optionsWindow").style("visibility", "hidden");
         svg.select("#optionsForeignObject").style("visibility", "hidden");
         svg.selectAll("g.option").data([]).exit().remove();
-        if (d.option == "Use team re-roll") {
+        if (d.option == "teamReroll") {
             reroll(d, "team", null);
-        } else if (d.option == "Use skill re-roll") {
+        } else if (d.option == "skillReroll") {
             reroll(d, "skill", rerollSkill);
-        } else if (d.option == "Use Pro re-roll") {
+        } else if (d.option == "proReroll") {
             reroll(d, "pro", null);
         } else {
             callback(d);            
@@ -2091,16 +2093,16 @@ var selectFromOptions = function(options, message, data, callback, teamReroll, s
     }
     var optionsData = new Array;
     for (var index = 0; index < options.length; index++) {
-        optionsData[index] = {"option": options[index], "data": data, "inactive": false};
+        optionsData[index] = {"option": options[index], "data": data, "inactive": false, "label": labels[index]};
     }
     if (teamReroll) {
-        optionsData[optionsData.length] = {"option": "Use team re-roll", "data": data, "inactive": (teamReroll == "inactive")};
+        optionsData[optionsData.length] = {"option": "teamReroll", "data": data, "inactive": (teamReroll == "inactive"), "label": "Use team re-roll"};
     }
     if (skillReroll) {
-        optionsData[optionsData.length] = {"option": "Use skill re-roll", "data": data, "inactive": (skillReroll == "inactive")};
+        optionsData[optionsData.length] = {"option": "skillReroll", "data": data, "inactive": (skillReroll == "inactive"), "label": "Use skill re-roll"};
     }
     if (proReroll) {
-        optionsData[optionsData.length] = {"option": "Use Pro re-roll", "data": data, "inactive": (proReroll == "inactive")};
+        optionsData[optionsData.length] = {"option": "proReroll", "data": data, "inactive": (proReroll == "inactive"), "label": "Use Pro re-roll"};
     }
     svg.select("#optionsWindow").style("visibility", "visible");
     svg.select("#optionsForeignObject").style("visibility", "visible");
@@ -2127,7 +2129,7 @@ var selectFromOptions = function(options, message, data, callback, teamReroll, s
         .attr("height", viewData.buttonHeight)
         .classed("button", true)
     g.append("text")
-        .text(function(d) { return d.option; })
+        .text(function(d) { return d.label; })
         .attr("x", 0.5 * nSquaresX * viewData.squareSize + viewData.margin)
         .attr("y", function(d, i) { return firstButtonTop + (0.5+1.3*i)*viewData.buttonHeight; })
         .classed("buttonText", true)
