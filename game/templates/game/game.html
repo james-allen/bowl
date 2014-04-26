@@ -111,6 +111,10 @@
 {
     fill: #444444;
 }
+.rerollUsed
+{
+    fill: #AAAAAA;
+}
 #optionsWindow
 {
     fill: antiquewhite;
@@ -697,6 +701,19 @@ svg.append("text")
     .text(matchData.awayTeam)
     .attr("class", "away")
 svg.append("text")
+    .attr("x", viewData.margin+11*viewData.squareSize)
+    .attr("y", 2*viewData.margin+15*viewData.squareSize+2*viewData.lineHeight)
+    .attr("text-anchor", "end")
+    .text("Re-rolls: " + matchData.homeRerolls)
+    .attr("class", "home")
+    .attr("id", "homeRerolls")
+svg.append("text")
+    .attr("x", viewData.margin+15*viewData.squareSize)
+    .attr("y", 2*viewData.margin+15*viewData.squareSize+2*viewData.lineHeight)
+    .text("Re-rolls: " + matchData.awayRerolls)
+    .attr("class", "away")
+    .attr("id", "awayRerolls")
+svg.append("text")
     .attr("x", 13*viewData.squareSize)
     .attr("y", viewData.margin+15*viewData.squareSize+1.5*viewData.squareSize)
     .attr("text-anchor", "end")
@@ -1175,6 +1192,16 @@ var processEndTurn = function(step) {
     clearSelection();
     matchData.homeRerollUsedThisTurn = false;
     matchData.awayRerollUsedThisTurn = false;
+    if (matchData.homeRerolls > 0) {
+        d3.select("#homeRerolls")
+            .classed("home", true)
+            .classed("rerollUsed", false);
+    }
+    if (matchData.awayRerolls > 0) {
+        d3.select("#awayRerolls")
+            .classed("away", true)
+            .classed("rerollUsed", false);
+    }
     var skipTurn = false;
     if (step.touchdown) {
         matchData[step.side+"Score"] += 1;
@@ -2355,9 +2382,17 @@ var reroll = function(data, rerollType, rerollSkill) {
         if (step.side == "home") {
             matchData.homeRerolls -= 1;
             matchData.homeRerollUsedThisTurn = true;
+            d3.select("#homeRerolls")
+                .text("Re-rolls: " + matchData.homeRerolls)
+                .classed("home", false)
+                .classed("rerollUsed", true);
         } else {
             matchData.awayRerolls -= 1;
             matchData.awayRerollUsedThisTurn = true;
+            d3.select("#awayRerolls")
+                .text("Re-rolls: " + matchData.awayRerolls)
+                .classed("away", false)
+                .classed("rerollUsed", true);
         }
     }
     stepStack[0] = step;
