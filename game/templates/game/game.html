@@ -1651,7 +1651,7 @@ var isTurn = function(player) {
 var usedSkillThisTurn = function(player, skill) {
     // Check to see if a particular skill has been used by the player this turn.
     for (var index = history.length-1; index >= 0; index--) {
-        if (history[index].stepType == "endTurn") {
+        if (history[index].stepType == "endTurn" || history[index].side != player.side || history[index].num != player.num) {
             return false;
         }
         if (history[index].stepType == "reroll" && history[index].rerollType == "skill" && history[index].rerollSkill == skill) {
@@ -1672,6 +1672,18 @@ var usedActionThisTurn = function(action) {
         }
     }
     return false;
+}
+
+var performedStepThisTurn = function(player, stepType) {
+    // Check to see if the player has performed a particular step this turn.
+    for (var index = history.length-1; index >= 0; index--) {
+        if (history[index].stepType == "endTurn" || history[index].side != player.side || history[index].num != player.num) {
+            return false;
+        }
+        if (history[index].stepType == stepType) {
+            return true;
+        }
+    }
 }
 
 var lastActivePlayer = function() {
@@ -1727,7 +1739,7 @@ var defineStep = function(xpos, ypos) {
                 step.stepType = "move";
                 step.dodge = (nTackleZones(selected) > 0);
                 step.goForIt = (selected.moveLeft <= 0);
-            } else if (targetPlayer.side != selected.side && !targetPlayer.down) {
+            } else if (targetPlayer.side != selected.side && !targetPlayer.down && !performedStepThisTurn(selected, "block")) {
                 step.stepType = "block";
                 step.targetNum = targetPlayer.num;
                 step.targetSide = targetPlayer.side;
