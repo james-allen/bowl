@@ -1387,7 +1387,9 @@ var postProcessStep = function(step, result) {
         break;
     case "block":
         if (step.selectedDice == null) {
-            var message = "Which block dice would you like to use?";
+            var message = "Attack strength: " + result.attackSt;
+            message = message + "<br/>Defence strength: " + result.defenceSt;
+            message = message + "<br/>Which block dice would you like to use?";
             var teamReroll = (teamRerollAvailable(step.side) && step.stepType != "reroll") ? "active" : "inactive";
             var data = {"step": step, "result": result}
             var labels = [];
