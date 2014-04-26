@@ -8,7 +8,8 @@ var shapeGenerator = function(shape) {
             {x: -0.5, y: 0.5},
             {x: 0.5, y: 0.5},
             {x: 0.5, y: -0.5},
-            {x: -0.5, y: -0.5}
+            {x: -0.5, y: -0.5},
+            {x: -0.5, y: 0.5}
         ];
         interpolate = "linear";
         break;
@@ -29,7 +30,8 @@ var shapeGenerator = function(shape) {
             {x: 0.5, y: -0.5},
             {x: 0.5, y: 0},
             {x: 0, y: 0.5},
-            {x: -0.5, y: 0.5}
+            {x: -0.5, y: 0.5},
+            {x: -0.5, y: 0}
         ];
         interpolate = "linear";
         break;
@@ -39,7 +41,8 @@ var shapeGenerator = function(shape) {
             {x: -0.5, y: 0.35},
             {x: 0.5, y: 0.35},
             {x: 0.5, y: -0.35},
-            {x: -0.5, y: -0.35}
+            {x: -0.5, y: -0.35},
+            {x: -0.5, y: 0.35}
         ];
         interpolate = "linear";
         break;
@@ -49,7 +52,8 @@ var shapeGenerator = function(shape) {
             {x: 0, y: 0.5},
             {x: 0.5, y: 0},
             {x: 0, y: -0.5},
-            {x: -0.5, y: 0}
+            {x: -0.5, y: 0},
+            {x: 0, y: 0.5}
         ];
         interpolate = "linear";
         break;
@@ -61,7 +65,8 @@ var shapeGenerator = function(shape) {
             {x: 0.5, y: -0.25},
             {x: 0.5, y: 0.5},
             {x: 0, y: 0.25},
-            {x: -0.5, y: 0.5}
+            {x: -0.5, y: 0.5},
+            {x: -0.5, y: -0.25}
         ];
         interpolate = "linear";
         break;
