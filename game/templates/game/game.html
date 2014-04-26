@@ -1202,6 +1202,9 @@ var processEndTurn = function(step) {
             .classed("away", true)
             .classed("rerollUsed", false);
     }
+    if (step.turnover) {
+        messageArray[messageArray.length] = "Turnover!"
+    }
     var skipTurn = false;
     if (step.touchdown) {
         matchData[step.side+"Score"] += 1;
@@ -1230,6 +1233,8 @@ var processEndTurn = function(step) {
     if ((matchData.firstKickingTeam != matchData.currentSide && matchData.turnNumber <= 8) || (matchData.firstKickingTeam == matchData.currentSide && matchData.turnNumber >= 9) || skipTurn) {
         matchData.turnNumber += 1;
         if (matchData.turnNumber == 9) {
+            matchData.homeRerolls = matchData.homeRerollsTotal;
+            matchData.awayRerolls = matchData.awayRerollsTotal;
             setKickoff(otherSide(matchData.firstKickingTeam));
             messageArray[messageArray.length] = "Second half";
             endOfHalf = true;
@@ -1251,9 +1256,6 @@ var processEndTurn = function(step) {
     }
     stepStack = [];
     setAction(null, "");
-    if (step.turnover) {
-        messageArray[messageArray.length] = "Turnover!"
-    }
     if (messageArray.length > 0) {
         displayMessage(messageArray, null, function(){postStep(step);});
     } else {

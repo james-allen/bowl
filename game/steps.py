@@ -401,6 +401,8 @@ def resolve(match, step_type, data):
             match.turn_number += 1
             if match.turn_number == 9:
                 set_kickoff(match, other_side(match.first_kicking_team))
+                match.home_rerolls = match.home_rerolls_total
+                match.away_rerolls = match.away_rerolls_total
                 end_of_half = True
             if match.turn_number == 17:
                 match.turn_type = 'end'

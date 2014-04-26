@@ -91,6 +91,8 @@ class Match(models.Model):
     y_ball = models.IntegerField(null=True, default=None)
     home_rerolls = models.IntegerField(default=0)
     away_rerolls = models.IntegerField(default=0)
+    home_rerolls_total = models.IntegerField(default=0)
+    away_rerolls_total = models.IntegerField(default=0)
     home_reroll_used_this_turn = models.BooleanField(default=False)
     away_reroll_used_this_turn = models.BooleanField(default=False)
     n_to_place = models.IntegerField(default=0)
@@ -112,6 +114,8 @@ class Match(models.Model):
             'yBall': self.y_ball,
             'homeRerolls': self.home_rerolls,
             'awayRerolls': self.away_rerolls,
+            'homeRerollsTotal': self.home_rerolls_total,
+            'awayRerollsTotal': self.away_rerolls_total,
             'homeRerollUsedThisTurn': self.home_reroll_used_this_turn,
             'awayRerollUsedThisTurn': self.away_reroll_used_this_turn,
             'nToPlace': self.n_to_place,
@@ -144,6 +148,8 @@ def start_match(home_team, away_team, first_kicking_team=None,
         home_first_direction=home_first_direction,
         home_rerolls=home_team.rerolls,
         away_rerolls=away_team.rerolls,
+        home_rerolls_total=home_team.rerolls,
+        away_rerolls_total=away_team.rerolls,
         )
     match.save()
     for home_player in home_team.player_set.all():
