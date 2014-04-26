@@ -210,7 +210,7 @@ var viewData = {
     height: 1000,
     margin: 10,
     squareSize: 40,
-    buttonWidth: 100,
+    buttonWidth: 120,
     buttonHeight: 30,
     infoWidth: 200,
     lineHeight: 20,
@@ -1363,8 +1363,21 @@ var postProcessStep = function(step, result) {
             var message = "Which block dice would you like to use?";
             var teamReroll = (teamRerollAvailable(step.side) && step.stepType != "reroll") ? "active" : "inactive";
             var data = {"step": step, "result": result}
-            var options = [];
-            selectFromOptions(result.dice, message, data, blockDice, teamReroll, false, false, null);
+            var labels = [];
+            for (var i = 0; i < result.dice.length; i++) {
+                if (result.dice[i] == "attackerDown") {
+                    labels[i] = "Attacker down";
+                } else if (result.dice[i] = "bothDown") {
+                    labels[i] = "Both down";
+                } else if (result.dice[i] = "pushed") {
+                    labels[i] = "Pushed";
+                } else if (result.dice[i] = "defenderStumbles") {
+                    labels[i] = "Defender stumbles";
+                } else if (result.dice[i] = "defenderDown") {
+                    labels[i] = "Defender down";
+                }
+            }
+            selectFromOptions(result.dice, message, data, blockDice, teamReroll, false, false, null, labels);
         }
         break;
     case "knockDown":
