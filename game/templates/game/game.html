@@ -2453,23 +2453,25 @@ var setKickoff = function(kickingTeam) {
     var xpos, ypos, player;
     for (var index = 0; index < players.length; index++) {
         player = players[index];
-        player.down = false;
-        player.stunned = false;
-        player.stunnedThisTurn = false;
-        player.hasBall = false;
-        player.moveLeft = player.ma;
-        player.action = "";
-        player.finishedAction = false;
-        if (player.side == "home") {
-            xpos = xposHome;
-            ypos = yposHome;
-            yposHome += 1;
-        } else {
-            xpos = xposAway;
-            ypos = yposAway;
-            yposAway += 1;
+        if (player.onPitch) {
+            player.down = false;
+            player.stunned = false;
+            player.stunnedThisTurn = false;
+            player.hasBall = false;
+            player.moveLeft = player.ma;
+            player.action = "";
+            player.finishedAction = false;
+            if (player.side == "home") {
+                xpos = xposHome;
+                ypos = yposHome;
+                yposHome += 1;
+            } else {
+                xpos = xposAway;
+                ypos = yposAway;
+                yposAway += 1;
+            }
+            movePlayer(player, xpos, ypos);
         }
-        movePlayer(player, xpos, ypos);
     }
     matchData.nToPlace = 2;
     matchData.kickingTeam = kickingTeam;
