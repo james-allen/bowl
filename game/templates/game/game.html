@@ -2477,7 +2477,7 @@ var setKickoff = function(kickingTeam) {
     matchData.xBall = null;
     matchData.yBall = null;
     matchData.turnType = "placePlayers";
-    selectedAction = "placePlayers";
+    selectedAction = "placePlayer";
     d3.select("#ball").data([]).exit().remove();
     viewData.buttonData = defineButtonData(matchData.turnType);
     updateTurnIndicator();
