@@ -281,7 +281,7 @@ def resolve(match, step_type, data):
         if player.down:
             return {'success': False}
         modifier = - n_tackle_zones(player)
-        if data['accurate']:
+        if data['accurate'] == 'true':
             modifier += 1
         result = roll_agility_dice(player, modifier=modifier)
         if result['success']:
@@ -493,6 +493,8 @@ def n_tackle_zones(player):
         xpos__lt=(player.xpos+2), ypos__lt=(player.ypos+2))
     opponents = opponents.filter(
         down=False)
+    opponents = opponents.filter(
+        on_pitch=True)
     return opponents.count()
 
 def roll_block_dice(n_dice):
