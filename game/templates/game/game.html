@@ -1365,6 +1365,7 @@ var postStep = function(step) {
                     break;
                 case 0:
                     console.log(step.historyPosition + ": OK")
+                    step.result = result;
                     postProcessStep(step, result);
                     break;
                 default:

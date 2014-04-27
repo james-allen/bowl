@@ -80,6 +80,9 @@ def post_step_view(request):
             except Exception as e:
                 print(e)
                 raise
+            # Add the result to the step in the database
+            step.result = json.dumps(result)
+            step.save()
             # Tell the client that everything is ok
             result['status'] = 0
     result_json = json.dumps(result)

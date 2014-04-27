@@ -268,19 +268,25 @@ class Step(models.Model):
     match = models.ForeignKey(Match)
     history_position = models.IntegerField()
     properties = models.TextField()
+    result = models.TextField()
 
     class Meta:
         unique_together = ('match', 'history_position')
 
     def as_dict(self):
         if self.properties:
-            result_dict = json.loads(self.properties)
+            step_dict = json.loads(self.properties)
+        else:
+            step_dict = {}
+        if self.result:
+            result_dict = json.loads(self.result)
         else:
             result_dict = {}
-        result_dict['stepType'] = self.step_type
-        result_dict['matchId'] = self.match.id
-        result_dict['historyPosition'] = self.history_position
-        return result_dict
+        step_dict['result'] = result_dict
+        step_dict['stepType'] = self.step_type
+        step_dict['matchId'] = self.match.id
+        step_dict['historyPosition'] = self.history_position
+        return step_dict
 
 
 
