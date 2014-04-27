@@ -131,6 +131,8 @@ def resolve(match, step_type, data):
             attacking_player.finished_action = True
         attacking_player.save()
         return result
+    elif step_type == 'selectBlockDice':
+        return {}
     elif step_type == 'foul':
         # A foul on a player
         # Find out which is the attacking player

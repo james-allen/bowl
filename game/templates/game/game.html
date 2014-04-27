@@ -2194,7 +2194,9 @@ var selectFromOptions = function(options, message, data, callback, teamReroll, s
 
 var blockDice = function(data) {
     var dice = data.option;
-    var step = data.data.step;
+    var step = $.extend({}, data.data.step);
+    step.stepType = "selectBlockDice";
+    step.historyPosition = null;
     step.selectedDice = dice;
     postStep(step);
     var nextStep = null;
