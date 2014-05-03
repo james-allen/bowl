@@ -1408,13 +1408,13 @@ var postProcessStep = function(step, result) {
             for (var i = 0; i < result.dice.length; i++) {
                 if (result.dice[i] == "attackerDown") {
                     labels[i] = "Attacker down";
-                } else if (result.dice[i] = "bothDown") {
+                } else if (result.dice[i] == "bothDown") {
                     labels[i] = "Both down";
-                } else if (result.dice[i] = "pushed") {
+                } else if (result.dice[i] == "pushed") {
                     labels[i] = "Pushed";
-                } else if (result.dice[i] = "defenderStumbles") {
+                } else if (result.dice[i] == "defenderStumbles") {
                     labels[i] = "Defender stumbles";
-                } else if (result.dice[i] = "defenderDown") {
+                } else if (result.dice[i] == "defenderDown") {
                     labels[i] = "Defender down";
                 }
             }
