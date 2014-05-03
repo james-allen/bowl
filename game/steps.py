@@ -13,7 +13,7 @@ def find_player(match, data):
         match=match, player__team=team, player__number=num)
     return player
 
-def finish_last_action(match):
+def finish_previous_action(match, current_player):
     active_steps = ['move', 'block', 'standUp', 'pass', 'foul', 'handOff']
     step_set = Step.objects.filter(match=match).order_by('-history_position')
     for step in step_set:
@@ -23,13 +23,16 @@ def finish_last_action(match):
             return
         if step.step_type in active_steps:
             player = find_player(match, step.as_dict())
+            if (player.side == current_player.side and 
+                    player.player.number == current_player.player.number):
+                continue
             player.finished_action = True
             player.save()
 
 def set_action(player, action):
     player.action = action
     player.save()
-    finish_last_action(player.match)
+    finish_previous_action(player.match, player)
 
 def resolve(match, step_type, data):
     if step_type == 'reroll':
@@ -47,7 +50,8 @@ def resolve(match, step_type, data):
         if step_type == 'followUp' and data['choice'] == 'false':
             return {}
         player = find_player(match, data)
-        set_action(player, data['action'])
+        if step_type == 'move':
+            set_action(player, data['action'])
         # Update the player's position in the database
         player.xpos = int(data['x1'])
         player.ypos = int(data['y1'])
