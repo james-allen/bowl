@@ -1748,7 +1748,7 @@ var isAdjacent = function(xpos0, ypos0, xpos1, ypos1) {
 }
 
 var defineStep = function(xpos, ypos) {
-    if (matchData.turnType != "placeBall" && (selected == null || selected.finishedAction || selected.down)) {
+    if ((matchData.turnType != "placeBall" && matchData.turnType != "touchback") && (selected == null || selected.finishedAction || selected.down)) {
         return [];
     }
     var step = {};
@@ -1885,6 +1885,7 @@ var defineStep = function(xpos, ypos) {
         } else {
             step = null;
         }
+        break;
     default:
         step = null;
     }
@@ -1896,7 +1897,7 @@ var defineStep = function(xpos, ypos) {
         stepArray[stepArray.length] = step;
         for (var i = 0; i < stepArray.length; i++) {
             stepArray[i].action = selectedAction;
-            if (step.stepType != "placeBall" && step.stepType != "toucback") {
+            if (step.stepType != "placeBall" && step.stepType != "touchback") {
                 stepArray[i].side = selected.side;
                 stepArray[i].num = selected.num;
                 stepArray[i].x0 = selected.xpos;
@@ -2322,6 +2323,7 @@ var scatterBall = function(step, result) {
                 var nextStep = defineScatter(1, false, step.potentialTurnover);
                 stepStack[0] = nextStep;
             } else if (matchData.turnType == "placeBall") {
+                stepStack.shift();
                 endKickoff(false);
             } else {
                 if (step.potentialTurnover) {
@@ -2649,6 +2651,8 @@ refreshButtonColumn();
 
 if (matchData.turnType == "normal") {
     selectPlayer(lastActivePlayer());
+} else if (matchData.turnType == "touchback") {
+    selectedAction = "touchback";
 } else if (matchData.turnType == "placeBall") {
     selectedAction = "placeBall";
 } else if (matchData.turnType == "placePlayers") {
