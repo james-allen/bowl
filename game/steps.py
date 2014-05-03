@@ -495,7 +495,7 @@ def resolve(match, step_type, data):
         return {}
     elif step_type == 'submitTouchback' or step_type == 'endKickoff':
         match.turn_type = 'normal'
-        if data['touchback'] == 'false':
+        if 'touchback' in data and data['touchback'] == 'false':
             match.current_side = other_side(match.current_side)
         match.save()
         return {}
