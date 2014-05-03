@@ -993,6 +993,9 @@ var processStep = function(step) {
         case "endTurn":
             processEndTurn(step);
             break;
+        case "setKickoff":
+            processSetKickoff(step);
+            break;
         case "placeBall":
             processPlaceBall(step);
             break;
@@ -1235,7 +1238,8 @@ var processEndTurn = function(step) {
         if (matchData.turnNumber == 9) {
             matchData.homeRerolls = matchData.homeRerollsTotal;
             matchData.awayRerolls = matchData.awayRerollsTotal;
-            setKickoff(otherSide(matchData.firstKickingTeam));
+            addStepToStack({stepType: "setKickoff", action: "setKickoff", kickingTeam: otherSide(matchData.firstKickingTeam)});
+            // setKickoff(otherSide(matchData.firstKickingTeam));
             messageArray[messageArray.length] = "Second half";
             endOfHalf = true;
         } else if (matchData.turnNumber == 17) {
@@ -1252,7 +1256,8 @@ var processEndTurn = function(step) {
     }
     updateTurnIndicator();
     if (step.touchdown && !endOfHalf) {
-        setKickoff(step.side);
+        addStepToStack({stepType: "setKickoff", action: "setKickoff", kickingTeam: step.side})
+        // setKickoff(step.side);
     }
     stepStack = [];
     setAction(null, "");
@@ -1261,6 +1266,10 @@ var processEndTurn = function(step) {
     } else {
         postStep(step);
     }
+}
+
+var processSetKickoff = function(step) {
+    postStep(step);
 }
 
 var processPlaceBall = function(step) {
@@ -1492,6 +1501,34 @@ var postProcessStep = function(step, result) {
         confirmResult(step, result, null, postProcessGoForIt);
         break;
     case "endTurn":
+        break;
+    case "setKickoff":
+        stepStack.shift();
+        if (result.revived.length + result.knockedOut.length > 0) {
+            var message = "";
+            var player;
+            if (result.revived.length > 0) {
+                message = message + "Revived:"
+                for (var index = 0; index < result.revived.length; index++) {
+                    player = findPlayer(result.revived[index].side, result.revived[index].num);
+                    player.onPitch = true;
+                    drawPlayer(player, svg);
+                    player.knockedOut = false;
+                    message = message + "<br/>" + player.name;
+                }
+                if (result.knockedOut.length > 0) { message = message + "<br/>"; }
+            }
+            if (result.knockedOut.length > 0) {
+                message = message + "Still out:"
+                for (var index = 0; index < result.knockedOut.length; index++) {
+                    player = findPlayer(result.knockedOut[index].side, result.knockedOut[index].num);
+                    message = message + "<br/>" + player.name;
+                }
+            }
+            displayMessage(message, null, function(d) {setKickoff(step.kickingTeam);});
+        } else {
+            setKickoff(step.kickingTeam);
+        }
         break;
     case "submitBall":
         scatterBall(step, result);

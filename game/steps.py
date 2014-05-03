@@ -395,23 +395,23 @@ def resolve(match, step_type, data):
             match.current_side = data['side']
         else:
             match.current_side = other_side(match.current_side)
-        end_of_half = False
+        # end_of_half = False
         if ((match.current_side != match.first_kicking_team and 
              match.turn_number <= 8) or
             (match.current_side == match.first_kicking_team and
              match.turn_number >= 9) or skip_turn):
             match.turn_number += 1
             if match.turn_number == 9:
-                set_kickoff(match, other_side(match.first_kicking_team))
+                # set_kickoff(match, other_side(match.first_kicking_team))
                 match.home_rerolls = match.home_rerolls_total
                 match.away_rerolls = match.away_rerolls_total
-                end_of_half = True
+                # end_of_half = True
             if match.turn_number == 17:
                 match.turn_type = 'end'
-                end_of_half = True
-        if ('touchdown' in data and data['touchdown'] == 'true' and 
-            not end_of_half):
-            set_kickoff(match, data['side'])
+                # end_of_half = True
+        # if ('touchdown' in data and data['touchdown'] == 'true' and 
+        #     not end_of_half):
+        #     set_kickoff(match, data['side'])
         match.save()
         for player in PlayerInGame.objects.filter(match=match):
             player.move_left = player.ma
@@ -423,6 +423,23 @@ def resolve(match, step_type, data):
             player.stunned_this_turn = False
             player.save()
         return {}
+    elif step_type == 'setKickoff':
+        revive_result = {'revived': [], 'knockedOut': []}
+        for player in PlayerInGame.objects.filter(
+                match=match, knocked_out=True):
+            dice = roll_dice(6, 1)
+            player_data = {'side': player.side, 'num': player.player.number,
+                           'dice': dice}
+            if dice['dice'][0] >= 4:
+                revive_result['revived'].append(player_data)
+                player.knocked_out = False
+                player.on_pitch = True
+                player.save()
+            else:
+                revive_result['knockedOut'].append(player_data)
+        set_kickoff(match, data['kickingTeam'])
+        match.save()
+        return revive_result
     elif step_type == 'placeBall':
         match.x_ball = int(data['x1'])
         match.y_ball = int(data['y1'])

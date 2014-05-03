@@ -154,10 +154,10 @@ def start_match(home_team, away_team, first_kicking_team=None,
     match.save()
     for home_player in home_team.player_set.all():
         create_pig(home_player, match=match, xpos=0, ypos=0,
-                   on_pitch=True).save()
+                   on_pitch=True, side='home').save()
     for away_player in away_team.player_set.all():
         create_pig(away_player, match=match, xpos=0, ypos=0,
-                   on_pitch=True).save()
+                   on_pitch=True, side='away').save()
     set_kickoff(match, first_kicking_team)
     return match
 
@@ -201,6 +201,7 @@ def set_kickoff(match, kicking_team):
 class PlayerInGame(models.Model):
     player = models.ForeignKey(Player)
     match = models.ForeignKey(Match)
+    side = models.CharField(max_length=4)
     xpos = models.IntegerField()
     ypos = models.IntegerField()
     ma = models.IntegerField()
@@ -220,9 +221,9 @@ class PlayerInGame(models.Model):
     casualty = models.BooleanField(default=False)
     sent_off = models.BooleanField(default=False)
 
-    def as_dict(self, side):
+    def as_dict(self):
         result_dict = {
-            'side': side,
+            'side': self.side,
             'name': self.player.name,
             'num': self.player.number,
             'position': self.player.position.title,

@@ -19,8 +19,8 @@ def game_view(request, match_id):
     away_players = PlayerInGame.objects.filter(
         match=match, player__team=match.away_team).all()
     players_list = []
-    players_list.extend([p.as_dict('home') for p in home_players])
-    players_list.extend([p.as_dict('away') for p in away_players])
+    players_list.extend([p.as_dict() for p in home_players])
+    players_list.extend([p.as_dict() for p in away_players])
     players_json = json.dumps(players_list)
     history = Step.objects.filter(match=match).order_by('history_position')
     history = json.dumps([a.as_dict() for a in history])
