@@ -1717,7 +1717,7 @@ var usedActionThisTurn = function(action) {
 var performedStepThisTurn = function(player, stepType) {
     // Check to see if the player has performed a particular step this turn.
     for (var index = history.length-1; index >= 0; index--) {
-        if (history[index].stepType == "endTurn" || history[index].side != player.side || history[index].num != player.num) {
+        if (history[index].stepType == "endTurn") {
             return false;
         }
         if (history[index].stepType == stepType) {
