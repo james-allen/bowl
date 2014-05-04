@@ -628,23 +628,28 @@ var zoomButtonData = [
     {label: "+", func: zoomIn},
     {label: "-", func: zoomOut}
 ]
+var zoomButtonY = function(d, i) {return 1.5*viewData.margin + i*(viewData.buttonHeight+viewData.margin) + $("#divPitch").scrollTop()};
+var zoomButtonTextY = function(d, i) {return zoomButtonY(d, i) + 0.5*viewData.buttonHeight};
+var zoomButtonX = function() {return 1.5*viewData.margin + $("#divPitch").scrollLeft()};
+var zoomButtonTextX = function() {return zoomButtonX() + 0.5*viewData.buttonHeight};
 var gZoomButton = svgPitch.selectAll("g.zoom")
     .data(zoomButtonData)
     .enter()
     .append("g")
     .attr("class", "zoom")
     .on("click", function(d) {d.func();});
-gZoomButton.append("rect")
-    .attr("x", 1.5*viewData.margin)
-    .attr("y", function(d, i) {return 1.5*viewData.margin + i*(viewData.buttonHeight+viewData.margin)})
+var zoomButtonRect = gZoomButton.append("rect")
+    .attr("x", zoomButtonX)
+    .attr("y", zoomButtonY)
     .attr("width", viewData.buttonHeight)
     .attr("height", viewData.buttonHeight)
     .classed("button", true)
-gZoomButton.append("text")
+var zoomButtonText = gZoomButton.append("text")
     .text(function(d) {return d.label;})
-    .attr("x", 1.5*viewData.margin + 0.5*viewData.buttonHeight)
-    .attr("y", function(d, i) {return 1.5*viewData.margin + i*(viewData.buttonHeight+viewData.margin) + 0.5*viewData.buttonHeight})
+    .attr("x", zoomButtonTextX)
+    .attr("y", zoomButtonTextY)
     .classed("buttonText", true)
+$("#divPitch").on("scroll", function(){zoomButtonRect.attr("x", zoomButtonX).attr("y", zoomButtonY); zoomButtonText.attr("x", zoomButtonTextX).attr("y", zoomButtonTextY)})
 
 // Make info screens
 var drawInfoBox = function(parent, id, y) {
