@@ -216,7 +216,9 @@ var viewData = {
     buttonHeight: 30,
     infoWidth: 200,
     lineHeight: 20,
-    activityType: "normal"
+    activityType: "normal",
+    scale: 1.0,
+    scaleFactor: 1.1
 };
 viewData.buttonX = viewData.margin;
 viewData.infoX = viewData.buttonX + viewData.buttonWidth + viewData.margin;
@@ -533,13 +535,26 @@ divBottom = d3.select("body").append("div")
 // Make the SVG containers
 var svgPitch = divPitch.append("svg")
     .attr("width", viewData.width)
-    .attr("height", viewData.height)
+    .attr("height", viewData.height);
+var gPitch = svgPitch.append("g");
 var svgRight = divRight.append("svg")
     .attr("width", $("#divRight").width())
-    .attr("height", 2*viewData.infoHeight+3*viewData.margin)
+    .attr("height", 2*viewData.infoHeight+3*viewData.margin);
 var svgBottom = divBottom.append("svg")
     .attr("width", viewData.width)
-    .attr("height", $("#divBottom").height())
+    .attr("height", $("#divBottom").height());
+
+// Functions for zooming in and out
+var setZoom = function(scale) {
+    viewData.scale = scale;
+    gPitch.transition().attr("transform", "scale("+scale+")");
+}
+var zoomIn = function() {
+    setZoom(viewData.scale * viewData.scaleFactor);
+}
+var zoomOut = function() {
+    setZoom(viewData.scale / viewData.scaleFactor);
+}
 
 // Make the pitch
 var clickPitch = function(d) {
@@ -558,7 +573,7 @@ var drawPitch = function() {
             coords[yIndex*nSquaresX + xIndex] = {"xpos": xIndex, "ypos": yIndex};
         }
     }
-    var pitch = svgPitch.append("g").attr("class", "pitch")
+    var pitch = gPitch.append("g").attr("class", "pitch")
         .selectAll("rect.pitch").data(coords).enter().append("rect")
         .attr("x", function(d) { return d.xpos*viewData.squareSize + viewData.margin; })
         .attr("y", function(d) { return d.ypos*viewData.squareSize + viewData.margin; })
@@ -591,13 +606,13 @@ var drawPitch = function() {
         [{x: endLeft, y: wideTop}, {x: endRight, y: wideTop}],
         [{x: endLeft, y: wideBottom}, {x: endRight, y: wideBottom}]
     ];
-    svgPitch.selectAll("path.mainBorder")
+    gPitch.selectAll("path.mainBorder")
         .data(mainBorderData)
         .enter()
         .append("path")
         .attr("class", "mainBorder")
         .attr("d", line);
-    svgPitch.selectAll("path.secondaryBorder")
+    gPitch.selectAll("path.secondaryBorder")
         .data(secondaryBorderData)
         .enter()
         .append("path")
@@ -608,6 +623,28 @@ var drawPitch = function() {
 var pitch = drawPitch();
 pitch.on("click", clickPitch)
 pitch.on("mouseover", highlightStep)
+
+var zoomButtonData = [
+    {label: "+", func: zoomIn},
+    {label: "-", func: zoomOut}
+]
+var gZoomButton = svgPitch.selectAll("g.zoom")
+    .data(zoomButtonData)
+    .enter()
+    .append("g")
+    .attr("class", "zoom")
+    .on("click", function(d) {d.func();});
+gZoomButton.append("rect")
+    .attr("x", 1.5*viewData.margin)
+    .attr("y", function(d, i) {return 1.5*viewData.margin + i*(viewData.buttonHeight+viewData.margin)})
+    .attr("width", viewData.buttonHeight)
+    .attr("height", viewData.buttonHeight)
+    .classed("button", true)
+gZoomButton.append("text")
+    .text(function(d) {return d.label;})
+    .attr("x", 1.5*viewData.margin + 0.5*viewData.buttonHeight)
+    .attr("y", function(d, i) {return 1.5*viewData.margin + i*(viewData.buttonHeight+viewData.margin) + 0.5*viewData.buttonHeight})
+    .classed("buttonText", true)
 
 // Make info screens
 var drawInfoBox = function(parent, id, y) {
@@ -845,7 +882,7 @@ var setAction = function(player, action) {
 var finishAction = function(player) {
     player.finishedAction = true;
     player.moveLeft = 0;
-    svgPitch.select("#" + playerId(player)).classed("finishedAction", true);
+    gPitch.select("#" + playerId(player)).classed("finishedAction", true);
     if (player == selected) {
         updateInfoBox("infoBoxSelected", player);
     }
@@ -903,14 +940,14 @@ var selectPlayer = function(player) {
 var drawPlayers = function() {
     for (var i = 0; i < players.length; i++) {
         if (players[i].onPitch) {
-            drawPlayer(players[i], svgPitch);
+            drawPlayer(players[i], gPitch);
         }
     }
 }
 drawPlayers();
 
 var drawBall = function() {
-    svgPitch.append("circle")
+    gPitch.append("circle")
         .attr("cx", cxBall())
         .attr("cy", cyBall())
         .attr("r", 0.2*viewData.squareSize)
@@ -936,14 +973,14 @@ for (var index = 0; index < players.length; index++) {
 }
 
 // Make a background for selecting options
-var optionsWindow = svgPitch.append("rect")
+var optionsWindow = gPitch.append("rect")
     .attr("id", "optionsWindow")
     .attr("x", 0.4 * nSquaresX * viewData.squareSize + viewData.margin)
     .attr("y", 0.4 * nSquaresY * viewData.squareSize + viewData.margin)
     .attr("width", 0.2 * nSquaresX * viewData.squareSize)
     .attr("height", 0.2 * nSquaresY * viewData.squareSize)
     .style("visibility", "hidden");
-var optionsForeignObject = svgPitch.append("foreignObject")
+var optionsForeignObject = gPitch.append("foreignObject")
     .attr("id", "optionsForeignObject")
     .attr("x", 0.4 * nSquaresX * viewData.squareSize + 2*viewData.margin)
     .attr("y", 0.4 * nSquaresY * viewData.squareSize + 2*viewData.margin)
@@ -1257,7 +1294,7 @@ var processEndTurn = function(step) {
             createKnockDownSymbol(players[i].xpos, players[i].ypos, false)
         }
         players[i].stunnedThisTurn = false;
-        svgPitch.selectAll(".player").classed("finishedAction", false);
+        gPitch.selectAll(".player").classed("finishedAction", false);
     }
     var endOfHalf = false;
     if ((matchData.firstKickingTeam != matchData.currentSide && matchData.turnNumber <= 8) || (matchData.firstKickingTeam == matchData.currentSide && matchData.turnNumber >= 9) || skipTurn) {
@@ -1539,7 +1576,7 @@ var postProcessStep = function(step, result) {
                 for (var index = 0; index < result.revived.length; index++) {
                     player = findPlayer(result.revived[index].side, result.revived[index].num);
                     player.onPitch = true;
-                    drawPlayer(player, svgPitch);
+                    drawPlayer(player, gPitch);
                     player.knockedOut = false;
                     message = message + "<br/>" + player.name;
                 }
@@ -2099,17 +2136,17 @@ var selectPush = function(step) {
         for (var index = 0; index < squares.length; index++) {
             var xpos = squares[index][0];
             var ypos = squares[index][1];
-            svgPitch.select("#" + gridId({"xpos": xpos, "ypos": ypos}))
+            gPitch.select("#" + gridId({"xpos": xpos, "ypos": ypos}))
                 .classed("gridOption", true)
                 .on("click", function(d) {push(step, d.xpos, d.ypos);})
             var player = playerInPos(xpos, ypos);
             if (player != null) {
-                svgPitch.select("#" + playerId(player))
+                gPitch.select("#" + playerId(player))
                     .on("click", function(d) {push(step, d.xpos, d.ypos);})
             }
         }
         pitch.sort(function(a, b) {
-            if (svgPitch.select("#" + gridId(a)).classed("gridOption")) {
+            if (gPitch.select("#" + gridId(a)).classed("gridOption")) {
                 return 1;
             } else {
                 return -1;
@@ -2200,9 +2237,9 @@ var selectFromOptions = function(options, message, data, callback, teamReroll, s
     var selectOption = function(d) {
         if (d.inactive) { return; }
         viewData.activityType = "normal";
-        svgPitch.select("#optionsWindow").style("visibility", "hidden");
-        svgPitch.select("#optionsForeignObject").style("visibility", "hidden");
-        svgPitch.selectAll("g.option").data([]).exit().remove();
+        gPitch.select("#optionsWindow").style("visibility", "hidden");
+        gPitch.select("#optionsForeignObject").style("visibility", "hidden");
+        gPitch.selectAll("g.option").data([]).exit().remove();
         if (d.option == "teamReroll") {
             reroll(d, "team", null);
         } else if (d.option == "skillReroll") {
@@ -2226,18 +2263,18 @@ var selectFromOptions = function(options, message, data, callback, teamReroll, s
     if (proReroll) {
         optionsData[optionsData.length] = {"option": "proReroll", "data": data, "inactive": (proReroll == "inactive"), "label": "Use Pro re-roll"};
     }
-    svgPitch.select("#optionsWindow").style("visibility", "visible");
-    svgPitch.select("#optionsForeignObject").style("visibility", "visible");
-    svgPitch.select("#optionsHtml").html(message);
+    gPitch.select("#optionsWindow").style("visibility", "visible");
+    gPitch.select("#optionsForeignObject").style("visibility", "visible");
+    gPitch.select("#optionsHtml").html(message);
     var optionsWindowHeight = 3*viewData.margin + $("#optionsHtml").height()+ 1.3*viewData.buttonHeight*optionsData.length;
     var optionsWindowTop = viewData.margin + 0.5*nSquaresY*viewData.squareSize - 0.5*optionsWindowHeight;
-    svgPitch.select("#optionsWindow")
+    gPitch.select("#optionsWindow")
         .attr("height", optionsWindowHeight)
         .attr("y", optionsWindowTop);
-    svgPitch.select("#optionsForeignObject")
+    gPitch.select("#optionsForeignObject")
         .attr("y", optionsWindowTop + viewData.margin)
     var firstButtonTop = $("#optionsHtml").position().top + $("#optionsHtml").height() + viewData.margin;
-    var g = svgPitch.selectAll("g.option")
+    var g = gPitch.selectAll("g.option")
         .data(optionsData)
         .enter()
         .append("g")
@@ -2305,7 +2342,7 @@ var followUp = function(data) {
 }
 
 var push = function(step, xpos, ypos) {
-    svgPitch.selectAll(".gridOption")
+    gPitch.selectAll(".gridOption")
         .classed("gridOption", false)
     viewData.activityType = "normal";
     pitch.on("click", clickPitch);
@@ -2427,7 +2464,7 @@ var movePlayer = function(player, xpos, ypos, destroy) {
         }
     } else {
         player.onPitch = true;
-        drawPlayer(player, svgPitch);
+        drawPlayer(player, gPitch);
     }
 }
 
@@ -2634,7 +2671,7 @@ var endMatch = function() {
     updateTurnIndicator();
     viewData.buttonData = defineButtonData(matchData.turnType);
     refreshButtonColumn();
-    svgPitch.selectAll(".player").on("click", null);
+    gPitch.selectAll(".player").on("click", null);
     pitch.on("click", null);
 }
 
