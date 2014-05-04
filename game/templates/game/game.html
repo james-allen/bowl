@@ -548,6 +548,7 @@ var svgBottom = divBottom.append("svg")
 var setZoom = function(scale) {
     viewData.scale = scale;
     gPitch.transition().attr("transform", "scale("+scale+")");
+    svgPitch.transition().attr("width", viewData.width*scale).attr("height", viewData.height*scale);
 }
 var zoomIn = function() {
     setZoom(viewData.scale * viewData.scaleFactor);
