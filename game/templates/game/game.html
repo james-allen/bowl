@@ -92,6 +92,12 @@
     stroke: saddlebrown;
     stroke-width: 2;
 }
+.benchText
+{
+    fill: saddlebrown;
+    text-anchor: middle;
+    dominant-baseline: middle;
+}
 .button
 {
     fill: #00BB00;
@@ -848,12 +854,14 @@ var benchTop = function(side, box) {
     }
 }
 var gBench = svgBottom.append("g");
-var sides = ["home", "away"];
-var boxes = ["subs", "knockedOut", "casualty", "sentOff"];
-for (var i = 0; i < sides.length; i++) {
-    var side = sides[i];
-    for (var j = 0; j < boxes.length; j++) {
-        var box = boxes[j];
+var benchSides = ["home", "away"];
+var benchBoxes = ["subs", "knockedOut", "casualty", "sentOff"];
+var benchLabels = ["Substitutions", "KO'd", "Casualties", "Sent off"];
+for (var i = 0; i < benchSides.length; i++) {
+    var side = benchSides[i];
+    for (var j = 0; j < benchBoxes.length; j++) {
+        var box = benchBoxes[j];
+        var label = benchLabels[j];
         var id = side + box.charAt(0).toUpperCase() + box.slice(1);
         gBench.append("rect")
             .attr("x", benchLeft(side, box))
@@ -862,20 +870,29 @@ for (var i = 0; i < sides.length; i++) {
             .attr("height", benchHeight(side, box))
             .attr("class", "bench")
             .attr("id", id);
+        gBench.append("text")
+            .attr("x", benchLeft(side, box) + 0.5*benchWidth(side, box))
+            .attr("y", benchTop(side, box) + 0.5*benchHeight(side, box))
+            .text(label)
+            .attr("class", "benchText")
+            .attr("id", id+"Text");
     }
 }
 
 var updateBenchSize = function() {
-    for (var i = 0; i < sides.length; i++) {
-        var side = sides[i];
-        for (var j = 0; j < boxes.length; j++) {
-            var box = boxes[j];
+for (var i = 0; i < benchSides.length; i++) {
+    var side = benchSides[i];
+    for (var j = 0; j < benchBoxes.length; j++) {
+        var box = benchBoxes[j];
             var id = side + box.charAt(0).toUpperCase() + box.slice(1);
             svgBottom.select("#"+id)
                 .attr("x", benchLeft(side, box))
                 .attr("y", benchTop(side, box))
                 .attr("width", benchWidth(side, box))
                 .attr("height", benchHeight(side, box));
+            svgBottom.select("#"+id+"Text")
+                .attr("x", benchLeft(side, box) + 0.5*benchWidth(side, box))
+                .attr("y", benchTop(side, box) + 0.5*benchHeight(side, box));
         }
     }    
 }
