@@ -86,6 +86,12 @@
     stroke-width: 3;
     stroke-dasharray: 9,9;
 }
+.bench
+{
+    fill: tan;
+    stroke: saddlebrown;
+    stroke-width: 2;
+}
 .button
 {
     fill: #00BB00;
@@ -800,11 +806,88 @@ gMatchInfo.append("text")
     .text("Turn " + matchData.turnNumber)
     .attr("class", matchData.currentSide)
     .attr("id", "turnIndicator")
+
+var benchWidth = function(side, box) {
+    var totalWidth = Math.min($("#divBottom").width(), svgBottom.attr("width"));
+    if (box == "subs") {
+        return 0.5*totalWidth - ($("#"+side+"Team").width()+2*viewData.squareSize+2*viewData.margin);
+    } else {
+        return (0.5*totalWidth - (2*viewData.squareSize + viewData.margin)) / 3;
+    }
+}
+var benchHeight = function(side, box) {
+    return 0.5*$("#divBottom").height() - viewData.margin;
+}
+var benchLeft = function(side, box) {
+    var totalWidth = Math.min($("#divBottom").width(), svgBottom.attr("width"));
+    if (side == "home") {
+        if (box == "subs" || box == "knockedOut") {
+            return viewData.margin;
+        } else if (box == "casualty") {
+            return viewData.margin + benchWidth("home", "knockedOut");
+        } else {
+            return viewData.margin + 2*benchWidth("home", "knockedOut");
+        }
+    } else {
+        if (box == "subs") {
+            return 0.5*totalWidth + 2*viewData.squareSize + $("#"+side+"Team").width() + viewData.margin;
+        } else if (box == "sentOff") {
+            return 0.5*totalWidth + 2*viewData.squareSize;
+        } else if (box == "casualty") {
+            return 0.5*totalWidth + 2*viewData.squareSize + benchWidth("away", "sentOff");
+        } else {
+            return 0.5*totalWidth + 2*viewData.squareSize + 2*benchWidth("away", "sentOff");
+        }
+    }
+}
+var benchTop = function(side, box) {
+    if (box == "subs") {
+        return viewData.margin;
+    } else {
+        return viewData.margin + benchHeight(side, box);
+    }
+}
+var gBench = svgBottom.append("g");
+var sides = ["home", "away"];
+var boxes = ["subs", "knockedOut", "casualty", "sentOff"];
+for (var i = 0; i < sides.length; i++) {
+    var side = sides[i];
+    for (var j = 0; j < boxes.length; j++) {
+        var box = boxes[j];
+        var id = side + box.charAt(0).toUpperCase() + box.slice(1);
+        gBench.append("rect")
+            .attr("x", benchLeft(side, box))
+            .attr("y", benchTop(side, box))
+            .attr("width", benchWidth(side, box))
+            .attr("height", benchHeight(side, box))
+            .attr("class", "bench")
+            .attr("id", id);
+    }
+}
+
+var updateBenchSize = function() {
+    for (var i = 0; i < sides.length; i++) {
+        var side = sides[i];
+        for (var j = 0; j < boxes.length; j++) {
+            var box = boxes[j];
+            var id = side + box.charAt(0).toUpperCase() + box.slice(1);
+            svgBottom.select("#"+id)
+                .attr("x", benchLeft(side, box))
+                .attr("y", benchTop(side, box))
+                .attr("width", benchWidth(side, box))
+                .attr("height", benchHeight(side, box));
+        }
+    }    
+}
 var moveMatchInfo = function() {
-    gMatchInfo.attr("transform", "translate("+0.5*($("#divBottom").width()-svgBottom.attr("width"))+",0)");
+    gMatchInfo.attr("transform", "translate("+Math.min(0.5*($("#divBottom").width()-svgBottom.attr("width")), 0)+",0)");
 }
 moveMatchInfo()
-d3.select(window).on("resize", moveMatchInfo)
+var updateSvgBottom = function() {
+    moveMatchInfo();
+    updateBenchSize();
+}
+d3.select(window).on("resize", updateSvgBottom)
 
 var updateTurnIndicator = function() {
     var turnIndicator = d3.select("#turnIndicator");
