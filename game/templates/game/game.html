@@ -776,27 +776,27 @@ drawInfoBox(svgRight, "infoBoxHighlighted", 2*viewData.margin+viewData.infoHeigh
 // Print the team names and current score
 gMatchInfo = svgBottom.append("g")
 gMatchInfo.append("text")
-    .attr("x", viewData.margin+11*viewData.squareSize)
+    .attr("x", viewData.margin+11.5*viewData.squareSize)
     .attr("y", viewData.lineHeight)
     .attr("text-anchor", "end")
     .text(matchData.homeTeam)
     .attr("class", "home")
     .attr("id", "homeTeam")
 gMatchInfo.append("text")
-    .attr("x", viewData.margin+15*viewData.squareSize)
+    .attr("x", viewData.margin+14.5*viewData.squareSize)
     .attr("y", viewData.lineHeight)
     .text(matchData.awayTeam)
     .attr("class", "away")
     .attr("id", "awayTeam")
 gMatchInfo.append("text")
-    .attr("x", viewData.margin+11*viewData.squareSize)
+    .attr("x", viewData.margin+11.5*viewData.squareSize)
     .attr("y", 2*viewData.lineHeight)
     .attr("text-anchor", "end")
     .text("Re-rolls: " + matchData.homeRerolls)
     .attr("class", (matchData.homeRerolls > 0) ? "home" : "rerollUsed")
     .attr("id", "homeRerolls")
 gMatchInfo.append("text")
-    .attr("x", viewData.margin+15*viewData.squareSize)
+    .attr("x", viewData.margin+14.5*viewData.squareSize)
     .attr("y", 2*viewData.lineHeight)
     .text("Re-rolls: " + matchData.awayRerolls)
     .attr("class", (matchData.awayRerolls > 0) ? "away" : "rerollUsed")
@@ -827,9 +827,9 @@ gMatchInfo.append("text")
 var benchWidth = function(side, box) {
     var totalWidth = Math.min($("#divBottom").width(), svgBottom.attr("width"));
     if (box == "subs") {
-        return 0.5*totalWidth - ($("#"+side+"Team").width()+2*viewData.squareSize+2*viewData.margin);
+        return 0.5*totalWidth - ($("#"+side+"Team").width()+1.5*viewData.squareSize+2*viewData.margin);
     } else {
-        return (0.5*totalWidth - (2*viewData.squareSize + viewData.margin)) / 3;
+        return (0.5*totalWidth - (1.5*viewData.squareSize + viewData.margin)) / 3;
     }
 }
 var benchHeight = function(side, box) {
@@ -847,13 +847,13 @@ var benchLeft = function(side, box) {
         }
     } else {
         if (box == "subs") {
-            return 0.5*totalWidth + 2*viewData.squareSize + $("#"+side+"Team").width() + viewData.margin;
+            return 0.5*totalWidth + 1.5*viewData.squareSize + $("#"+side+"Team").width() + viewData.margin;
         } else if (box == "sentOff") {
-            return 0.5*totalWidth + 2*viewData.squareSize;
+            return 0.5*totalWidth + 1.5*viewData.squareSize;
         } else if (box == "casualty") {
-            return 0.5*totalWidth + 2*viewData.squareSize + benchWidth("away", "sentOff");
+            return 0.5*totalWidth + 1.5*viewData.squareSize + benchWidth("away", "sentOff");
         } else {
-            return 0.5*totalWidth + 2*viewData.squareSize + 2*benchWidth("away", "sentOff");
+            return 0.5*totalWidth + 1.5*viewData.squareSize + 2*benchWidth("away", "sentOff");
         }
     }
 }
