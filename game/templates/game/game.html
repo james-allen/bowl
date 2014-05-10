@@ -1005,23 +1005,23 @@ var finishAction = function(player) {
     }
 }
 
-var clickPlayer = function(d) {
-    if (viewData.activityType != "normal") {return;}
-    if (selected == d) {
+var clickPlayer = function(player) {
+    if (viewData.activityType != "normal" || !player.onPitch) {return;}
+    if (selected == player) {
         // Was already selected. Unselect.
         clearSelection()
     } else {
         var stepArray = [];
         if (selected != null || matchData.turnType == "placeBall" || matchData.turnType == "touchback") {
-            stepArray = defineStep(d.xpos, d.ypos);
+            stepArray = defineStep(player.xpos, player.ypos);
         }
         if (stepArray.length > 0 && stepStack.length == 0) {
             // Valid step involving this player (block, pass...)
             for (var i = 0; i < stepArray.length; i++) {
                 addStepToStack(stepArray[i]);
             }
-        } else if (isTurn(d)) {
-            selectPlayer(d);
+        } else if (isTurn(player)) {
+            selectPlayer(player);
         }
     }
 }
@@ -1058,6 +1058,8 @@ var drawPlayers = function() {
     for (var i = 0; i < players.length; i++) {
         if (players[i].onPitch) {
             drawPlayer(players[i], gPitch);
+        } else {
+            drawPlayer(players[i], svgBottom);
         }
     }
 }
@@ -1509,9 +1511,9 @@ var processEndKickoff = function(step) {
 
 var removeFromPitch = function(player, reason) {
     player.onPitch = false;
-    d3.select("#"+playerId(player)).data([]).exit().remove();
-    d3.select("#"+playerId(player)+"knockDown").data([]).exit().remove();
-    d3.select("#"+playerId(player)+"stunned").data([]).exit().remove();
+    d3.select("#"+playerId(player)).transition().style("opacity", 0).remove();
+    d3.select("#"+playerId(player)+"knockDown").transition().style("opacity", 0).remove();
+    d3.select("#"+playerId(player)+"stunned").transition().style("opacity", 0).remove();
     if (reason == "knockedOut") {
         player.knockedOut = true;
     } else if (reason == "casualty") {
@@ -1522,6 +1524,8 @@ var removeFromPitch = function(player, reason) {
     if (player === selected) {
         clearSelection();
     }
+    // Draw the player again on the bench.
+    drawPlayer(player, svgBottom);
 }
 
 var postStep = function(step) {

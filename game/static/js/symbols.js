@@ -108,8 +108,24 @@ var moveShape = function(id, deltaX, deltaY, interpolate) {
 }
 
 var drawPlayer = function(player, parent) {
-    var x0 = viewData.margin + (player.xpos+0.5)*viewData.squareSize;
-    var y0 = viewData.margin + (player.ypos+0.5)*viewData.squareSize;
+    var x0, y0;
+    if (player.onPitch) {
+        x0 = viewData.margin + (player.xpos+0.5)*viewData.squareSize;
+        y0 = viewData.margin + (player.ypos+0.5)*viewData.squareSize;
+    } else {
+        var box;
+        if (player.sentOff) {
+            box = "sentOff";
+        } else if (player.casualty) {
+            box = "casualty";
+        } else if (player.knockedOut) {
+            box = "knockedOut";
+        } else {
+            box = "subs";
+        }
+        x0 = benchLeft(player.side, box) + 0.5*viewData.squareSize + Math.random()*(benchWidth(player.side, box) - viewData.squareSize);
+        y0 = benchTop(player.side, box) + 0.5*viewData.squareSize + Math.random()*(benchHeight(player.side, box) - viewData.squareSize);
+    }
     var g = parent.append("g")
         .attr("class", player.side)
         .classed("player", true)
@@ -117,7 +133,8 @@ var drawPlayer = function(player, parent) {
         .attr("id", playerId(player))
         .on("click", function(){clickPlayer(player);})
         .on("mouseover", function(){updateInfoBox("infoBoxHighlighted", player);highlightStep(player);})
-        .on("mouseout", function(){updateInfoBox("infoBoxHighlighted", null);});
+        .on("mouseout", function(){updateInfoBox("infoBoxHighlighted", null);})
+        .style("opacity", 0);
     player.interpolate = createShape(
         shapeSelector(player), x0, y0, viewData.playerSize, g, "playerSymbol", 
         playerId(player)+"Symbol");
@@ -127,6 +144,7 @@ var drawPlayer = function(player, parent) {
         .attr("class", "playerNumber")
         .attr("id", playerId(player)+"Number")
         .text(player.num);
+    g.transition().style("opacity", 1);
 }
 
 var shapeSelector = function(player) {
