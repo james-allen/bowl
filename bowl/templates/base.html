@@ -9,6 +9,9 @@
 </head>
 
 <body>
+    <div id="banner">
+        {% block banner %}{{ username }}{% endblock %}
+    </div>
     <div id="content">
         {% block content %}{% endblock %}
     </div>

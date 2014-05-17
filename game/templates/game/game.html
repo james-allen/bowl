@@ -252,6 +252,7 @@ viewData.rightPanelWidth = viewData.buttonWidth + viewData.infoWidth + 3*viewDat
 viewData.bottomPanelHeight = 120;
 viewData.width = nSquaresX*viewData.squareSize + 2*viewData.margin;
 viewData.height = nSquaresY*viewData.squareSize + 2*viewData.margin;
+viewData.top = $("#banner").height() + 2*viewData.margin;
 
 var selected = null;
 
@@ -547,10 +548,10 @@ var highlightStep = function(d) {
 
 // Make the overall layout of the page
 divPitch = d3.select("body").append("div")
-    .attr("style", "position:absolute; left:0px; right:"+viewData.rightPanelWidth+"px; top:0px; bottom:"+viewData.bottomPanelHeight+"px; overflow:auto;")
+    .attr("style", "position:absolute; left:0px; right:"+viewData.rightPanelWidth+"px; top:"+viewData.top+"px; bottom:"+viewData.bottomPanelHeight+"px; overflow:auto;")
     .attr("id", "divPitch");
 divRight = d3.select("body").append("div")
-    .attr("style", "position:absolute; right:0px; width:"+viewData.rightPanelWidth+"px; top:0px; bottom:0px; overflow:hidden;")
+    .attr("style", "position:absolute; right:0px; width:"+viewData.rightPanelWidth+"px; top:"+viewData.top+"px; bottom:0px; overflow:hidden;")
     .attr("id", "divRight");
 divBottom = d3.select("body").append("div")
     .attr("style", "position:absolute; left:0px; right:"+viewData.rightPanelWidth+"px; bottom:0px; height:"+viewData.bottomPanelHeight+"px; overflow:hidden;")

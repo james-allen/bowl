@@ -30,6 +30,7 @@ def game_view(request, match_id):
         'players_json': players_json,
         'match_data': json.dumps(match.as_dict()),
         'history': history,
+        'username': request.user.username,
     }
     return render(request, 'game/game.html', data)
 
