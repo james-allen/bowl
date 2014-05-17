@@ -10,7 +10,7 @@
 
 <body>
     <div id="banner">
-        {% block banner %}{{ username }}{% endblock %}
+        {% block banner %}{{ username }} | <a href="{% url 'logout' %}">logout</a>{% endblock %}
     </div>
     <div id="content">
         {% block content %}{% endblock %}
