@@ -824,6 +824,20 @@ gMatchInfo.append("text")
     .attr("class", matchData.currentSide)
     .attr("id", "turnIndicator")
 
+var clickSubs = function(side) {
+    console.log("clicked subs for " + side);
+    if (matchData.turnType == "placePlayers" && matchData.currentSide == side && selected != null && selected.onPitch) {
+        var step = {
+            side: side,
+            num: selected.num,
+            subs: true,
+            action: "placePlayers",
+            stepType: "placePlayer"
+        }
+        addStepToStack(step);
+    }
+}
+
 var benchWidth = function(side, box) {
     var totalWidth = Math.min($("#divBottom").width(), svgBottom.attr("width"));
     if (box == "subs") {
@@ -864,6 +878,26 @@ var benchTop = function(side, box) {
         return viewData.margin + benchHeight(side, box);
     }
 }
+var drawBenchBox = function(side, box, label) {
+    var id = side + box.charAt(0).toUpperCase() + box.slice(1);
+    var gBox = gBench.append("g");
+    if (box == "subs") {
+        gBox.on("click", function(){clickSubs(side);});
+    }
+    gBox.append("rect")
+        .attr("x", benchLeft(side, box))
+        .attr("y", benchTop(side, box))
+        .attr("width", benchWidth(side, box))
+        .attr("height", benchHeight(side, box))
+        .attr("class", "bench")
+        .attr("id", id);
+    gBox.append("text")
+        .attr("x", benchLeft(side, box) + 0.5*benchWidth(side, box))
+        .attr("y", benchTop(side, box) + 0.5*benchHeight(side, box))
+        .text(label)
+        .attr("class", "benchText")
+        .attr("id", id+"Text");    
+}
 var gBench = svgBottom.append("g");
 var benchSides = ["home", "away"];
 var benchBoxes = ["subs", "knockedOut", "casualty", "sentOff"];
@@ -873,20 +907,7 @@ for (var i = 0; i < benchSides.length; i++) {
     for (var j = 0; j < benchBoxes.length; j++) {
         var box = benchBoxes[j];
         var label = benchLabels[j];
-        var id = side + box.charAt(0).toUpperCase() + box.slice(1);
-        gBench.append("rect")
-            .attr("x", benchLeft(side, box))
-            .attr("y", benchTop(side, box))
-            .attr("width", benchWidth(side, box))
-            .attr("height", benchHeight(side, box))
-            .attr("class", "bench")
-            .attr("id", id);
-        gBench.append("text")
-            .attr("x", benchLeft(side, box) + 0.5*benchWidth(side, box))
-            .attr("y", benchTop(side, box) + 0.5*benchHeight(side, box))
-            .text(label)
-            .attr("class", "benchText")
-            .attr("id", id+"Text");
+        drawBenchBox(side, box, label);
     }
 }
 
@@ -1006,13 +1027,13 @@ var finishAction = function(player) {
 }
 
 var clickPlayer = function(player) {
-    if (viewData.activityType != "normal" || !player.onPitch) {return;}
+    if (viewData.activityType != "normal" || (matchData.turnType != "placePlayers" && !player.onPitch) || (matchData.turnType == "placePlayers" && (player.knockedOut || player.casualty || player.sentOff))) {return;}
     if (selected == player) {
         // Was already selected. Unselect.
         clearSelection()
     } else {
         var stepArray = [];
-        if (selected != null || matchData.turnType == "placeBall" || matchData.turnType == "touchback") {
+        if (player.onPitch && (selected != null || matchData.turnType == "placeBall" || matchData.turnType == "touchback")) {
             stepArray = defineStep(player.xpos, player.ypos);
         }
         if (stepArray.length > 0 && stepStack.length == 0) {
@@ -1464,7 +1485,13 @@ var processPlaceBall = function(step) {
 
 var processPlacePlayer = function(step) {
     var player = findPlayer(step.side, step.num);
-    movePlayer(player, step.x1, step.y1);
+    if (step.subs) {
+        if (player.onPitch) {
+            removeFromPitch(player);
+        }
+    } else {
+        movePlayer(player, step.x1, step.y1);
+    }
     postStep(step);
     stepStack.shift();
     processNextStep();    
@@ -2585,6 +2612,7 @@ var movePlayer = function(player, xpos, ypos, destroy) {
         }
     } else {
         player.onPitch = true;
+        d3.select("#"+playerId(player)).transition().style("opacity", 0).remove();
         drawPlayer(player, gPitch);
     }
 }

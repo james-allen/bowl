@@ -451,8 +451,12 @@ def resolve(match, step_type, data):
         return {}
     elif step_type == 'placePlayer':
         player = find_player(match, data)
-        player.xpos = int(data['x1'])
-        player.ypos = int(data['y1'])
+        if 'subs' in data and data['subs'] == 'true':
+            player.on_pitch = False
+        else:
+            player.xpos = int(data['x1'])
+            player.ypos = int(data['y1'])
+            player.on_pitch = True
         player.save()
         return {}
     elif step_type == 'submitPlayers':
