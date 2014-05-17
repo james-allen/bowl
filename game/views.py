@@ -6,11 +6,13 @@ from django.http import HttpResponse, Http404
 from django.shortcuts import render, get_object_or_404
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.db.utils import IntegrityError
+from django.contrib.auth.decorators import login_required
 
 from game.models import Match, PlayerInGame, Step
 from game.steps import resolve
 
 # Create your views here.
+@login_required
 @ensure_csrf_cookie
 def game_view(request, match_id):
     match = get_object_or_404(Match, id=match_id)
@@ -31,6 +33,7 @@ def game_view(request, match_id):
     }
     return render(request, 'game/game.html', data)
 
+@login_required
 def post_step_view(request):
     # sleep(randint(1, 5))
     # Get the match in question
