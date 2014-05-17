@@ -1,6 +1,6 @@
-<!DOCTYPE html>
-<meta charset="utf-8">
-<style>
+{% extends "base.html" %}
+
+{% block style %}
 .home
 {
     fill: rgba(255,0,0,1.0);
@@ -172,8 +172,9 @@ text.away
     stroke-width: 2;
     fill: antiquewhite;
 }
-</style>
-<body>
+{% endblock style %}
+
+{% block content %}
 <script type="text/javascript" src="/static/js/d3.v3.min.js"></script>
 <script type="text/javascript" src="/static/js/jquery-1.10.2.js"></script>
 <script type="text/javascript" src="/static/js/symbols.js"></script>
@@ -2873,5 +2874,4 @@ if (matchData.turnType == "normal") {
 }
 
 </script>
-</body>
-</html>
+{% endblock content %}
