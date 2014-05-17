@@ -16,7 +16,7 @@ class Team(models.Model):
     value = models.IntegerField(default=0)
     rerolls = models.IntegerField(default=0)
     cash = models.IntegerField(default=0)
-    coach = models.OneToOneField(User)
+    coach = models.ForeignKey(User)
 
 
 class Position(models.Model):

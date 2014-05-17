@@ -12,4 +12,5 @@ urlpatterns = patterns('',
     url(r'^game/', include('game.urls', namespace='game')),
     url(r'^accounts/login/$', 'django.contrib.auth.views.login'),
     url(r'^accounts/logout/$', 'bowl.views.logout_view', name='logout'),
+    url(r'^accounts/profile/(?P<username>.+?)/$', 'bowl.views.profile_view', name='profile'),
 )
