@@ -1723,8 +1723,8 @@ var postProcessStep = function(step, result) {
                 message = message + "Revived:"
                 for (var index = 0; index < result.revived.length; index++) {
                     player = findPlayer(result.revived[index].side, result.revived[index].num);
-                    player.onPitch = true;
-                    drawPlayer(player, gPitch);
+                    d3.select("#"+playerId(player)).transition().style("opacity", 0).remove();
+                    drawPlayer(player, svgBottom);
                     player.knockedOut = false;
                     message = message + "<br/>" + player.name;
                 }
