@@ -1,6 +1,7 @@
 import json
 
 from django.db import models
+from django.contrib.auth.models import User
 
 
 class Race(models.Model):
@@ -15,6 +16,7 @@ class Team(models.Model):
     value = models.IntegerField(default=0)
     rerolls = models.IntegerField(default=0)
     cash = models.IntegerField(default=0)
+    coach = models.OneToOneField(User)
 
 
 class Position(models.Model):
@@ -103,6 +105,8 @@ class Match(models.Model):
             'id': self.id,
             'homeTeam': self.home_team.name,
             'awayTeam': self.away_team.name,
+            'homeCoach': self.home_team.coach.username,
+            'awayCoach': self.away_team.coach.username,
             'homeScore': self.home_score,
             'awayScore': self.away_score,
             'turnNumber': self.turn_number,

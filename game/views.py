@@ -41,54 +41,65 @@ def post_step_view(request):
     print('post_step_view')
     print('POST:', request.POST)
     match = Match.objects.get(id=request.POST['matchId'])
-    # Check what steps have previously been saved
-    history_saved = Step.objects.filter(match=match).values_list(
-        'history_position', flat=True).order_by('history_position')
-    if len(history_saved) == 0:
-        expected_position = 0
+    # Check that it's the correct user
+    if match.current_side == 'home':
+        expected_user = match.home_team.coach.username
     else:
-        expected_position = history_saved[len(history_saved)-1] + 1
-    # Check where this new step fits in with the history
-    history_position = int(request.POST['historyPosition'])
-    print('expected:', expected_position, 'actual:', history_position)
-    if history_position > expected_position:
-        # Missing some history, so request it be resent
-        result = {'status': 'resend',
-                  'start': expected_position}
-    elif history_position < expected_position:
-        # Already have this one
-        # Should also check against the database for consistency
-        result = {'status': 'duplicate'}
+        expected_user = match.away_team.coach.username
+    if request.user.username != expected_user:
+        result = {'status': 'wrongUser'}
     else:
-        # This is the next step, as expected
-        # Turn the POST data into a model step
-        properties = {key: value for key, value in request.POST.items() 
-                      if key not in ['stepType', 'matchId', 'historyPosition']}
-        print(str(history_position) + ':', properties)
-        step_type = request.POST['stepType']
-        step = Step(
-            step_type=step_type,
-            match=match,
-            history_position=history_position,
-            properties=json.dumps(properties))
-        try:
-            step.save()
-        except IntegrityError:
-            # A conflicting step exists in the database
+        # Check what steps have previously been saved
+        history_saved = Step.objects.filter(match=match).values_list(
+            'history_position', flat=True).order_by('history_position')
+        if len(history_saved) == 0:
+            expected_position = 0
+        else:
+            expected_position = history_saved[len(history_saved)-1] + 1
+        # Check where this new step fits in with the history
+        history_position = int(request.POST['historyPosition'])
+        print('expected:', expected_position, 'actual:', history_position)
+        if history_position > expected_position:
+            # Missing some history, so request it be resent
+            result = {'status': 'resend',
+                      'start': expected_position}
+        elif history_position < expected_position:
+            # Already have this one
+            # Should also check against the database for consistency
             result = {'status': 'duplicate'}
         else:
-            # Carry out the step
-            print(str(history_position) + ':', "Carrying out the step")
+            # This is the next step, as expected
+            # Turn the POST data into a model step
+            properties = {key: value for key, value in request.POST.items() 
+                          if key not in ['stepType', 'matchId', 'historyPosition']}
+            print(str(history_position) + ':', properties)
+            step_type = request.POST['stepType']
+            step = Step(
+                step_type=step_type,
+                match=match,
+                history_position=history_position,
+                properties=json.dumps(properties))
             try:
-                result = resolve(match, step_type, properties)
-            except Exception as e:
-                print(e)
-                raise
-            # Add the result to the step in the database
-            step.result = json.dumps(result)
-            step.save()
-            # Tell the client that everything is ok
-            result['status'] = 0
+                step.save()
+            except IntegrityError:
+                # A conflicting step exists in the database
+                result = {'status': 'duplicate'}
+            else:
+                # Carry out the step
+                print(str(history_position) + ':', "Carrying out the step")
+                try:
+                    result = resolve(match, step_type, properties)
+                except Exception as e:
+                    print(e)
+                    raise
+                # Add the result to the step in the database
+                step.result = json.dumps(result)
+                step.save()
+                # Tell the client that everything is ok
+                result['status'] = 0
     result_json = json.dumps(result)
-    print(str(history_position) + ':', result_json)
+    try:
+        print(str(history_position) + ':', result_json)
+    except NameError:
+        pass
     return HttpResponse(result_json, content_type="application/json")
