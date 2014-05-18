@@ -2,7 +2,7 @@
 
 {% block content %}
 <h3>Teams</h3>
-{% for team in user.team_set.all %}<p>{{ team.name }}</p>
+{% for team in user.team_set.all %}<p><a href="{% url 'game:team_view' team.slug %}">{{ team.name }}</a></p>
 {% endfor %}
 <h3>Matches</h3>
 {% for match in match_set %}<p><a href="{% url 'game:game_view' match.id %}">{{ match.home_team.name }} {{ match.home_score }} - {{ match.away_score }} {{ match.away_team.name }}</a></p>

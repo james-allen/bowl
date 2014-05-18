@@ -8,7 +8,7 @@ from django.views.decorators.csrf import ensure_csrf_cookie
 from django.db.utils import IntegrityError
 from django.contrib.auth.decorators import login_required
 
-from game.models import Match, PlayerInGame, Step
+from game.models import Match, PlayerInGame, Step, Team
 from game.steps import resolve
 
 # Create your views here.
@@ -33,6 +33,11 @@ def game_view(request, match_id):
         'username': request.user.username,
     }
     return render(request, 'game/game.html', data)
+
+@login_required
+def team_view(request, team_slug):
+    team = get_object_or_404(Team, slug=team_slug)
+    return HttpResponse(team.name)
 
 @login_required
 def post_step_view(request):

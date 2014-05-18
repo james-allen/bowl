@@ -2,6 +2,7 @@ import json
 
 from django.db import models
 from django.contrib.auth.models import User
+from django.template.defaultfilters import slugify
 
 
 class Race(models.Model):
@@ -17,6 +18,27 @@ class Team(models.Model):
     rerolls = models.IntegerField(default=0)
     cash = models.IntegerField(default=0)
     coach = models.ForeignKey(User)
+    slug = models.SlugField(unique=True)
+
+def create_team(name, race, coach, **kwargs):
+    team = Team(name=name, race=race, coach=coach, **kwargs)
+    slug = slugify(name)
+    try:
+        Team.objects.get(slug=slug)
+    except Team.DoesNotExist:
+        pass
+    else:
+        i = 1
+        while True:
+            try:
+                slug = slugify(name) + '-' + str(i)
+                Team.objects.get(slug=slug)
+            except Team.DoesNotExist:
+                break
+            else:
+                i += 1
+    team.slug = slug
+    return team
 
 
 class Position(models.Model):

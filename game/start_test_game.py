@@ -1,6 +1,6 @@
 from django.contrib.auth.models import User
 
-from game.models import Race, Team, Player, PlayerInGame, create_player, start_match
+from game.models import Race, create_team, PlayerInGame, create_player, start_match
 
 def create_match():
     # Make the users, if necessary
@@ -14,13 +14,17 @@ def create_match():
                 password='password')
     # Make teams
     human = Race.objects.get(singular='human')
-    reavers = Team(race=human, name='Reikland Reavers',
-        coach=User.objects.get(username='alice'))
+    alice = User.objects.get(username='alice')
+    reavers = create_team('Reikland Reavers', human, alice)
+    # reavers = Team(race=human, name='Reikland Reavers',
+    #     coach=User.objects.get(username='alice'))
     reavers.save()
     populate_humans(reavers)
     orc = Race.objects.get(singular='orc')
-    raiders = Team(race=orc, name='Orcland Raiders',
-        coach=User.objects.get(username='bob'))
+    bob = User.objects.get(username='bob')
+    raiders = create_team('Orcland Raiders', orc, bob)
+    # raiders = Team(race=orc, name='Orcland Raiders',
+    #     coach=User.objects.get(username='bob'))
     raiders.save()
     populate_orcs(raiders)
     match = start_match(reavers, raiders)
