@@ -37,7 +37,12 @@ def game_view(request, match_id):
 @login_required
 def team_view(request, team_slug):
     team = get_object_or_404(Team, slug=team_slug)
-    return HttpResponse(team.name)
+    data = {
+        'team': team,
+        'username': request.user.username,
+        'reroll_total': team.rerolls * team.race.reroll_cost,
+    }
+    return render(request, 'game/team.html', data)
 
 @login_required
 def post_step_view(request):

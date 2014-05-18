@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h3>{{ team.name }}</h3>
+<p>Race: {{ team.race.singular }}</p>
+<p>Team rating: n/a</p>
+<p>Treasury: {{ team.cash }},000</p>
+<p>Head coach: {{ team.coach.username }}</p>
+<table>
+    <tr>
+        <th>#</th>
+        <th>Name</th>
+        <th>Position</th>
+        <th>MA</th>
+        <th>ST</th>
+        <th>AG</th>
+        <th>AV</th>
+        <th>Skills</th>
+        <th>Inj.</th>
+        <th>Comp.</th>
+        <th>TD</th>
+        <th>Int.</th>
+        <th>Cas.</th>
+        <th>MVP</th>
+        <th>SPP</th>
+        <th>Cost</th>
+    </tr>
+{% for player in team.player_set.all %}    <tr>
+        <td>{{ player.number }}</td>
+        <td>{{ player.name }}</td>
+        <td>{{ player.position.title }}</td>
+        <td>{{ player.ma }}</td>
+        <td>{{ player.st }}</td>
+        <td>{{ player.ag }}</td>
+        <td>{{ player.av }}</td>
+        <td>{{ player.skills }}</td>
+        <td>{{ player.niggles }}</td>
+        <td>{{ player.completions }}</td>
+        <td>{{ player.touchdowns }}</td>
+        <td>{{ player.interceptions }}</td>
+        <td>{{ player.casualties }}</td>
+        <td>{{ player.mvps }}</td>
+        <td>{{ player.spps }}</td>
+        <td>{{ player.value }},000</td>
+    </tr>
+{% endfor %}    <tr>
+        <td colspan="8">&nbsp;</td>
+        <td colspan="3">Re-rolls:</td>
+        <td>{{ team.rerolls }}</td>
+        <td colspan="3">x {{ team.race.reroll_cost }},000</td>
+        <td>{{ reroll_total }},000</td>
+    </tr>
+    <tr>
+        <td colspan="8">&nbsp;</td>
+        <td colspan="7">Total:</td>
+        <td>{{ team.value }},000</td>
+    </tr>
+</table>
+{% endblock content %}
