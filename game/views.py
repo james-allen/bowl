@@ -8,7 +8,7 @@ from django.views.decorators.csrf import ensure_csrf_cookie
 from django.db.utils import IntegrityError
 from django.contrib.auth.decorators import login_required
 
-from game.models import Match, PlayerInGame, Step, Team
+from game.models import Match, PlayerInGame, Step, Team, Race
 from game.steps import resolve
 
 # Create your views here.
@@ -43,6 +43,15 @@ def team_view(request, team_slug):
         'reroll_total': team.rerolls * team.race.reroll_cost,
     }
     return render(request, 'game/team.html', data)
+
+@login_required
+def create_team_view(request):
+    data = {
+        'number_range': range(1, 17),
+        'race_list': Race.objects.all(),
+        'username': request.user.username,
+    }
+    return render(request, 'game/create-team.html', data)
 
 @login_required
 def post_step_view(request):

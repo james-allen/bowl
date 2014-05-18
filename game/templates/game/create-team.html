@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h3>Name</h3>
+<p>Race: <select id="selectRace" onchange="updateRace(this)"><option value=""></option>{% for race in race_list %}<option value="{{ race.singular }}">{{ race.singular }}</option>{% endfor %}</select></p>
+<p>Team rating: n/a</p>
+<p>Treasury: 1,000,000</p>
+<p>Head coach: {{ username }}</p>
+<table>
+    <tr>
+        <th>#</th>
+        <th>Name</th>
+        <th>Position</th>
+        <th>MA</th>
+        <th>ST</th>
+        <th>AG</th>
+        <th>AV</th>
+        <th>Skills</th>
+        <th>Inj.</th>
+        <th>Comp.</th>
+        <th>TD</th>
+        <th>Int.</th>
+        <th>Cas.</th>
+        <th>MVP</th>
+        <th>SPP</th>
+        <th>Cost</th>
+    </tr>{% for number in number_range %}
+    <tr>
+        <td>{{ number }}</td>
+        <td><input type="text"/></td>
+        <td><select class="selectPosition"><option value=""></option></select></td>
+        <td>&nbsp;</td>
+        <td>&nbsp;</td>
+        <td>&nbsp;</td>
+        <td>&nbsp;</td>
+        <td>&nbsp;</td>
+        <td>&nbsp;</td>
+        <td>&nbsp;</td>
+        <td>&nbsp;</td>
+        <td>&nbsp;</td>
+        <td>&nbsp;</td>
+        <td>&nbsp;</td>
+        <td>&nbsp;</td>
+        <td>&nbsp;</td>
+    </tr>{% endfor %}
+    <tr>
+        <td colspan="8">&nbsp;</td>
+        <td colspan="3">Re-rolls:</td>
+        <td>rerolls</td>
+        <td colspan="3">x</td>
+        <td>&nbsp;</td>
+    </tr>
+    <tr>
+        <td colspan="8">&nbsp;</td>
+        <td colspan="7">Total:</td>
+        <td>1,000,000</td>
+    </tr>
+</table>
+
+<script type="text/javascript">
+var data = {
+    "": {
+        "": {
+            ma: "&nbsp;",
+            st: "&nbsp;",
+            ag: "&nbsp;",
+            av: "&nbsp;",
+            skills: "&nbsp;",
+            cost: "&nbsp;"
+        }
+    }{% for race in race_list %},
+    "{{ race.singular }}": {
+        "": {
+            ma: "&nbsp;",
+            st: "&nbsp;",
+            ag: "&nbsp;",
+            av: "&nbsp;",
+            skills: "&nbsp;",
+            cost: "&nbsp;"
+        }{% for position in race.position_set.all %},
+        "{{ position.title }}": {
+            ma: {{ position.ma }},
+            st: {{ position.st }},
+            ag: {{ position.ag }},
+            av: {{ position.av }},
+            skills: "{{ position.skills }}",
+            cost: {{ position.cost }}
+        }{% endfor %}
+    }{% endfor %}
+}
+
+var updateRace = function(selectRace) {
+    var selectPositionList = document.getElementsByClassName("selectPosition");
+    for (var i = 0; i < selectPositionList.length; i++) {
+        var selectPosition = selectPositionList[i];
+        while (selectPosition.length > 0) {
+            selectPosition.remove(selectPosition.length-1);
+        }
+        for (var position in data[selectRace.value]) {
+            var option = document.createElement("option");
+            option.text = position;
+            option.value = position;
+            selectPosition.add(option);
+        }
+    }
+}
+</script>
+
+{% endblock content %}
