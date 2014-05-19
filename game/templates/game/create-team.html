@@ -4,7 +4,7 @@
 <h3>Name</h3>
 <p>Race: <select id="selectRace" onchange="updateRace(this)"><option value=""></option>{% for race in race_list %}<option value="{{ race.singular }}">{{ race.singular }}</option>{% endfor %}</select></p>
 <p>Team rating: n/a</p>
-<p>Treasury: 1,000,000</p>
+<p>Treasury: <span id="treasury">1,000,000</span></p>
 <p>Head coach: {{ username }}</p>
 <table>
     <tr>
@@ -27,8 +27,13 @@
     </tr>{% for number in number_range %}
     <tr>
         <td>{{ number }}</td>
-        <td><input type="text"/></td>
-        <td><select class="selectPosition"><option value=""></option></select></td>
+        <td><input type="text" id="name{{ number }}"/></td>
+        <td><select class="selectPosition" id="select{{ number }}" onchange="updatePosition(this, {{ number }})"><option value=""></option></select></td>
+        <td id="ma{{ number }}">&nbsp;</td>
+        <td id="st{{ number }}">&nbsp;</td>
+        <td id="ag{{ number }}">&nbsp;</td>
+        <td id="av{{ number }}">&nbsp;</td>
+        <td id="skills{{ number }}">&nbsp;</td>
         <td>&nbsp;</td>
         <td>&nbsp;</td>
         <td>&nbsp;</td>
@@ -36,12 +41,7 @@
         <td>&nbsp;</td>
         <td>&nbsp;</td>
         <td>&nbsp;</td>
-        <td>&nbsp;</td>
-        <td>&nbsp;</td>
-        <td>&nbsp;</td>
-        <td>&nbsp;</td>
-        <td>&nbsp;</td>
-        <td>&nbsp;</td>
+        <td id="cost{{ number }}">&nbsp;</td>
     </tr>{% endfor %}
     <tr>
         <td colspan="8">&nbsp;</td>
@@ -89,7 +89,48 @@ var data = {
     }{% endfor %}
 }
 
+var clearAll = function() {
+    var i = 0
+    var maBox;
+    while (true) {
+        i += 1;
+        maBox = document.getElementById("ma"+i);
+        if (maBox == null) {
+            break;
+        }
+        maBox.innerHTML = "&nbsp;";
+        document.getElementById("st"+i).innerHTML = "&nbsp;";
+        document.getElementById("ag"+i).innerHTML = "&nbsp;";
+        document.getElementById("av"+i).innerHTML = "&nbsp;";
+        document.getElementById("skills"+i).innerHTML = "&nbsp;";
+        document.getElementById("cost"+i).innerHTML = "&nbsp;";
+    }
+}
+
+var updateTreasury = function() {
+    var race = document.getElementById("selectRace").value;
+    var cost = 0;
+    var i = 0;
+    var positionSelect;
+    while (true) {
+        i += 1;
+        positionSelect = document.getElementById("select"+i);
+        if (positionSelect == null) {
+            break;
+        } else if (positionSelect.value != "") {
+            cost += data[race][positionSelect.value].cost;
+        }
+    }
+    var treasury = document.getElementById("treasury");
+    if (cost == 0) {
+        treasury.innerHTML = "1,000,000";
+    } else {
+        treasury.innerHTML = (1000-cost)+",000";
+    }
+}
+
 var updateRace = function(selectRace) {
+    clearAll();
     var selectPositionList = document.getElementsByClassName("selectPosition");
     for (var i = 0; i < selectPositionList.length; i++) {
         var selectPosition = selectPositionList[i];
@@ -103,6 +144,22 @@ var updateRace = function(selectRace) {
             selectPosition.add(option);
         }
     }
+    updateTreasury();
+}
+
+var updatePosition = function(selectPosition, number) {
+    var position = data[document.getElementById("selectRace").value][selectPosition.value];
+    document.getElementById("ma"+number).innerHTML = position.ma;
+    document.getElementById("st"+number).innerHTML = position.st;
+    document.getElementById("ag"+number).innerHTML = position.ag;
+    document.getElementById("av"+number).innerHTML = position.av;
+    document.getElementById("skills"+number).innerHTML = position.skills;
+    if (position.cost == "&nbsp;") {
+        document.getElementById("cost"+number).innerHTML = position.cost;
+    } else {
+        document.getElementById("cost"+number).innerHTML = position.cost + ",000";
+    }
+    updateTreasury();
 }
 </script>
 
