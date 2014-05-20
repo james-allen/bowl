@@ -46,9 +46,19 @@
     <tr>
         <td colspan="8">&nbsp;</td>
         <td colspan="3">Re-rolls:</td>
-        <td>rerolls</td>
-        <td colspan="3">x</td>
-        <td>&nbsp;</td>
+        <td><select id="selectRerolls" onchange="updateRerolls(this)">
+            <option value="0">0</option>
+            <option value="1">1</option>
+            <option value="2">2</option>
+            <option value="3">3</option>
+            <option value="4">4</option>
+            <option value="5">5</option>
+            <option value="6">6</option>
+            <option value="7">7</option>
+            <option value="8">8</option>
+        </select></td>
+        <td colspan="3" id="rerollCost">&nbsp;</td>
+        <td id="rerollTotal">&nbsp;</td>
     </tr>
     <tr>
         <td colspan="8">&nbsp;</td>
@@ -89,6 +99,11 @@ var data = {
     }{% endfor %}
 }
 
+var rerollCost = {
+    "": 0{% for race in race_list %},
+    "{{ race.singular }}": {{ race.reroll_cost }}{% endfor %}
+}
+
 var clearAll = function() {
     var i = 0
     var maBox;
@@ -121,6 +136,8 @@ var updateTreasury = function() {
             cost += data[race][positionSelect.value].cost;
         }
     }
+    var selectRerolls = document.getElementById("selectRerolls");
+    cost += rerollCost[race] * selectRerolls.value;
     var treasury = document.getElementById("treasury");
     if (cost == 0) {
         treasury.innerHTML = "1,000,000";
@@ -144,6 +161,16 @@ var updateRace = function(selectRace) {
             selectPosition.add(option);
         }
     }
+    var tdRerollCost = document.getElementById("rerollCost");
+    var tdRerollTotal = document.getElementById("rerollTotal");
+    if (selectRace.value == "") {
+        tdRerollCost.innerHTML = "&nbsp;";
+        tdRerollTotal.innerHTML = "&nbsp;";
+    } else {
+        tdRerollCost.innerHTML = "x " + rerollCost[selectRace.value] + ",000";
+        var selectRerolls = document.getElementById("selectRerolls");
+        tdRerollTotal.innerHTML = (selectRerolls.value * rerollCost[selectRace.value]) + ",000";
+    }
     updateTreasury();
 }
 
@@ -158,6 +185,18 @@ var updatePosition = function(selectPosition, number) {
         document.getElementById("cost"+number).innerHTML = position.cost;
     } else {
         document.getElementById("cost"+number).innerHTML = position.cost + ",000";
+    }
+    updateTreasury();
+}
+
+var updateRerolls = function(selectRerolls) {
+    var nRerolls = selectRerolls.value;
+    var rerollTotal = nRerolls * rerollCost[document.getElementById("selectRace").value];
+    var tdRerollTotal = document.getElementById("rerollTotal");
+    if (rerollTotal == 0) {
+        tdRerollTotal.innerHTML = "&nbsp;";
+    } else {
+        tdRerollTotal.innerHTML = rerollTotal + ",000";
     }
     updateTreasury();
 }
