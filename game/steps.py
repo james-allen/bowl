@@ -437,7 +437,6 @@ def resolve(match, step_type, data):
             if dice['dice'][0] >= 4:
                 revive_result['revived'].append(player_data)
                 player.knocked_out = False
-                player.on_pitch = True
                 player.save()
             else:
                 revive_result['knockedOut'].append(player_data)
