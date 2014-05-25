@@ -2,13 +2,14 @@ import json
 from time import sleep
 from random import randint
 
-from django.http import HttpResponse, Http404
+from django.http import HttpResponse, Http404, HttpResponseRedirect
 from django.shortcuts import render, get_object_or_404
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.db.utils import IntegrityError
 from django.contrib.auth.decorators import login_required
+from django.core.urlresolvers import reverse
 
-from game.models import Match, PlayerInGame, Step, Team, Race
+from game.models import Match, PlayerInGame, Step, Team, Race, create_player, create_team
 from game.steps import resolve
 
 # Create your views here.
@@ -46,6 +47,41 @@ def team_view(request, team_slug):
 
 @login_required
 def create_team_view(request):
+    if request.method == 'POST':
+        team_dict = {
+            'players': [],
+            'name': request.POST['team_name'],
+            'race': request.POST['race'],
+            'rerolls': int(request.POST['rerolls'])}
+        for i in range(1, 17):
+            name = request.POST['name'+str(i)]
+            position = request.POST['position'+str(i)]
+            if name and position:
+                team_dict['players'].append({
+                    'number': i,
+                    'name': name,
+                    'position': position})
+        race = Race.objects.get(singular=team_dict['race'])
+        team = create_team(
+            team_dict['name'],
+            race,
+            request.user,
+            rerolls=team_dict['rerolls'])
+        team.save()
+        for player in team_dict['players']:
+            create_player(
+                team,
+                player['position'],
+                player['name'],
+                player['number']
+                ).save()
+        team.update_value()
+        team.cash = 1000 - team.value
+        team.update_value()
+        if team.valid_starting_team():
+            team.save()
+            url = reverse('game:team_view', kwargs={'team_slug': team.slug})
+            return HttpResponseRedirect(url)
     data = {
         'number_range': range(1, 17),
         'race_list': Race.objects.all(),

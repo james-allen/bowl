@@ -1,71 +1,75 @@
 {% extends "base.html" %}
 
 {% block content %}
-<h3>Name</h3>
-<p>Race: <select id="selectRace" onchange="updateRace(this)"><option value=""></option>{% for race in race_list %}<option value="{{ race.singular }}">{{ race.singular }}</option>{% endfor %}</select></p>
-<p>Team rating: n/a</p>
-<p>Treasury: <span id="treasury">1,000,000</span></p>
-<p>Head coach: {{ username }}</p>
-<table>
-    <tr>
-        <th>#</th>
-        <th>Name</th>
-        <th>Position</th>
-        <th>MA</th>
-        <th>ST</th>
-        <th>AG</th>
-        <th>AV</th>
-        <th>Skills</th>
-        <th>Inj.</th>
-        <th>Comp.</th>
-        <th>TD</th>
-        <th>Int.</th>
-        <th>Cas.</th>
-        <th>MVP</th>
-        <th>SPP</th>
-        <th>Cost</th>
-    </tr>{% for number in number_range %}
-    <tr>
-        <td>{{ number }}</td>
-        <td><input type="text" id="name{{ number }}"/></td>
-        <td><select class="selectPosition" id="select{{ number }}" onchange="updatePosition(this, {{ number }})"><option value=""></option></select></td>
-        <td id="ma{{ number }}">&nbsp;</td>
-        <td id="st{{ number }}">&nbsp;</td>
-        <td id="ag{{ number }}">&nbsp;</td>
-        <td id="av{{ number }}">&nbsp;</td>
-        <td id="skills{{ number }}">&nbsp;</td>
-        <td>&nbsp;</td>
-        <td>&nbsp;</td>
-        <td>&nbsp;</td>
-        <td>&nbsp;</td>
-        <td>&nbsp;</td>
-        <td>&nbsp;</td>
-        <td>&nbsp;</td>
-        <td id="cost{{ number }}">&nbsp;</td>
-    </tr>{% endfor %}
-    <tr>
-        <td colspan="8">&nbsp;</td>
-        <td colspan="3">Re-rolls:</td>
-        <td><select id="selectRerolls" onchange="updateRerolls(this)">
-            <option value="0">0</option>
-            <option value="1">1</option>
-            <option value="2">2</option>
-            <option value="3">3</option>
-            <option value="4">4</option>
-            <option value="5">5</option>
-            <option value="6">6</option>
-            <option value="7">7</option>
-            <option value="8">8</option>
-        </select></td>
-        <td colspan="3" id="rerollCost">&nbsp;</td>
-        <td id="rerollTotal">&nbsp;</td>
-    </tr>
-    <tr>
-        <td colspan="8">&nbsp;</td>
-        <td colspan="7">Total:</td>
-        <td>1,000,000</td>
-    </tr>
-</table>
+<h3>Create team</h3>
+<form action="{% url 'game:create_team_view' %}" method="post">{% csrf_token %}
+    <p>Team name: <input type="text" name="team_name" id="teamName"/></p>
+    <p>Race: <select name="race" id="selectRace" onchange="updateRace(this)"><option value=""></option>{% for race in race_list %}<option value="{{ race.singular }}">{{ race.singular }}</option>{% endfor %}</select></p>
+    <p>Team rating: n/a</p>
+    <p>Treasury: <span id="treasury">1,000,000</span></p>
+    <p>Head coach: {{ username }}</p>
+    <table>
+        <tr>
+            <th>#</th>
+            <th>Name</th>
+            <th>Position</th>
+            <th>MA</th>
+            <th>ST</th>
+            <th>AG</th>
+            <th>AV</th>
+            <th>Skills</th>
+            <th>Inj.</th>
+            <th>Comp.</th>
+            <th>TD</th>
+            <th>Int.</th>
+            <th>Cas.</th>
+            <th>MVP</th>
+            <th>SPP</th>
+            <th>Cost</th>
+        </tr>{% for number in number_range %}
+        <tr>
+            <td>{{ number }}</td>
+            <td><input type="text" name="name{{ number }}" id="name{{ number }}"/></td>
+            <td><select class="selectPosition" name="position{{ number }}" id="select{{ number }}" onchange="updatePosition(this, {{ number }})"><option value=""></option></select></td>
+            <td id="ma{{ number }}">&nbsp;</td>
+            <td id="st{{ number }}">&nbsp;</td>
+            <td id="ag{{ number }}">&nbsp;</td>
+            <td id="av{{ number }}">&nbsp;</td>
+            <td id="skills{{ number }}">&nbsp;</td>
+            <td>&nbsp;</td>
+            <td>&nbsp;</td>
+            <td>&nbsp;</td>
+            <td>&nbsp;</td>
+            <td>&nbsp;</td>
+            <td>&nbsp;</td>
+            <td>&nbsp;</td>
+            <td id="cost{{ number }}">&nbsp;</td>
+        </tr>{% endfor %}
+        <tr>
+            <td colspan="8">&nbsp;</td>
+            <td colspan="3">Re-rolls:</td>
+            <td><select name="rerolls" id="selectRerolls" onchange="updateRerolls(this)">
+                <option value="0">0</option>
+                <option value="1">1</option>
+                <option value="2">2</option>
+                <option value="3">3</option>
+                <option value="4">4</option>
+                <option value="5">5</option>
+                <option value="6">6</option>
+                <option value="7">7</option>
+                <option value="8">8</option>
+            </select></td>
+            <td colspan="3" id="rerollCost">&nbsp;</td>
+            <td id="rerollTotal">&nbsp;</td>
+        </tr>
+        <tr>
+            <td colspan="8">&nbsp;</td>
+            <td colspan="7">Total:</td>
+            <td>1,000,000</td>
+        </tr>
+    </table>
+    <input type="submit" value="Create" />
+</form>
 
 <script type="text/javascript">
 var data = {

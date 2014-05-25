@@ -1,3 +1,5 @@
+from getpass import getpass
+
 from django.contrib.auth.models import User
 
 from game.models import Race, create_team, PlayerInGame, create_player, start_match
@@ -11,7 +13,7 @@ def create_match():
             User.objects.create_user(
                 username=username,
                 email='james.thomas.allen@gmail.com',
-                password='password')
+                password=getpass('Password for '+username+': '))
     # Make teams
     human = Race.objects.get(singular='human')
     alice = User.objects.get(username='alice')

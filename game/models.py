@@ -20,6 +20,14 @@ class Team(models.Model):
     coach = models.ForeignKey(User)
     slug = models.SlugField(unique=True)
 
+    def update_value(self):
+        """Recalculate the value of the team."""
+        pass
+
+    def valid_starting_team(self):
+        """Return True if this is a valid starting team."""
+        return True
+
 def create_team(name, race, coach, **kwargs):
     team = Team(name=name, race=race, coach=coach, **kwargs)
     slug = slugify(name)
