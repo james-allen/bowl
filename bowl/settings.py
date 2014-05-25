@@ -8,8 +8,13 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/1.6/ref/settings/
 """
 
-# Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 import os
+try:
+    heroku = bool(int(os.environ['HEROKU']))
+except KeyError:
+    heroku = False
+
+# Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(__file__))
 
 
@@ -87,7 +92,19 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 
-MEDIA_ROOT = '/Library/WebServer/media'
+if heroku:
+    import dj_database_url
+    DATABASES['default'] =  dj_database_url.config()
 
-MEDIA_URL = '/media/'
+    # Honor the 'X-Forwarded-Proto' header for request.is_secure()
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
+    # Allow all host headers
+    ALLOWED_HOSTS = ['*']
+
+    # Static asset configuration
+    STATIC_ROOT = 'staticfiles'
+
+    STATICFILES_DIRS = (
+        os.path.join(BASE_DIR, 'static'),
+    )
