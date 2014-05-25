@@ -23,7 +23,7 @@ BASE_DIR = os.path.dirname(os.path.dirname(__file__))
 
 # SECURITY WARNING: keep the secret key used in production secret!
 try:
-    SECRET_KEY = os.environ(['SECRET_KEY'])
+    SECRET_KEY = os.environ['SECRET_KEY']
 except KeyError:
     SECRET_KEY = 'yb=j96pl@ni=_t7zjx6jnnz6zn-bloxn=g5m4otfn@c%a@w@zp'
 
