@@ -22,10 +22,26 @@ class Team(models.Model):
 
     def update_value(self):
         """Recalculate the value of the team."""
-        pass
+        value = 0
+        for player in self.player_set.all():
+            value += player.value
+        value += self.rerolls * self.race.reroll_cost
+        value += self.cash
+        self.value = value
+        self.save()
+        return
 
     def valid_starting_team(self):
         """Return True if this is a valid starting team."""
+        if self.player_set.count() < 11:
+            return False
+        if self.cash < 0:
+            return False
+        if self.value != 1000:
+            return False
+        for player in self.player_set.all():
+            if player.name == '':
+                return False
         return True
 
 def create_team(name, race, coach, **kwargs):

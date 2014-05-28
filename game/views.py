@@ -60,7 +60,8 @@ def create_team_view(request):
                 team_dict['players'].append({
                     'number': i,
                     'name': name,
-                    'position': position})
+                    'position': position
+                })
         race = Race.objects.get(singular=team_dict['race'])
         team = create_team(
             team_dict['name'],
@@ -74,7 +75,7 @@ def create_team_view(request):
                 player['position'],
                 player['name'],
                 player['number']
-                ).save()
+            ).save()
         team.update_value()
         team.cash = 1000 - team.value
         team.update_value()
@@ -82,6 +83,17 @@ def create_team_view(request):
             team.save()
             url = reverse('game:team_view', kwargs={'team_slug': team.slug})
             return HttpResponseRedirect(url)
+        else:
+            team.player_set.delete()
+            team.delete()
+    colors = [
+        '#1f78b4',
+        '#33a02c',
+        '#e31a1c',
+        '#ff7f00',
+        '#6a3d9a',
+        '#b15928',
+    ]
     data = {
         'number_range': range(1, 17),
         'race_list': Race.objects.all(),
