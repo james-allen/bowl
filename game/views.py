@@ -27,11 +27,23 @@ def game_view(request, match_id):
     players_json = json.dumps(players_list)
     history = Step.objects.filter(match=match).order_by('history_position')
     history = json.dumps([a.as_dict() for a in history])
+    color_home_primary = match.home_team.color_home_primary
+    color_home_secondary = match.home_team.color_home_secondary
+    if match.away_team.color_home_primary == match.home_team.color_home_primary:
+        color_away_primary = match.away_team.color_away_primary
+        color_away_secondary = match.away_team.color_away_secondary
+    else:
+        color_away_primary = match.away_team.color_home_primary
+        color_away_secondary = match.away_team.color_home_secondary
     data = {
         'players_json': players_json,
         'match_data': json.dumps(match.as_dict()),
         'history': history,
         'username': request.user.username,
+        'color_home_primary': color_home_primary,
+        'color_home_secondary': color_home_secondary,
+        'color_away_primary': color_away_primary,
+        'color_away_secondary': color_away_secondary,
     }
     return render(request, 'game/game.html', data)
 
@@ -52,7 +64,12 @@ def create_team_view(request):
             'players': [],
             'name': request.POST['team_name'],
             'race': request.POST['race'],
-            'rerolls': int(request.POST['rerolls'])}
+            'rerolls': int(request.POST['rerolls']),
+            'color_home_primary': request.POST['colorHomePrimary'],
+            'color_home_secondary': request.POST['colorHomeSecondary'],
+            'color_away_primary': request.POST['colorAwayPrimary'],
+            'color_away_secondary': request.POST['colorAwaySecondary'],
+        }
         for i in range(1, 17):
             name = request.POST['name'+str(i)]
             position = request.POST['position'+str(i)]
@@ -67,7 +84,12 @@ def create_team_view(request):
             team_dict['name'],
             race,
             request.user,
-            rerolls=team_dict['rerolls'])
+            rerolls=team_dict['rerolls'],
+            color_home_primary=team_dict['color_home_primary'],
+            color_home_secondary=team_dict['color_home_secondary'],
+            color_away_primary=team_dict['color_away_primary'],
+            color_away_secondary=team_dict['color_away_secondary'],
+        )
         team.save()
         for player in team_dict['players']:
             create_player(
@@ -87,17 +109,18 @@ def create_team_view(request):
             team.player_set.delete()
             team.delete()
     colors = [
-        '#1f78b4',
-        '#33a02c',
-        '#e31a1c',
-        '#ff7f00',
-        '#6a3d9a',
-        '#b15928',
+        '31,120,180',
+        '51,160,44',
+        '227,26,28',
+        '255,127,0',
+        '106,61,154',
+        '177,89,40'
     ]
     data = {
         'number_range': range(1, 17),
         'race_list': Race.objects.all(),
         'username': request.user.username,
+        'colors': colors,
     }
     return render(request, 'game/create-team.html', data)
 

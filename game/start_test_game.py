@@ -17,16 +17,20 @@ def create_match():
     # Make teams
     human = Race.objects.get(singular='human')
     alice = User.objects.get(username='alice')
-    reavers = create_team('Reikland Reavers', human, alice)
-    # reavers = Team(race=human, name='Reikland Reavers',
-    #     coach=User.objects.get(username='alice'))
+    reavers = create_team(
+        'Reikland Reavers', human, alice,
+        color_home_primary='31,120,180', color_home_secondary='51,160,44',
+        color_away_primary='227,26,28', color_away_secondary='51,160,44',
+    )
     reavers.save()
     populate_humans(reavers)
     orc = Race.objects.get(singular='orc')
     bob = User.objects.get(username='bob')
-    raiders = create_team('Orcland Raiders', orc, bob)
-    # raiders = Team(race=orc, name='Orcland Raiders',
-    #     coach=User.objects.get(username='bob'))
+    raiders = create_team(
+        'Orcland Raiders', orc, bob,
+        color_home_primary='31,120,180', color_home_secondary='51,160,44',
+        color_away_primary='227,26,28', color_away_secondary='51,160,44',
+    )
     raiders.save()
     populate_orcs(raiders)
     match = start_match(reavers, raiders)

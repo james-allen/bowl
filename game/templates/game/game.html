@@ -3,21 +3,21 @@
 {% block style %}
 .home
 {
-    fill: rgba(255,0,0,1.0);
+    fill: rgba({{ color_home_primary }},1.0);
     stroke: rgba(0,0,0,1.0);
 }
 .home.finishedAction
 {
-    fill: rgba(255,0,0,0.5);
+    fill: rgba({{ color_home_primary }},0.5);
 }
 .away
 {
-    fill: rgba(0,0,255,1.0);
+    fill: rgba({{ color_away_primary }},1.0);
     stroke: rgba(0,0,0,1.0);
 }
 .away.finishedAction
 {
-    fill: rgba(0,0,255,0.5);
+    fill: rgba({{ color_away_primary }},0.5);
 }
 text.home
 {
@@ -35,11 +35,11 @@ text.away
 }
 .home .playerNumber
 {
-    fill: rgba(0,0,0,1.0);
+    fill: rgba({{ color_home_secondary }},1.0);
 }
 .away .playerNumber
 {
-    fill: rgba(255,255,0,1.0);
+    fill: rgba({{ color_away_secondary }},1.0);
 }
 .selected.player .playerSymbol
 {

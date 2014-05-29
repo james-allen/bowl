@@ -19,6 +19,10 @@ class Team(models.Model):
     cash = models.IntegerField(default=0)
     coach = models.ForeignKey(User)
     slug = models.SlugField(unique=True)
+    color_home_primary = models.CharField(max_length=11)
+    color_home_secondary = models.CharField(max_length=11)
+    color_away_primary = models.CharField(max_length=11)
+    color_away_secondary = models.CharField(max_length=11)
 
     def update_value(self):
         """Recalculate the value of the team."""

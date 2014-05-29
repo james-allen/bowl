@@ -68,6 +68,32 @@
             <td>1,000,000</td>
         </tr>
     </table>
+
+    <table>
+        <tr>
+	    <th colspan="4">Home strip</th>
+	    <th colspan="4">Away strip</th>
+	</tr>
+	<tr>
+	    <td rowspan="{{colors|length}}">Primary</td>
+	    {% for color in colors %}<td style="background-color:{{color}}">
+	        <input type="radio" name="colorHomePrimary" id="colorHomePrimary{{forloop.counter0}}" value="{{color}}" onchange="updateColor(this, 'home', 'primary', {{forloop.counter0}})"/>
+	    </td>
+	    {% if forloop.first %}<td rowspan="{{colors|length}}">Secondary</td>
+	    {% endif %}<td style="background-color:{{color}}">
+	        <input type="radio" name="colorHomeSecondary" id="colorHomeSecondary{{forloop.counter0}}" value="{{color}}" onchange="updateColor(this, 'home', 'secondary', {{forloop.counter0}})"/>
+	    </td>
+	    {% if forloop.first %}<td rowspan="{{colors|length}}">Primary</td>
+	    {% endif %}<td style="background-color:{{color}}">
+	        <input type="radio" name="colorAwayPrimary" id="colorAwayPrimary{{forloop.counter0}}" value="{{color}}" onchange="updateColor(this, 'away', 'primary', {{forloop.counter0}})"/>
+	    </td>
+	    {% if forloop.first %}<td rowspan="{{colors|length}}">Secondary</td>
+	    {% endif %}<td style="background-color:{{color}}">
+	        <input type="radio" name="colorAwaySecondary" id="colorAwaySecondary{{forloop.counter0}}" value="{{color}}" onchange="updateColor(this, 'away', 'secondary', {{forloop.counter0}})"/>
+	    </td>
+        </tr>{% endfor %}
+    </table>
+    
     <input type="submit" value="Create" />
 </form>
 
@@ -203,6 +229,59 @@ var updateRerolls = function(selectRerolls) {
         tdRerollTotal.innerHTML = rerollTotal + ",000";
     }
     updateTreasury();
+}
+
+var colors = {
+    home: {
+        primary: null,
+        secondary: null
+    },
+    away: {
+        primary: null,
+        secondary: null
+    }
+};
+var reverseHomeOrAway = function(homeOrAway) {
+    return (homeOrAway == "home") ? "away" : "home";
+}
+var reversePrimaryOrSecondary = function(primaryOrSecondary) {
+    return (primaryOrSecondary == "primary") ? "secondary" : "primary";
+}
+var capitalise = function(string) {
+    return string.charAt(0).toUpperCase() + string.slice(1);
+}
+var updateColor = function(radio, newHomeOrAway, newPrimaryOrSecondary, num) {
+    var homeOrAwayOptions = ['home', 'away'];
+    var primaryOrSecondaryOptions = ['primary', 'secondary'];
+    var homeOrAway, primaryOrSecondary, i, id, id1, radio, radio1;
+    for (var iHOA = 0; iHOA < homeOrAwayOptions.length; iHOA++) {
+        homeOrAway = homeOrAwayOptions[iHOA];
+        for (var iPOS = 0; iPOS < primaryOrSecondaryOptions.length; iPOS++) {
+            primaryOrSecondary = primaryOrSecondaryOptions[iPOS];
+            i = 0;
+            while (true) {
+                id = "color" + capitalise(homeOrAway) + capitalise(primaryOrSecondary) + i;
+                radio = document.getElementById(id);
+                if (radio == null) {
+                    break;
+                }
+                // If the same color is already selected in this strip, disable
+                id1 = "color" + capitalise(homeOrAway) + capitalise(reversePrimaryOrSecondary(primaryOrSecondary)) + i;
+                radio1 = document.getElementById(id1);
+                radio.disabled = radio1.checked;
+                // If this is primary the other primary color must be different
+                if (primaryOrSecondary == "primary") {
+                    id1 = "color" + capitalise(reverseHomeOrAway(homeOrAway)) + "Primary" + i;
+                    radio1 = document.getElementById(id1);
+                    if (radio1.checked) {
+                        radio.disabled = true;
+                    }
+                }
+                i += 1;
+            }
+        }
+    }
+    colors[newHomeOrAway][newPrimaryOrSecondary] = num;
 }
 </script>
 
