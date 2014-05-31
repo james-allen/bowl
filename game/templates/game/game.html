@@ -2449,17 +2449,22 @@ var selectFromOptions = function(options, message, data, callback, teamReroll, s
     if (proReroll) {
         optionsData[optionsData.length] = {"option": "proReroll", "data": data, "inactive": (proReroll == "inactive"), "label": "Use Pro re-roll"};
     }
-    gPitch.select("#optionsWindow").style("visibility", "visible");
+    var optionsWindow = gPitch.select("#optionsWindow");
+    optionsWindow.style("visibility", "visible");
     gPitch.select("#optionsForeignObject").style("visibility", "visible");
     gPitch.select("#optionsHtml").html(message);
     var optionsWindowHeight = 3*viewData.margin + $("#optionsHtml").height()+ 1.3*viewData.buttonHeight*optionsData.length;
-    var optionsWindowTop = viewData.margin + 0.5*nSquaresY*viewData.squareSize - 0.5*optionsWindowHeight;
-    gPitch.select("#optionsWindow")
-        .attr("height", optionsWindowHeight)
-        .attr("y", optionsWindowTop);
+    var optionsWindowTop = $("#divPitch").scrollTop() + 0.5*$("#divPitch").height() - 0.5*optionsWindowHeight;
+    optionsWindowTop = Math.max(optionsWindowTop, 0);
+    optionsWindowTop = Math.min(optionsWindowTop, viewData.height - optionsWindowHeight);
+    optionsWindowLeft = $("#divPitch").scrollLeft() + 0.5*$("#divPitch").width() - 0.5*optionsWindow.attr("width");
+    optionsWindow.attr("height", optionsWindowHeight)
+        .attr("y", optionsWindowTop)
+        .attr("x", optionsWindowLeft);
     gPitch.select("#optionsForeignObject")
         .attr("y", optionsWindowTop + viewData.margin)
-    var firstButtonTop = $("#optionsHtml").position().top + $("#optionsHtml").height() + viewData.margin;
+        .attr("x", optionsWindowLeft + viewData.margin);
+    var firstButtonTop = optionsWindowTop + 2*viewData.margin + $("#optionsHtml").height();
     var g = gPitch.selectAll("g.option")
         .data(optionsData)
         .enter()
@@ -2468,14 +2473,14 @@ var selectFromOptions = function(options, message, data, callback, teamReroll, s
         .classed("inactive", function(d) {return d.inactive})
         .on("click", selectOption);
     g.append("rect")
-        .attr("x", 0.5 * nSquaresX * viewData.squareSize + viewData.margin - 0.5 * viewData.buttonWidth)
+        .attr("x", $("#divPitch").scrollLeft() + 0.5*$("#divPitch").width() - 0.5 * viewData.buttonWidth)
         .attr("y", function(d, i) { return firstButtonTop + (1.3*i)*viewData.buttonHeight; })
         .attr("width", viewData.buttonWidth)
         .attr("height", viewData.buttonHeight)
         .classed("button", true)
     g.append("text")
         .text(function(d) { return d.label; })
-        .attr("x", 0.5 * nSquaresX * viewData.squareSize + viewData.margin)
+        .attr("x", $("#divPitch").scrollLeft() + 0.5*$("#divPitch").width())
         .attr("y", function(d, i) { return firstButtonTop + (0.5+1.3*i)*viewData.buttonHeight; })
         .classed("buttonText", true)
 }
