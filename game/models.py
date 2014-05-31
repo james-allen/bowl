@@ -70,9 +70,9 @@ def create_team(name, race, coach, **kwargs):
 
 
 class Challenge(models.Model):
-	challenger = models.ForeignKey(Team, related_name='challenges_issued')
-	challengee = models.ForeignKey(Team, related_name='challenges_received')
-	time_issued = models.DateTimeField(auto_now_add=True)
+    challenger = models.ForeignKey(Team, related_name='challenges_issued')
+    challengee = models.ForeignKey(Team, related_name='challenges_received')
+    time_issued = models.DateTimeField(auto_now_add=True)
 
 
 class Position(models.Model):
@@ -308,6 +308,9 @@ class PlayerInGame(models.Model):
             'skills': self.skills.split(','),
         }
         return result_dict
+
+    def has_skill(self, skill):
+        return skill in self.skills.split(',')
 
 def create_pig(parent, **kwargs):
     pig = PlayerInGame()

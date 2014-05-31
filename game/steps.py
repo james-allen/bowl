@@ -66,7 +66,7 @@ def resolve(match, step_type, data):
             match.save()
         if step_type == 'push' and data['offPitch'] == 'true':
             player.on_pitch = False
-            injury_roll = roll_injury_dice()
+            injury_roll = roll_injury_dice(player)
             if injury_roll['result'] == 'knockedOut':
                 player.knocked_out = True
             elif injury_roll['result'] == 'casualty':
@@ -177,7 +177,7 @@ def resolve(match, step_type, data):
         # Roll against armour
         armour_roll = roll_armour_dice(defending_player, modifier)
         if armour_roll['success']:
-            injury_roll = roll_injury_dice()
+            injury_roll = roll_injury_dice(defending_player)
             if injury_roll['result'] == 'stunned':
                 defending_player.stunned = True
                 defending_player.stunned_this_turn = True
@@ -213,7 +213,7 @@ def resolve(match, step_type, data):
         # Roll against armour
         armour_roll = roll_armour_dice(player)
         if armour_roll['success']:
-            injury_roll = roll_injury_dice()
+            injury_roll = roll_injury_dice(player)
             if injury_roll['result'] == 'stunned':
                 player.stunned = True
                 player.stunned_this_turn = True
@@ -544,11 +544,12 @@ def roll_armour_dice(player, modifier=0):
     return {'dice': dice, 'rawResult': raw_result, 
             'modifiedResult': modified_result, 'success': success}
 
-def roll_injury_dice(modifier=0):
+def roll_injury_dice(player, modifier=0):
     dice = roll_dice(6, 2)
     raw_result = sum(dice['dice'])
     modified_result = raw_result + modifier
-    if modified_result <= 7:
+    thick_skull = player.has_skill('Thick Skull')
+    if modified_result <= 7 or (modified_result == 8 and thick_skull):
         result = 'stunned'
     elif modified_result <= 9:
         result = 'knockedOut'
