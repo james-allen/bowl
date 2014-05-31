@@ -10,4 +10,10 @@
 <h3>Matches</h3>
 {% for match in match_set %}<p><a href="{% url 'game:game_view' match.id %}">{{ match.home_team.name }} {{ match.home_score }} - {{ match.away_score }} {{ match.away_team.name }}</a></p>
 {% endfor %}
+<h3>Challenges</h3>
+{% if this_user %}
+<a href="{% url 'game:issue_challenge_view' %}">Issue new challenge</a>
+{% endif %}
+{% for team in user.team_set.all %}{% for challenge in team.challenges_received.all %}<p>From {{ challenge.challenger.coach.username }}: {{ challenge.challenger.name }} vs. {{ challenge.challengee.name }}{% if this_user %} | <a href="{% url 'game:accept_challenge_view' challenge.id %}">Accept</a> | <a href="{% url 'game:reject_challenge_view' challenge.id %}">Reject</a></p>{% endif %}
+{% endfor %}{% endfor %}
 {% endblock content %}

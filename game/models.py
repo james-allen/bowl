@@ -69,6 +69,12 @@ def create_team(name, race, coach, **kwargs):
     return team
 
 
+class Challenge(models.Model):
+	challenger = models.ForeignKey(Team, related_name='challenges_issued')
+	challengee = models.ForeignKey(Team, related_name='challenges_received')
+	time_issued = models.DateTimeField(auto_now_add=True)
+
+
 class Position(models.Model):
     title = models.CharField(max_length=30)
     team_race = models.ForeignKey(Race)

@@ -9,7 +9,7 @@ from django.db.utils import IntegrityError
 from django.contrib.auth.decorators import login_required
 from django.core.urlresolvers import reverse
 
-from game.models import Match, PlayerInGame, Step, Team, Race, create_player, create_team
+from game.models import Match, PlayerInGame, Step, Team, Race, Challenge, create_player, create_team, start_match
 from game.steps import resolve
 
 # Create your views here.
@@ -123,6 +123,45 @@ def create_team_view(request):
         'colors': colors,
     }
     return render(request, 'game/create-team.html', data)
+
+@login_required
+def issue_challenge_view(request):
+	if request.method == 'POST':
+		try:
+			challenger = Team.objects.get(slug=request.POST['challenger'])
+			challengee = Team.objects.get(slug=request.POST['challengee'])
+		except Team.DoesNotExist:
+			pass
+		else:
+			challenge = Challenge(challenger=challenger, challengee=challengee)
+			challenge.save()
+			url = reverse('profile',
+						  kwargs={'username': request.user.username})
+			return HttpResponseRedirect(url)
+	data = {
+		'own_teams': request.user.team_set.all(),
+		'other_teams': Team.objects.exclude(coach=request.user),
+	}
+	return render(request, 'game/issue-challenge.html', data)
+	
+@login_required
+def accept_challenge_view(request, challenge_id):
+	challenge = get_object_or_404(Challenge, id=challenge_id)
+	if challenge.challengee.coach != request.user:
+		raise Http404
+	match = start_match(challenge.challenger, challenge.challengee)
+	challenge.delete()
+	url = reverse('game:game_view', kwargs={'match_id': match.id})
+	return HttpResponseRedirect(url)
+	
+@login_required
+def reject_challenge_view(request, challenge_id):
+	challenge = get_object_or_404(Challenge, id=challenge_id)
+	if challenge.challengee.coach != request.user:
+		raise Http404
+	challenge.delete()
+	url = reverse('profile', kwargs={'username': request.user.username})
+	return HttpResponseRedirect(url)
 
 @login_required
 def post_step_view(request):
