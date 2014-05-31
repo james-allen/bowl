@@ -1331,19 +1331,31 @@ var processFollowUp = function(step) {
 }
 
 var processKnockDown = function(step) {
-    var player = findPlayer(step.side, step.num);
+    var player = findPlayer(step.side, step.num);  
     if (player.onPitch) {
         player.down = true;
         createKnockDownSymbol(player.xpos, player.ypos, false);
         if (isTurn(player)) {
             addStepToStack(defineTurnover());
         }
-        postStep(step);
+        if (step.mightyBlow == true) {
+            var message = "Which roll do you want to use Might Blow on?";
+            selectFromOptions(["armour", "injury"], message, step, processKnockDownWithMightyBlow, null, null, null, null, ["Armour", "Injury"]);
+        } else {
+            postStep(step);
+        }
     } else {
         // The player must have just been pushed off the pitch
         stepStack.shift();
         processNextStep();
     }
+}
+
+var processKnockDownWithMightyBlow = function(data) {
+    var step = data.data;
+    var option = data.option;
+    step.mightyBlow = option;
+    postStep(step);
 }
 
 var processStandUp = function(step) {
@@ -2137,14 +2149,29 @@ var defineKnockDown = function(step, dice, victim) {
     var newStep = {}
     newStep.action = selectedAction;
     newStep.stepType = "knockDown";
+    var attacker = findPlayer(step.side, step.num);
+    var defender = findPlayer(step.targetSide, step.targetNum);
+    var player, perpetrator;
     if (victim == "defender") {
-        newStep.num = step.targetNum;
-        newStep.side = otherSide(step.side);
+        player = defender;
+        perpetrator = attacker;
     } else {
-        newStep.num = step.num;
-        newStep.side = step.side;
+        player = attacker;
+        perpetrator = defender;
     }
-    var player = findPlayer(newStep.side, newStep.num);
+    newStep.num = player.num;
+    newStep.side = player.side;
+    newStep.perpNum = perpetrator.num;
+    newStep.perpSide = perpetrator.side;
+    if (hasSkill(perpetrator, "Mighty Blow")) {
+        if (perpetrator == defender) {
+            newStep.mightyBlow = "armour";
+        } else {
+            newStep.mightyBlow = true;
+        }
+    } else {
+        newStep.mightyBlow = false;
+    }
     if ((dice == "bothDown" && hasSkill(player, "Block")) || (dice == "defenderStumbles" && hasSkill(player, "Dodge")) || !player.onPitch) {
         // Avoid a Both Down result with the block skill, or a Defender Stumbles with the dodge skill. Do nothing if the player has been pushed off the pitch.
         return null;

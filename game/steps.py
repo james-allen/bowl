@@ -210,10 +210,14 @@ def resolve(match, step_type, data):
         player.down = True
         player.has_ball = False
         player.save()
+        # Check for Mighty Blow skill
+        mighty_blow = data.get('mightyBlow', False)
         # Roll against armour
-        armour_roll = roll_armour_dice(player)
+        modifier = 1 if mighty_blow == 'armour' else 0
+        armour_roll = roll_armour_dice(player, modifier=modifier)
         if armour_roll['success']:
-            injury_roll = roll_injury_dice(player)
+            modifier = 1 if mighty_blow == 'injury' else 0
+            injury_roll = roll_injury_dice(player, modifier=modifier)
             if injury_roll['result'] == 'stunned':
                 player.stunned = True
                 player.stunned_this_turn = True
