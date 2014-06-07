@@ -330,6 +330,8 @@ class PlayerInGame(models.Model):
             
     def remove_effect(self, effect):
         mat = re.match('^(.+,)?(?P<effect>'+effect+')(,.+)?$', self.effects)
+        if not mat:
+            return
         start = mat.start('effect')
         finish = mat.end('effect')
         if start > 0:

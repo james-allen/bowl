@@ -1672,7 +1672,17 @@ var postProcessStep = function(step, result) {
         break;
     case "block":
         if (step.selectedDice == null) {
-            var message = "Attack strength: " + result.attackSt;
+            var message = "";
+            if (result.loner) {
+                message = message + "Loner result: ";
+                if (result.loner.success) {
+                    message = message + "Success!";
+                } else {
+                    message = message + "Failed!";
+                }
+                message = message + "<br/>";
+            }
+            message = message + "Attack strength: " + result.attackSt;
             message = message + "<br/>Defence strength: " + result.defenceSt;
             message = message + "<br/>Which block dice would you like to use?";
             var teamReroll = (teamRerollAvailable(step.side) && step.stepType != "reroll") ? "active" : "inactive";
@@ -2440,15 +2450,23 @@ var selectPush = function(step) {
 
 var confirmResult = function(step, result, rerollSkill, callback) {
     var stepType = (step.stepType == "reroll") ? step.rerollStepType: step.stepType;
-    var message;
-    if (stepType == "move") { message = "Dodge: "; }
-    else if (stepType == "pickUp") { message = "Pick up ball: "; }
-    else if (stepType == "catch") { message = "Catch: "; }
-    else if (stepType == "pass") { message = "Pass: "; }
-    else if (stepType == "goForIt") { message = "Go for it: "; }
-    else if (stepType == "bonehead") { message = "Bone-head: "; }
-    else if (stepType == "reallyStupid") { message = "Really Stupid: "; }
-    else { message = ""; }
+    var message = "";
+    if (step.loner) {
+        message = message + "Loner result: ";
+        if (step.loner.success) {
+            message = message + "Success!";
+        } else {
+            message = message + "Failed!";
+        }
+        message = message + "<br/>";
+    }
+    if (stepType == "move") { message = message + "Dodge: "; }
+    else if (stepType == "pickUp") { message = message + "Pick up ball: "; }
+    else if (stepType == "catch") { message = message + "Catch: "; }
+    else if (stepType == "pass") { message = message + "Pass: "; }
+    else if (stepType == "goForIt") { message = message + "Go for it: "; }
+    else if (stepType == "bonehead") { message = message + "Bone-head: "; }
+    else if (stepType == "reallyStupid") { message = message + "Really Stupid: "; }
     var teamReroll, skillReroll, proReroll;
     var data = {"step": step, "result": result};
     if (result.success) {

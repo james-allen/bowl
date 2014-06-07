@@ -35,6 +35,7 @@ def set_action(player, action):
     finish_previous_action(player.match, player)
 
 def resolve(match, step_type, data):
+    result = {}
     if step_type == 'reroll':
         if data['rerollType'] == 'team':
             if data['side'] == 'home':
@@ -44,6 +45,16 @@ def resolve(match, step_type, data):
                 match.away_rerolls -= 1
                 match.away_reroll_used_this_turn = True
             match.save()
+        player = find_player(match, data)
+        if player.has_skill('Loner'):
+            loner_dice = roll_dice(6, 1)
+            loner_success = loner_dice['dice'][0] >= 4
+            loner_dict = {'dice': loner_dice, 'success': loner_success}
+            result.update({'loner': loner_dict})
+            if not loner_success:
+                # Copy the results of the last attempt and return now
+                result.update(previous_step(match, data).as_dict()['result'])
+                return result
         step_type = data['rerollStepType']
     if step_type in ['move', 'push', 'followUp']:
         # A move step
@@ -71,12 +82,12 @@ def resolve(match, step_type, data):
                 player.knocked_out = True
             elif injury_roll['result'] == 'casualty':
                 player.casualty = True
-            result = {'injuryRoll': injury_roll}
+            result.update({'injuryRoll': injury_roll})
         elif step_type == 'move' and data['dodge'] == 'true':
             modifier = 1 - n_tackle_zones(player)
-            result = roll_agility_dice(player, modifier=modifier)
+            result.update(roll_agility_dice(player, modifier=modifier))
         else:
-            result = {'success': True}
+            result.update({'success': True})
         player.save()
         return result
     elif step_type == 'block':
@@ -130,7 +141,7 @@ def resolve(match, step_type, data):
             n_dice = 3
         elif attack_st < defence_st:
             n_dice = 2
-        result = roll_block_dice(n_dice)
+        result.update(roll_block_dice(n_dice))
         result['attackSt'] = attack_st
         result['defenceSt'] = defence_st
         if data['action'] == 'blitz':
@@ -140,7 +151,7 @@ def resolve(match, step_type, data):
         attacking_player.save()
         return result
     elif step_type == 'selectBlockDice':
-        return {}
+        return result
     elif step_type == 'foul':
         # A foul on a player
         # Find out which is the attacking player
@@ -207,8 +218,9 @@ def resolve(match, step_type, data):
             attacking_player.on_pitch = False
         attacking_player.finished_action = True    
         attacking_player.save()
-        return {'armourRoll': armour_roll, 'injuryRoll': injury_roll, 
-                'sentOff': sent_off}
+        result.update({'armourRoll': armour_roll, 'injuryRoll': injury_roll, 
+                       'sentOff': sent_off})
+        return result
     elif step_type == 'knockDown':
         # A player knocked over
         player = find_player(match, data)
@@ -240,7 +252,8 @@ def resolve(match, step_type, data):
             player.save()
         else:
             injury_roll = None
-        return {'armourRoll': armour_roll, 'injuryRoll': injury_roll}
+        result.update({'armourRoll': armour_roll, 'injuryRoll': injury_roll})
+        return result
     elif step_type == 'standUp':
         # A player standing up
         player = find_player(match, data)
@@ -258,12 +271,13 @@ def resolve(match, step_type, data):
             player.down = False
             player.tackle_zones = True
         player.save()
-        return {'dice': dice, 'success': success}
+        result.update({'dice': dice, 'success': success})
+        return result
     elif step_type == 'pickUp':
         # A player picking up the ball
         player = find_player(match, data)
         modifier = 1 - n_tackle_zones(player)
-        result = roll_agility_dice(player, modifier=modifier)
+        result.update(roll_agility_dice(player, modifier=modifier))
         if result['success']:
             player.has_ball = True
             player.save()
@@ -290,9 +304,10 @@ def resolve(match, step_type, data):
         match.x_ball = x_ball
         match.y_ball = y_ball
         match.save()
-        return {'dice': dice, 'direction': direction, 
-                'x1': x_ball, 'y1': y_ball,
-                'lastX': last_x, 'lastY': last_y}
+        result.update({'dice': dice, 'direction': direction, 
+                       'x1': x_ball, 'y1': y_ball,
+                       'lastX': last_x, 'lastY': last_y})
+        return result
     elif step_type == 'catch':
         # Catching the ball
         player = find_player(match, data)
@@ -301,7 +316,7 @@ def resolve(match, step_type, data):
         modifier = - n_tackle_zones(player)
         if data['accurate'] == 'true':
             modifier += 1
-        result = roll_agility_dice(player, modifier=modifier)
+        result.update(roll_agility_dice(player, modifier=modifier))
         if result['success']:
             player.has_ball = True
             player.save()
@@ -322,7 +337,7 @@ def resolve(match, step_type, data):
         elif pass_range == 'longBomb':
             modifier = -2
         modifier -= n_tackle_zones(player)
-        result = roll_agility_dice(player, modifier=modifier)
+        result.update(roll_agility_dice(player, modifier=modifier))
         fumble = (min(result['rawResult'], result['modifiedResult']) <= 1)
         if fumble:
             result['success'] = False
@@ -347,7 +362,7 @@ def resolve(match, step_type, data):
         match.x_ball = int(data['x1'])
         match.y_ball = int(data['y1'])
         match.save()
-        return {}
+        return result
     elif step_type == 'throwin':
         x0 = int(data['lastX'])
         y0 = int(data['lastY'])
@@ -392,9 +407,10 @@ def resolve(match, step_type, data):
             y1 = last_y
             last_x = x1 - x_dir
             last_y = y1 - y_dir
-        return {'x1': x1, 'y1': y1, 'lastX': last_x, 'lastY': last_y}
+        result.update({'x1': x1, 'y1': y1, 'lastX': last_x, 'lastY': last_y})
+        return result
     elif step_type == 'goForIt':
-        result = roll_dice(6, 1)
+        result.update(roll_dice(6, 1))
         result['success'] = (result['dice'][0] != 1)
         return result
     elif step_type == 'endTurn':
@@ -438,7 +454,7 @@ def resolve(match, step_type, data):
                 player.stunned = False
             player.stunned_this_turn = False
             player.save()
-        return {}
+        return result
     elif step_type == 'setKickoff':
         revive_result = {'revived': [], 'knockedOut': []}
         for player in PlayerInGame.objects.filter(
@@ -454,12 +470,13 @@ def resolve(match, step_type, data):
                 revive_result['knockedOut'].append(player_data)
         set_kickoff(match, data['kickingTeam'])
         match.save()
-        return revive_result
+        result.update(revive_result)
+        return result
     elif step_type == 'placeBall':
         match.x_ball = int(data['x1'])
         match.y_ball = int(data['y1'])
         match.save()
-        return {}
+        return result
     elif step_type == 'placePlayer':
         player = find_player(match, data)
         if 'subs' in data and data['subs'] == 'true':
@@ -469,14 +486,14 @@ def resolve(match, step_type, data):
             player.ypos = int(data['y1'])
             player.on_pitch = True
         player.save()
-        return {}
+        return result
     elif step_type == 'submitPlayers':
         match.n_to_place -= 1
         if match.n_to_place == 0:
             match.turn_type = 'placeBall'
         match.current_side = other_side(match.current_side)
         match.save()
-        return {}
+        return result
     elif step_type == 'submitBall':
         distance_dice = roll_dice(6, 1)
         distance = distance_dice['dice'][0]
@@ -501,9 +518,10 @@ def resolve(match, step_type, data):
             match.x_ball = x_ball
             match.y_ball = y_ball
         match.save()
-        return {'dice': direction_dice, 'direction': direction, 
-                'distanceDice': distance_dice, 'distance': distance,
-                'x1': x_ball, 'y1': y_ball}
+        result.update({'dice': direction_dice, 'direction': direction, 
+                       'distanceDice': distance_dice, 'distance': distance,
+                       'x1': x_ball, 'y1': y_ball})
+        return result
     elif step_type == 'touchback':
         match.x_ball = int(data['x1'])
         match.y_ball = int(data['y1'])
@@ -511,20 +529,19 @@ def resolve(match, step_type, data):
         player = find_player(match, data)
         player.has_ball = True
         player.save()
-        return {}
+        return result
     elif step_type == 'submitTouchback' or step_type == 'endKickoff':
         match.turn_type = 'normal'
         if 'touchback' in data and data['touchback'] == 'false':
             match.current_side = other_side(match.current_side)
         match.save()
-        return {}
+        return result
     elif step_type == 'bonehead':
         player = find_player(match, data)
         set_action(player, data['action'])
-        dice = roll_dice(6, 1)
-        success = dice['dice'][0] != 1
-        result = {'dice': dice, 'success': success}
-        if success:
+        result.update(roll_dice(6, 1))
+        result['success'] = (result['dice'][0] != 1)
+        if result['success']:
             player.tackle_zones = True
             player.remove_effect('Bone-head')
         else:
@@ -536,7 +553,7 @@ def resolve(match, step_type, data):
     elif step_type == 'reallyStupid':
         player = find_player(match, data)
         set_action(player, data['action'])
-        dice = roll_dice(6, 1)
+        result.update(roll_dice(6, 1))
         n_helpers = PlayerInGame.objects.filter(
             match=match, player__team=player.team,
             xpos__gt=(player.xpos-2),
@@ -548,10 +565,9 @@ def resolve(match, step_type, data):
             required_result = 2
         else:
             required_result = 4
-        success = dice['dice'][0] >= required_result
-        result = {'dice': dice, 'success': success,
-                  'requiredResult': required_result}
-        if success:
+        result['success'] = dice['dice'][0] >= required_result
+        result['requiredResult'] = required_result
+        if result['success']:
             player.tackle_zones = True
             player.remove_effect('Really Stupid')
         else:
@@ -685,6 +701,11 @@ def other_side(side):
         return 'home'
     else:
         raise ValueError('Unrecognised side: ' + side)
+        
+def previous_step(match, data):
+    """Return the previous step from the match"""
+    history = Step.objects.filter(match=match).order_by('-history_position')
+    return history[1]
 
 # def current_team(match):
 #     step_set = Step.objects.filter(match=match).order_by('-history_position')
