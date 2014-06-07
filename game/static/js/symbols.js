@@ -154,17 +154,28 @@ var shapeSelector = function(player) {
 var shapeDatabase = {
     "human": {
         "Lineman": "circle",
+        "Linewoman": "circle",
         "Thrower": "rising",
         "Catcher": "diamond",
         "Blitzer": "chevron",
     },
     "ogre": {
-        "Ogre": "square"
+        "Ogre": "square",
     },
     "orc": {
         "Lineman": "circle",
         "Thrower": "rising",
         "Black Orc Blocker": "rectangleHorizontal",
-        "Blitzer": "chevron"
-    }
+        "Blitzer": "chevron",
+    },
+    "undead": {
+        "Skeleton": "circle",
+        "Thro-Ra": "rising",
+        "Blitz-Ra": "chevron",
+        "Tomb Guardian": "rectangleHorizontal",
+        "Zombie": "rising",
+        "Ghoul": "diamond",
+        "Wight": "chevron",
+        "Mummy": "square",
+    },
 }

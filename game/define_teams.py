@@ -1,5 +1,17 @@
 from game.models import Race, Position
 
+AMAZON = {
+    'singular': 'amazon',
+    'plural': 'amazons',
+    'reroll_cost': 50,
+    'positions': [
+        (16, 'Linewoman', 50, 6, 3, 3, 7, 'Dodge', 'G', 'ASP', 'human'),
+        (2, 'Thrower', 70, 6, 3, 3, 7, 'Dodge,Pass', 'GP', 'AS', 'human'),
+        (2, 'Catcher', 70, 6, 3, 3, 7, 'Dodge,Catch', 'GA', 'SP', 'human'),
+        (4, 'Blitzer', 90, 6, 3, 3, 7, 'Dodge,Block', 'GS', 'AP', 'human'),
+        ]
+}
+
 HUMAN = {
     'singular': 'human',
     'plural': 'humans',
@@ -9,7 +21,19 @@ HUMAN = {
         (4, 'Catcher', 70, 8, 2, 3, 7, 'Catch,Dodge', 'GA', 'SP', 'human'),
         (2, 'Thrower', 70, 6, 4, 4, 8, 'Sure Hands,Pass', 'GP', 'AS', 'human'),
         (4, 'Blitzer', 90, 7, 3, 3, 8, 'Block', 'GS', 'AP', 'human'),
-        (1, 'Ogre', 140, 5, 5, 2, 9, 'Loner,Bone-head,Mighty Blow,Thick Skull,Throw Team-Mate', 'S', 'GAP', 'ogre')
+        (1, 'Ogre', 140, 5, 5, 2, 9, 'Loner,Bone-head,Mighty Blow,Thick Skull,Throw Team-Mate', 'S', 'GAP', 'ogre'),
+        ]
+}
+
+KHEMRI = {
+    'singular': 'khemri',
+    'plural': 'khemri',
+    'reroll_cost': 70,
+    'positions': [
+        (16, 'Skeleton', 40, 5, 3, 2, 7, 'Regeneration,Thick Skull', 'G', 'ASP', 'undead'),
+        (2, 'Thro-Ra', 70, 6, 3, 2, 7, 'Pass,Regeneration,Sure Hands', 'GP', 'AS', 'undead'),
+        (2, 'Blitz-Ra', 90, 6, 3, 2, 8, 'Block,Regeneration', 'GS', 'AP', 'undead'),
+        (4, 'Tomb Guardian', 100, 4, 5, 1, 9, 'Decay,Regeneration', 'S', 'GAP', 'undead'),
         ]
 }
 
@@ -23,7 +47,20 @@ ORC = {
         (2, 'Thrower', 70, 5, 3, 3, 8, 'Sure Hands,Pass', 'GP', 'AS', 'orc'),
         (4, 'Black Orc Blocker', 80, 4, 4, 2, 9, '', 'GS', 'AP', 'orc'),
         (4, 'Blitzer', 80, 6, 3, 3, 9, 'Block', 'GS', 'AP', 'orc'),
-        (1, 'Troll', 110, 4, 5, 1, 9, 'Loner,Always Hungry,Mighty Blow,Really Stupid,Regeneration,Throw Team-Mate', 'S', 'GAP', 'troll')
+        (1, 'Troll', 110, 4, 5, 1, 9, 'Loner,Always Hungry,Mighty Blow,Really Stupid,Regeneration,Throw Team-Mate', 'S', 'GAP', 'troll'),
+        ]
+}
+
+UNDEAD = {
+    'singular': 'undead',
+    'plural': 'undead',
+    'reroll_cost': 70,
+    'positions': [
+        (16, 'Skeleton', 40, 5, 3, 2, 7, 'Regeneration,Thick Skull', 'G', 'ASP', 'undead'),
+        (16, 'Zombie', 40, 4, 3, 2, 8, 'Regeneration', 'G', 'ASP', 'undead'),
+        (4, 'Ghoul', 70, 7, 3, 3, 7, 'Dodge', 'GA', 'SP', 'undead'),
+        (2, 'Wight', 90, 6, 3, 3, 8, 'Block,Regeneration', 'GS', 'AP', 'undead'),
+        (2, 'Mummy', 120, 3, 5, 1, 9, 'Mighty Blow,Regeneration', 'S', 'GAP', 'undead'),
         ]
 }
 
