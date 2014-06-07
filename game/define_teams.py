@@ -12,6 +12,18 @@ AMAZON = {
         ]
 }
 
+HIGH_ELF = {
+    'singular': 'high elf',
+    'plural': 'high elves',
+    'reroll_cost': 50,
+    'positions': [
+        (16, 'Lineman', 70, 6, 3, 4, 7, '', 'GA', 'SP', 'elf'),
+        (2, 'Thrower', 90, 6, 3, 4, 8, 'Pass,Safe Throw', 'GAP', 'S', 'elf'),
+        (4, 'Catcher', 90, 8, 3, 4, 7, 'Catch', 'GA', 'SP', 'elf'),
+        (2, 'Blitzer', 100, 7, 3, 4, 8, 'Block', 'GA', 'SP', 'elf'),
+        ]
+}
+
 HUMAN = {
     'singular': 'human',
     'plural': 'humans',
@@ -65,6 +77,13 @@ UNDEAD = {
 }
 
 def define_race(data):
+    # Don't define the race if it already exists
+    try:
+        Race.objects.get(singular=data['singular'])
+    except Race.DoesNotExist:
+        pass
+    else:
+        return
     race = Race(
         singular=data['singular'],
         plural=data['plural'],
@@ -89,5 +108,9 @@ def define_race(data):
         position.save()
 
 def define_all():
+    define_race(AMAZON)
+    define_race(HIGH_ELF)
     define_race(HUMAN)
+    define_race(KHEMRI)
     define_race(ORC)
+    define_race(UNDEAD)

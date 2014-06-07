@@ -159,6 +159,12 @@ var shapeDatabase = {
         "Catcher": "diamond",
         "Blitzer": "chevron",
     },
+    "elf": {
+        "Lineman": "circle",
+        "Thrower": "rising",
+        "Catcher": "diamond",
+        "Blitzer": "chevron",
+    },
     "ogre": {
         "Ogre": "square",
     },
