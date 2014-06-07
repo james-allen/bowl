@@ -519,11 +519,11 @@ def resolve(match, step_type, data):
         match.save()
         return {}
     elif step_type == 'bonehead':
+        player = find_player(match, data)
+        set_action(player, data['action'])
         dice = roll_dice(6, 1)
         success = dice['dice'][0] != 1
         result = {'dice': dice, 'success': success}
-        player = find_player(match, data)
-        set_action(player, data['action'])
         if success:
             player.tackle_zones = True
             player.remove_effect('Bone-head')
@@ -533,7 +533,33 @@ def resolve(match, step_type, data):
             player.finished_action = True
         player.save()
         return result
-
+    elif step_type == 'reallyStupid':
+        player = find_player(match, data)
+        set_action(player, data['action'])
+        dice = roll_dice(6, 1)
+        n_helpers = PlayerInGame.objects.filter(
+            match=match, player__team=player.team,
+            xpos__gt=(player.xpos-2),
+            xpos__lt=(player.xpos+2),
+            ypos__gt=(player.ypos-2),
+            ypos__lt=(player.ypos+2),
+            on_pitch=True, down=False).count()
+        if n_helpers > 0:
+            required_result = 2
+        else:
+            required_result = 4
+        success = dice['dice'][0] >= required_result
+        result = {'dice': dice, 'success': success,
+                  'requiredResult': required_result}
+        if success:
+            player.tackle_zones = True
+            player.remove_effect('Really Stupid')
+        else:
+            player.tackle_zones = False
+            player.add_effect('Really Stupid')
+            player.finished_action = True
+        player.save()
+        return result
 
 def n_tackle_zones(player):
     opponents = PlayerInGame.objects.filter(

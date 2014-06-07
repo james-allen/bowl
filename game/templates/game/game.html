@@ -1168,6 +1168,17 @@ var processStep = function(step) {
                 stepStack.unshift(boneheadStep);
                 processNextStep();
                 return;
+            } else if (hasSkill(selected, "Really Stupid")) {
+                // Quickly insert a Really Stupid roll and process that
+                reallyStupidStep = {
+                    action: selectedAction,
+                    stepType: "reallyStupid",
+                    side: selected.side,
+                    num: selected.num
+                }
+                stepStack.unshift(reallyStupidStep);
+                processNextStep();
+                return;
             }
         }
         var stepType = (step.stepType == "reroll") ? step.rerollStepType : step.stepType;
@@ -1243,6 +1254,9 @@ var processStep = function(step) {
             break;
         case "bonehead":
             processBonehead(step);
+            break;
+        case "reallyStupid":
+            processReallyStupid(step);
             break;
         }
     }
@@ -1576,6 +1590,10 @@ var processBonehead = function(step) {
     postStep(step);
 }
 
+var processReallyStupid = function(step) {
+    postStep(step);
+}
+
 var removeFromPitch = function(player, reason) {
     player.onPitch = false;
     d3.select("#"+playerId(player)).transition().style("opacity", 0).remove();
@@ -1795,6 +1813,9 @@ var postProcessStep = function(step, result) {
     case "bonehead":
         confirmResult(step, result, null, postProcessBonehead);
         break;
+    case "reallyStupid":
+        confirmResult(step, result, null, postProcessReallyStupid);
+        break;
     }
 }
 
@@ -1934,6 +1955,25 @@ var postProcessBonehead = function(data) {
         player = findPlayer(step.side, step.num);
         player.tackleZones = false;
         addEffect(player, "Bone-head");
+        finishAction(player);
+        stepStack = [];
+    }
+}
+
+var postProcessReallyStupid = function(data) {
+    var step = data.data.step;
+    var result = data.data.result;
+    if (result.success) {
+        // Everything is fine, continue with the requested step
+        player.tackleZones = true;
+        removeEffect(player, "Really Stupid");
+        stepStack.shift();
+        processNextStep();
+    } else {
+        // Player does nothing!
+        player = findPlayer(step.side, step.num);
+        player.tackleZones = false;
+        addEffect(player, "Really Stupid");
         finishAction(player);
         stepStack = [];
     }
@@ -2407,6 +2447,7 @@ var confirmResult = function(step, result, rerollSkill, callback) {
     else if (stepType == "pass") { message = "Pass: "; }
     else if (stepType == "goForIt") { message = "Go for it: "; }
     else if (stepType == "bonehead") { message = "Bone-head: "; }
+    else if (stepType == "reallyStupid") { message = "Really Stupid: "; }
     else { message = ""; }
     var teamReroll, skillReroll, proReroll;
     var data = {"step": step, "result": result};
@@ -2434,6 +2475,8 @@ var confirmResult = function(step, result, rerollSkill, callback) {
         message = message + "<br/>Rolled: " + result.rawResult + "<br/>Modified: " + result.modifiedResult + "<br/>Required: " + result.requiredResult
     } else if (stepType == "goForIt" || stepType == "bonehead") {
         message = message + "<br/>Rolled: " + result.dice[0];
+    } else if (stepType == "reallyStupid") {
+        message = message + "<br/>Rolled: " + result.dice[0] + "<br/>Required: " + result.requiredResult;
     }
     selectFromOptions(["OK"], message, data, callback, teamReroll, skillReroll, proReroll, rerollSkill);
 }
