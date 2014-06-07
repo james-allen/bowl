@@ -135,7 +135,7 @@ def issue_challenge_view(request):
 		else:
 			challenge = Challenge(challenger=challenger, challengee=challengee)
 			challenge.save()
-			url = reverse('profile',
+			url = reverse('user_profile',
 						  kwargs={'username': request.user.username})
 			return HttpResponseRedirect(url)
 	data = {
@@ -160,7 +160,7 @@ def reject_challenge_view(request, challenge_id):
 	if challenge.challengee.coach != request.user:
 		raise Http404
 	challenge.delete()
-	url = reverse('profile', kwargs={'username': request.user.username})
+	url = reverse('user_profile', kwargs={'username': request.user.username})
 	return HttpResponseRedirect(url)
 
 @login_required
