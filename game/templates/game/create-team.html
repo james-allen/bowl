@@ -76,25 +76,25 @@
 	</tr>
 	<tr>
 	    <td rowspan="{{colors|length}}">Primary</td>
-	    {% for color in colors %}<td style="background-color:{{color}}">
+	    {% for color in colors %}<td style="background-color:rgb({{color}})">
 	        <input type="radio" name="colorHomePrimary" id="colorHomePrimary{{forloop.counter0}}" value="{{color}}" onchange="updateColor(this, 'home', 'primary', {{forloop.counter0}})"/>
 	    </td>
 	    {% if forloop.first %}<td rowspan="{{colors|length}}">Secondary</td>
-	    {% endif %}<td style="background-color:{{color}}">
+	    {% endif %}<td style="background-color:rgb({{color}})">
 	        <input type="radio" name="colorHomeSecondary" id="colorHomeSecondary{{forloop.counter0}}" value="{{color}}" onchange="updateColor(this, 'home', 'secondary', {{forloop.counter0}})"/>
 	    </td>
 	    {% if forloop.first %}<td rowspan="{{colors|length}}">Primary</td>
-	    {% endif %}<td style="background-color:{{color}}">
+	    {% endif %}<td style="background-color:rgb({{color}})">
 	        <input type="radio" name="colorAwayPrimary" id="colorAwayPrimary{{forloop.counter0}}" value="{{color}}" onchange="updateColor(this, 'away', 'primary', {{forloop.counter0}})"/>
 	    </td>
 	    {% if forloop.first %}<td rowspan="{{colors|length}}">Secondary</td>
-	    {% endif %}<td style="background-color:{{color}}">
+	    {% endif %}<td style="background-color:rgb({{color}})">
 	        <input type="radio" name="colorAwaySecondary" id="colorAwaySecondary{{forloop.counter0}}" value="{{color}}" onchange="updateColor(this, 'away', 'secondary', {{forloop.counter0}})"/>
 	    </td>
         </tr>{% endfor %}
     </table>
     
-    <input type="submit" value="Create" />
+    <input id="submit" type="submit" value="Create" disabled />
 </form>
 
 <script type="text/javascript">
@@ -150,9 +150,20 @@ var clearAll = function() {
         document.getElementById("skills"+i).innerHTML = "&nbsp;";
         document.getElementById("cost"+i).innerHTML = "&nbsp;";
     }
+    document.getElementById("submit").disabled = true;
 }
 
 var updateTreasury = function() {
+    var cost = calculateCost();
+    var treasury = document.getElementById("treasury");
+    if (cost == 0) {
+        treasury.innerHTML = "1,000,000";
+    } else {
+        treasury.innerHTML = (1000-cost)+",000";
+    }
+}
+
+var calculateCost = function() {
     var race = document.getElementById("selectRace").value;
     var cost = 0;
     var i = 0;
@@ -168,12 +179,7 @@ var updateTreasury = function() {
     }
     var selectRerolls = document.getElementById("selectRerolls");
     cost += rerollCost[race] * selectRerolls.value;
-    var treasury = document.getElementById("treasury");
-    if (cost == 0) {
-        treasury.innerHTML = "1,000,000";
-    } else {
-        treasury.innerHTML = (1000-cost)+",000";
-    }
+    return cost;
 }
 
 var updateRace = function(selectRace) {
@@ -217,6 +223,7 @@ var updatePosition = function(selectPosition, number) {
         document.getElementById("cost"+number).innerHTML = position.cost + ",000";
     }
     updateTreasury();
+    checkSubmit();
 }
 
 var updateRerolls = function(selectRerolls) {
@@ -229,6 +236,7 @@ var updateRerolls = function(selectRerolls) {
         tdRerollTotal.innerHTML = rerollTotal + ",000";
     }
     updateTreasury();
+    checkSubmit();
 }
 
 var colors = {
@@ -282,6 +290,66 @@ var updateColor = function(radio, newHomeOrAway, newPrimaryOrSecondary, num) {
         }
     }
     colors[newHomeOrAway][newPrimaryOrSecondary] = num;
+    checkSubmit();
+}
+
+var colorsSelected = function() {
+    var n = 0
+    var homeOrAwayOptions = ['home', 'away'];
+    var primaryOrSecondaryOptions = ['primary', 'secondary'];
+    var homeOrAway, primaryOrSecondary, i, id, radio;
+    for (var iHOA = 0; iHOA < homeOrAwayOptions.length; iHOA++) {
+        homeOrAway = homeOrAwayOptions[iHOA];
+        for (var iPOS = 0; iPOS < primaryOrSecondaryOptions.length; iPOS++) {
+            primaryOrSecondary = primaryOrSecondaryOptions[iPOS];
+            i = 0;
+            while (true) {
+                id = "color" + capitalise(homeOrAway) + capitalise(primaryOrSecondary) + i;
+                radio = document.getElementById(id);
+                if (radio == null) {
+                    break;
+                }
+                if (radio.checked) {
+                    n += 1;
+                    if (n == 4) {
+                        return true;
+                    }
+                }
+            }
+        }
+    }
+    return false;
+}
+
+var checkSubmit = function() {
+    // Need to run this on changes to the text fields
+    document.getElementById("submit").disabled = !isValidTeam();
+}
+
+var isValidTeam = function() {
+    // Also need to check that there are no duplicate names and that all players have names
+    return (nPlayers() >= 11 && calculateCost() <= 1000 && colorsSelected() && hasTeamName());
+}
+
+var nPlayers = function() {
+    var n = 0;
+    var i = 0;
+    var positionSelect;
+    while (true) {
+        i += 1;
+        positionSelect = document.getElementById("select"+i);
+        if (positionSelect == null) {
+            break;
+        }
+        if (positionSelect.value != "" && document.getElementById("name"+i).value != "") {
+            n += 1;
+        }
+    }
+    return n;
+}
+
+var hasTeamName = function() {
+    return (document.getElementById("teamName").value != "");
 }
 </script>
 
