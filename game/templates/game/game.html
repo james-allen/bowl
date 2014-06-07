@@ -1862,7 +1862,7 @@ var postProcessPass = function(data) {
     var result = data.data.result;
     var player = findPlayer(step.side, step.num);
     player.hasBall = false;
-    var nextStep;
+    var nextStep = null;
     if (result.success) {
         moveBall(result.x1, result.y1);
         var receivingPlayer = playerInPos(result.x1, result.y1);
@@ -1872,13 +1872,19 @@ var postProcessPass = function(data) {
             nextStep = defineScatter(1, false, true);
         }
     } else if (result.fumble) {
-        nextStep = defineScatter(1);
-        addStepToStack(defineTurnover());
+        if (!hasSkill(player, "Safe Throw") || result.rawResult == 1) {
+            nextStep = defineScatter(1);
+            addStepToStack(defineTurnover());            
+        }
     } else {
         moveBall(result.x1, result.y1);
         nextStep = defineScatter(3, true, true);
     }
-    stepStack[0] = nextStep;
+    if (nextStep == null) {
+        stepStack.shift();
+    } else {
+        stepStack[0] = nextStep;
+    }
     processNextStep();
 }
 
