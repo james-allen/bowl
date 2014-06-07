@@ -1,4 +1,5 @@
 import json
+import re
 
 from django.db import models
 from django.contrib.auth.models import User
@@ -244,6 +245,7 @@ def set_kickoff(match, kicking_team):
         pig.down = False
         pig.stunned = False
         pig.stunned_this_turn = False
+        pig.tackle_zones = True
         pig.has_ball = False
         pig.move_left = pig.ma
         pig.action = ''
@@ -269,6 +271,7 @@ class PlayerInGame(models.Model):
     ag = models.IntegerField()
     av = models.IntegerField()
     skills = models.TextField()
+    effects = models.TextField()
     action = models.CharField(max_length=8)
     move_left = models.IntegerField()
     finished_action = models.BooleanField(default=False)
@@ -280,6 +283,7 @@ class PlayerInGame(models.Model):
     knocked_out = models.BooleanField(default=False)
     casualty = models.BooleanField(default=False)
     sent_off = models.BooleanField(default=False)
+    tackle_zones = models.BooleanField(default=True)
 
     def as_dict(self):
         result_dict = {
@@ -294,6 +298,8 @@ class PlayerInGame(models.Model):
             'st': self.st,
             'ag': self.ag,
             'av': self.av,
+            'skills': self.skills.split(','),
+            'effects': self.effects.split(','),
             'action': self.action,
             'moveLeft': self.move_left,
             'finishedAction': self.finished_action,
@@ -305,12 +311,39 @@ class PlayerInGame(models.Model):
             'knockedOut': self.knocked_out,
             'casualty': self.casualty,
             'sentOff': self.sent_off,
-            'skills': self.skills.split(','),
+            'tackleZones': self.tackle_zones,
         }
         return result_dict
 
     def has_skill(self, skill):
         return skill in self.skills.split(',')
+        
+    def affected(self, effect):
+        return effect in self.effects.split(',')
+        
+    def add_effect(self, effect):
+        if not self.affected(effect):
+            if len(self.effects) != 0:
+                self.effects = self.effects + ','
+            self.effects = self.effects + effect
+            self.save()
+            
+    def remove_effect(self, effect):
+        mat = re.match('^(.+,)?(?P<effect>'+effect+')(,.+)?$', self.effects)
+        start = mat.start('effect')
+        finish = mat.end('effect')
+        if start > 0:
+            # Also remove a preceding comma
+            start -= 1
+        else:
+            if finish < len(self.effects):
+                # Instead, remove a following comma
+                finish += 1
+            else:
+                # There are no commas!
+                pass
+        self.effects = self.effects[:start] + self.effects[finish:]
+        self.save()
 
 def create_pig(parent, **kwargs):
     pig = PlayerInGame()

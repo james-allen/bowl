@@ -104,8 +104,10 @@ def resolve(match, step_type, data):
             xpos__lt=(defending_player.xpos+2),
             ypos__gt=(defending_player.ypos-2),
             ypos__lt=(defending_player.ypos+2),
-            on_pitch=True, down=False):
-            if player != attacking_player and n_tackle_zones(player) == 1:
+            on_pitch=True, down=False, tackle_zones=True):
+            if (player != attacking_player and 
+                    n_tackle_zones(player) == 
+                    int(defending_player.tackle_zones)):
                 attack_st += 1
         defence_st = defending_player.player.st
         for player in PlayerInGame.objects.filter(
@@ -114,8 +116,10 @@ def resolve(match, step_type, data):
             xpos__lt=(attacking_player.xpos+2),
             ypos__gt=(attacking_player.ypos-2),
             ypos__lt=(attacking_player.ypos+2),
-            on_pitch=True, down=False):
-            if player != defending_player and n_tackle_zones(player) == 1:
+            on_pitch=True, down=False, tackle_zones=True):
+            if (player != defending_player and 
+                    n_tackle_zones(player) ==
+                    int(attacking_player.tackle_zones)):
                 defence_st += 1
         n_dice = 1
         if attack_st > (2 * defence_st):
@@ -162,7 +166,7 @@ def resolve(match, step_type, data):
             xpos__lt=(defending_player.xpos+2),
             ypos__gt=(defending_player.ypos-2),
             ypos__lt=(defending_player.ypos+2),
-            on_pitch=True, down=False):
+            on_pitch=True, down=False, tackle_zones=True):
             if player != attacking_player and n_tackle_zones(player) == 0:
                 modifier += 1
         for player in PlayerInGame.objects.filter(
@@ -171,8 +175,10 @@ def resolve(match, step_type, data):
             xpos__lt=(attacking_player.xpos+2),
             ypos__gt=(attacking_player.ypos-2),
             ypos__lt=(attacking_player.ypos+2),
-            on_pitch=True, down=False):
-            if player != defending_player and n_tackle_zones(player) == 1:
+            on_pitch=True, down=False, tackle_zones=True):
+            if (player != defending_player and
+                    n_tackle_zones(player) ==
+                    int(attacking_player.tackle_zones)):
                 modifier -= 1
         # Roll against armour
         armour_roll = roll_armour_dice(defending_player, modifier)
@@ -208,6 +214,7 @@ def resolve(match, step_type, data):
         player = find_player(match, data)
         # Knock the player over in the database
         player.down = True
+        player.tackle_zones = False
         player.has_ball = False
         player.save()
         # Check for Mighty Blow skill
@@ -249,6 +256,7 @@ def resolve(match, step_type, data):
             success = True
         if success:
             player.down = False
+            player.tackle_zones = True
         player.save()
         return {'dice': dice, 'success': success}
     elif step_type == 'pickUp':
@@ -288,7 +296,7 @@ def resolve(match, step_type, data):
     elif step_type == 'catch':
         # Catching the ball
         player = find_player(match, data)
-        if player.down:
+        if player.down or player.affected('Bone-head'):
             return {'success': False}
         modifier = - n_tackle_zones(player)
         if data['accurate'] == 'true':
@@ -510,6 +518,21 @@ def resolve(match, step_type, data):
             match.current_side = other_side(match.current_side)
         match.save()
         return {}
+    elif step_type == 'bonehead':
+        dice = roll_dice(6, 1)
+        success = dice['dice'][0] != 1
+        result = {'dice': dice, 'success': success}
+        player = find_player(match, data)
+        set_action(player, data['action'])
+        if success:
+            player.tackle_zones = True
+            player.remove_effect('Bone-head')
+        else:
+            player.tackle_zones = False
+            player.add_effect('Bone-head')
+            player.finished_action = True
+        player.save()
+        return result
 
 
 def n_tackle_zones(player):
@@ -522,7 +545,7 @@ def n_tackle_zones(player):
     opponents = opponents.filter(
         xpos__lt=(player.xpos+2), ypos__lt=(player.ypos+2))
     opponents = opponents.filter(
-        down=False)
+        tackle_zones=True)
     opponents = opponents.filter(
         on_pitch=True)
     return opponents.count()

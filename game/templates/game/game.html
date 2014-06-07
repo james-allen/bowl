@@ -1157,6 +1157,18 @@ var processStep = function(step) {
     if (step != null) {
         if (selected != null && selected.action == "") {
             setAction(selected, selectedAction);
+            if (hasSkill(selected, "Bone-head")) {
+                // Quickly insert a Bone-head roll and process that
+                boneheadStep = {
+                    action: selectedAction,
+                    stepType: "bonehead",
+                    side: selected.side,
+                    num: selected.num
+                }
+                stepStack.unshift(boneheadStep);
+                processNextStep();
+                return;
+            }
         }
         var stepType = (step.stepType == "reroll") ? step.rerollStepType : step.stepType;
         switch (stepType) {
@@ -1228,6 +1240,9 @@ var processStep = function(step) {
             break;
         case "endKickoff":
             processEndKickoff(step);
+            break;
+        case "bonehead":
+            processBonehead(step);
             break;
         }
     }
@@ -1334,6 +1349,7 @@ var processKnockDown = function(step) {
     var player = findPlayer(step.side, step.num);  
     if (player.onPitch) {
         player.down = true;
+        player.tackleZones = false;
         createKnockDownSymbol(player.xpos, player.ypos, false);
         if (isTurn(player)) {
             addStepToStack(defineTurnover());
@@ -1556,6 +1572,10 @@ var processEndKickoff = function(step) {
     stepStack = [];
 }
 
+var processBonehead = function(step) {
+    postStep(step);
+}
+
 var removeFromPitch = function(player, reason) {
     player.onPitch = false;
     d3.select("#"+playerId(player)).transition().style("opacity", 0).remove();
@@ -1670,6 +1690,7 @@ var postProcessStep = function(step, result) {
         if (result.success) {
             var player = findPlayer(step.side, step.num);
             player.down = false;
+            player.tackleZones = true;
             d3.select("#"+playerId(player)+"knockDown")
                 .data([]).exit().remove();
         }
@@ -1770,6 +1791,9 @@ var postProcessStep = function(step, result) {
         break;
     case "submitTouchback":
         endKickoff(true);
+        break;
+    case "bonehead":
+        confirmResult(step, result, null, postProcessBonehead);
         break;
     }
 }
@@ -1894,6 +1918,25 @@ var postProcessGoForIt = function(data) {
         addStepToStack(nextStep);
     }
     processNextStep();
+}
+
+var postProcessBonehead = function(data) {
+    var step = data.data.step;
+    var result = data.data.result;
+    if (result.success) {
+        // Everything is fine, continue with the requested step
+        player.tackleZones = true;
+        removeEffect(player, "Bone-head");
+        stepStack.shift();
+        processNextStep();
+    } else {
+        // Player does nothing!
+        player = findPlayer(step.side, step.num);
+        player.tackleZones = false;
+        addEffect(player, "Bone-head");
+        finishAction(player);
+        stepStack = [];
+    }
 }
 
 var restoreTo = function(restorePosition) {
@@ -2363,6 +2406,7 @@ var confirmResult = function(step, result, rerollSkill, callback) {
     else if (stepType == "catch") { message = "Catch: "; }
     else if (stepType == "pass") { message = "Pass: "; }
     else if (stepType == "goForIt") { message = "Go for it: "; }
+    else if (stepType == "bonehead") { message = "Bone-head: "; }
     else { message = ""; }
     var teamReroll, skillReroll, proReroll;
     var data = {"step": step, "result": result};
@@ -2388,7 +2432,7 @@ var confirmResult = function(step, result, rerollSkill, callback) {
     }
     if (stepType == "move" || stepType == "pickUp" || stepType == "catch" || stepType == "pass") {
         message = message + "<br/>Rolled: " + result.rawResult + "<br/>Modified: " + result.modifiedResult + "<br/>Required: " + result.requiredResult
-    } else if (stepType == "goForIt") {
+    } else if (stepType == "goForIt" || stepType == "bonehead") {
         message = message + "<br/>Rolled: " + result.dice[0];
     }
     selectFromOptions(["OK"], message, data, callback, teamReroll, skillReroll, proReroll, rerollSkill);
@@ -2722,6 +2766,28 @@ var hasSkill = function(player, skill) {
     return false;
 }
 
+var affected = function(player, effect) {
+    for (var i = 0; i < player.effects.length; i++) {
+        if (player.effects[i] == effect) {
+            return true;
+        }
+    }
+    return false;
+}
+
+var addEffect = function(player, effect) {
+    if (!affected(player, effect)) {
+        player.effects[player.effects.length] = effect;
+    }
+}
+
+var removeEffect = function(player, effect) {
+    var index = player.effects.indexOf(effect);
+    if (index > -1) {
+        player.effects.splice(index, 1);
+    }
+}
+
 var onPitch = function(xpos, ypos) {
     return (0 <= xpos && xpos < 26 && 0 <= ypos && ypos < 15);
 }
@@ -2729,7 +2795,7 @@ var onPitch = function(xpos, ypos) {
 var nTackleZones = function(player) {
     var n = 0;
     for (var i = 0; i < players.length; i++) {
-        if (isAdjacent(player.xpos, player.ypos, players[i].xpos, players[i].ypos) && player.side != players[i].side && players[i].onPitch && !players[i].down) {
+        if (isAdjacent(player.xpos, player.ypos, players[i].xpos, players[i].ypos) && player.side != players[i].side && players[i].onPitch && players[i].tackleZones) {
             n += 1;
         }
     }
@@ -2757,6 +2823,7 @@ var setKickoff = function(kickingTeam) {
             player.down = false;
             player.stunned = false;
             player.stunnedThisTurn = false;
+            player.tackleZones = true;
             player.hasBall = false;
             player.moveLeft = player.ma;
             player.action = "";
