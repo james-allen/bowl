@@ -602,14 +602,25 @@ def roll_injury_dice(player, modifier=0):
     raw_result = sum(dice['dice'])
     modified_result = raw_result + modifier
     thick_skull = player.has_skill('Thick Skull')
+    regeneration = player.has_skill('Regeneration')
     if modified_result <= 7 or (modified_result == 8 and thick_skull):
         result = 'stunned'
     elif modified_result <= 9:
         result = 'knockedOut'
     else:
         result = 'casualty'
-    return {'dice': dice, 'rawResult': raw_result, 
-            'modifiedResult': modified_result, 'result': result}
+        if regeneration:
+            regeneration_dice = roll_dice(6, 1)
+            regeneration_success = regeneration_dice['dice'][0] >= 4
+            if regeneration_success:
+                # Actually, they've regenerated!
+                result = 'regenerated'
+    result_dict = {'dice': dice, 'rawResult': raw_result, 
+                   'modifiedResult': modified_result, 'result': result}
+    if regeneration:
+        result_dict['regeneration'] = {'dice': regeneration_dice,
+                                       'success': regeneration_success}
+    return result_dict
 
 def roll_agility_dice(player, modifier=0):
     required_result = 7 - min(player.player.ag, 6)
