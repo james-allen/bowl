@@ -543,7 +543,7 @@ def resolve(match, step_type, data):
             xpos__lt=(player.xpos+2),
             ypos__gt=(player.ypos-2),
             ypos__lt=(player.ypos+2),
-            on_pitch=True, down=False).count()
+            on_pitch=True, down=False).count() - 1
         if n_helpers > 0:
             required_result = 2
         else:
