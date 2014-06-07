@@ -12,7 +12,9 @@ def logout_view(request):
     return redirect('/accounts/login/')
 
 @login_required
-def profile_view(request, username):
+def profile_view(request, username=None):
+    if username is None:
+        username = request.user.username
     user = get_object_or_404(User, username=username)
     this_user = (request.user.username == username)
     match_set = Match.objects.filter(
