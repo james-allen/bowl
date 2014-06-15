@@ -327,8 +327,8 @@ var checkSubmit = function() {
 }
 
 var isValidTeam = function() {
-    // Also need to check that there are no duplicate names and that all players have names, and limit numbers of particular positions
-    return (nPlayers() >= 11 && calculateCost() <= 1000 && colorsSelected() && hasTeamName());
+    // Also need to limit numbers of particular positions
+    return (nPlayers() >= 11 && calculateCost() <= 1000 && colorsSelected() && hasTeamName() && allValidNames());
 }
 
 var nPlayers = function() {
@@ -346,6 +346,39 @@ var nPlayers = function() {
         }
     }
     return n;
+}
+
+var allValidNames = function() {
+    var i = 0;
+    var positionSelect;
+    var names = [];
+    var name;
+    while (true) {
+        i += 1;
+        positionSelect = document.getElementById("select"+i);
+        if (positionSelect == null) {
+            // Ran out of lines, so jump out of the while loop
+            break;
+        }
+        if (positionSelect.value != "") {
+            // A position has been selected for this table row
+            name = document.getElementById("name"+i).value;
+            if (name == "") {
+                // Position selected but no name given - bad!
+                return false;
+            } else {
+                for (var j = 0; j < names.length; j++) {
+                    if (name == names[j]) {
+                        // Name already used - bad!
+                        return false;
+                    }
+                }
+                // Name is unique - add it to the list
+                names[names.length] = name;
+            }
+        }
+    }
+    return true;
 }
 
 var hasTeamName = function() {
