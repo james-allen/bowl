@@ -1157,28 +1157,32 @@ var processStep = function(step) {
     if (step != null) {
         if (selected != null && selected.action == "") {
             setAction(selected, selectedAction);
-            if (hasSkill(selected, "Bone-head")) {
-                // Quickly insert a Bone-head roll and process that
-                boneheadStep = {
-                    action: selectedAction,
-                    stepType: "bonehead",
-                    side: selected.side,
-                    num: selected.num
+            // Only do Bone-head and Really Stupid checks for actions that the player actually does,
+            // which doesn't include things like placePlayer and placeBall
+            if (selected.action != "") {
+                if (hasSkill(selected, "Bone-head")) {
+                    // Quickly insert a Bone-head roll and process that
+                    boneheadStep = {
+                        action: selectedAction,
+                        stepType: "bonehead",
+                        side: selected.side,
+                        num: selected.num
+                    }
+                    stepStack.unshift(boneheadStep);
+                    processNextStep();
+                    return;
+                } else if (hasSkill(selected, "Really Stupid")) {
+                    // Quickly insert a Really Stupid roll and process that
+                    reallyStupidStep = {
+                        action: selectedAction,
+                        stepType: "reallyStupid",
+                        side: selected.side,
+                        num: selected.num
+                    }
+                    stepStack.unshift(reallyStupidStep);
+                    processNextStep();
+                    return;
                 }
-                stepStack.unshift(boneheadStep);
-                processNextStep();
-                return;
-            } else if (hasSkill(selected, "Really Stupid")) {
-                // Quickly insert a Really Stupid roll and process that
-                reallyStupidStep = {
-                    action: selectedAction,
-                    stepType: "reallyStupid",
-                    side: selected.side,
-                    num: selected.num
-                }
-                stepStack.unshift(reallyStupidStep);
-                processNextStep();
-                return;
             }
         }
         var stepType = (step.stepType == "reroll") ? step.rerollStepType : step.stepType;
