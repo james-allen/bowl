@@ -44,9 +44,19 @@ class Team(models.Model):
             return False
         if self.value != 1000:
             return False
+        if (self.color_home_primary == self.color_away_primary or
+                self.color_home_primary == self.color_home_secondary or
+                self.color_away_primary == self.color_away_secondary):
+            return False
+        if self.name == '':
+            return False
+        name_list = []
         for player in self.player_set.all():
             if player.name == '':
                 return False
+            if player.name in name_list:
+                return False
+            name_list.append(player.name)
         return True
 
 def create_team(name, race, coach, **kwargs):
