@@ -174,6 +174,9 @@ var shapeDatabase = {
         "Black Orc Blocker": "rectangleHorizontal",
         "Blitzer": "chevron",
     },
+    "troll": {
+        "Troll": "square",
+    }
     "undead": {
         "Skeleton": "circle",
         "Thro-Ra": "rising",
