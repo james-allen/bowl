@@ -56,5 +56,5 @@
         <td>{{ team.value }},000</td>
     </tr>
 </table>
-<a href="{% url 'profile' team.coach.username %}">Return to {{ team.coach.username }}'s profile</a>
+<a href="{% url 'user_profile' team.coach.username %}">Return to {{ team.coach.username }}'s profile</a>
 {% endblock content %}
