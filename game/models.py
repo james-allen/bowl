@@ -59,8 +59,8 @@ class Team(models.Model):
             if player.name in name_list:
                 return False
             name_list.append(player.name)
-            position_tally[player.position.name] += 1
-            if (position_tally[player.position.name] > 
+            position_tally[player.position.title] += 1
+            if (position_tally[player.position.title] > 
                     player.position.max_quantity):
                 return False
 
