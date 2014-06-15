@@ -176,7 +176,7 @@ var shapeDatabase = {
     },
     "troll": {
         "Troll": "square",
-    }
+    },
     "undead": {
         "Skeleton": "circle",
         "Thro-Ra": "rising",
