@@ -106,7 +106,8 @@ def create_team_view(request):
             url = reverse('game:team_view', kwargs={'team_slug': team.slug})
             return HttpResponseRedirect(url)
         else:
-            team.player_set.delete()
+            for player in team.player_set.all():
+                player.delete()
             team.delete()
     colors = [
         '31,120,180',
