@@ -3,6 +3,7 @@ from django.shortcuts import redirect, render, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.db.models import Q
+from django.core.urlresolvers import reverse
 
 from game.models import Match
 
@@ -27,3 +28,7 @@ def profile_view(request, username=None):
             'match_set': match_set,
             }
     return render(request, 'profile.html', data)
+
+@login_required
+def home_view(request):
+    return redirect(reverse('profile'))

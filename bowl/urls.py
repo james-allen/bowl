@@ -15,4 +15,5 @@ urlpatterns = patterns('',
     url(r'^accounts/profile/$', 'bowl.views.profile_view', name='profile'),
     url(r'^accounts/profile/(?P<username>.+?)/$', 'bowl.views.profile_view', name='user_profile'),
     url(r'^accounts/change_password/$', 'django.contrib.auth.views.password_change', {'post_change_redirect': 'profile'}, name='change_password'),
+    url(r'^$', 'bowl.views.home_view', name='home'),
 )
