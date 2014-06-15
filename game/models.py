@@ -1,5 +1,6 @@
 import json
 import re
+from collections import defaultdict
 
 from django.db import models
 from django.contrib.auth.models import User
@@ -51,12 +52,18 @@ class Team(models.Model):
         if self.name == '':
             return False
         name_list = []
+        position_tally = defaultdict(int)
         for player in self.player_set.all():
             if player.name == '':
                 return False
             if player.name in name_list:
                 return False
             name_list.append(player.name)
+            position_tally[player.position.name] += 1
+            if (position_tally[player.position.name] > 
+                    player.position.max_quantity):
+                return False
+
         return True
 
 def create_team(name, race, coach, **kwargs):

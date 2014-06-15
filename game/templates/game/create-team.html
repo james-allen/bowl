@@ -106,7 +106,8 @@ var data = {
             ag: "&nbsp;",
             av: "&nbsp;",
             skills: "&nbsp;",
-            cost: "&nbsp;"
+            cost: "&nbsp;",
+            maxQuantity: 16,
         }
     }{% for race in race_list %},
     "{{ race.singular }}": {
@@ -116,7 +117,8 @@ var data = {
             ag: "&nbsp;",
             av: "&nbsp;",
             skills: "&nbsp;",
-            cost: "&nbsp;"
+            cost: "&nbsp;",
+            maxQuantity: 16,
         }{% for position in race.position_set.all %},
         "{{ position.title }}": {
             ma: {{ position.ma }},
@@ -124,7 +126,8 @@ var data = {
             ag: {{ position.ag }},
             av: {{ position.av }},
             skills: "{{ position.skills }}",
-            cost: {{ position.cost }}
+            cost: {{ position.cost }},
+            maxQuantity: {{ position.max_quantity }},
         }{% endfor %}
     }{% endfor %}
 }
@@ -327,8 +330,7 @@ var checkSubmit = function() {
 }
 
 var isValidTeam = function() {
-    // Also need to limit numbers of particular positions
-    return (nPlayers() >= 11 && calculateCost() <= 1000 && colorsSelected() && hasTeamName() && allValidNames());
+    return (nPlayers() >= 11 && calculateCost() <= 1000 && colorsSelected() && hasTeamName() && allValidNames() && positionsLimited());
 }
 
 var nPlayers = function() {
@@ -383,6 +385,26 @@ var allValidNames = function() {
 
 var hasTeamName = function() {
     return (document.getElementById("teamName").value != "");
+}
+
+var positionsLimited = function() {
+    var race = document.getElementById("selectRace").value;
+    var quantity = {};
+    var position;
+    for (position in data[race]) {
+        // Populate tallies with zeros
+        quantity[position] = 0;
+    }
+    var selectPositionList = document.getElementsByClassName("selectPosition");
+    for (var i = 0; i < selectPositionList.length; i++) {
+        position = selectPositionList[i].value;
+        quantity[position] += 1;
+        if (quantity[position] > data[race][position][maxQuantity]) {
+            // Quantity in this position has exceeded the maximum allowed
+            return false;
+        }
+    }
+    return true;
 }
 </script>
 
