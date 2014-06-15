@@ -399,7 +399,7 @@ var positionsLimited = function() {
     for (var i = 0; i < selectPositionList.length; i++) {
         position = selectPositionList[i].value;
         quantity[position] += 1;
-        if (quantity[position] > data[race][position][maxQuantity]) {
+        if (quantity[position] > data[race][position]["maxQuantity"]) {
             // Quantity in this position has exceeded the maximum allowed
             return false;
         }
