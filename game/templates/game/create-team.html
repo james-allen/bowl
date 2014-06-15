@@ -2,8 +2,8 @@
 
 {% block content %}
 <h3>Create team</h3>
-<form action="{% url 'game:create_team_view' %}" method="post">{% csrf_token %}
-    <p>Team name: <input type="text" name="team_name" id="teamName"/></p>
+<form action="{% url 'game:create_team_view' %}" method="post" name="teamForm">{% csrf_token %}
+    <p>Team name: <input type="text" name="team_name" id="teamName" onchange="checkSubmit()"/></p>
     <p>Race: <select name="race" id="selectRace" onchange="updateRace(this)"><option value=""></option>{% for race in race_list %}<option value="{{ race.singular }}">{{ race.singular }}</option>{% endfor %}</select></p>
     <p>Team rating: n/a</p>
     <p>Treasury: <span id="treasury">1,000,000</span></p>
@@ -29,7 +29,7 @@
         </tr>{% for number in number_range %}
         <tr>
             <td>{{ number }}</td>
-            <td><input type="text" name="name{{ number }}" id="name{{ number }}"/></td>
+            <td><input type="text" name="name{{ number }}" id="name{{ number }}" onchange="checkSubmit()"/></td>
             <td><select class="selectPosition" name="position{{ number }}" id="select{{ number }}" onchange="updatePosition(this, {{ number }})"><option value=""></option></select></td>
             <td id="ma{{ number }}">&nbsp;</td>
             <td id="st{{ number }}">&nbsp;</td>
@@ -315,6 +315,7 @@ var colorsSelected = function() {
                         return true;
                     }
                 }
+                i += 1;
             }
         }
     }
@@ -322,12 +323,11 @@ var colorsSelected = function() {
 }
 
 var checkSubmit = function() {
-    // Need to run this on changes to the text fields
     document.getElementById("submit").disabled = !isValidTeam();
 }
 
 var isValidTeam = function() {
-    // Also need to check that there are no duplicate names and that all players have names
+    // Also need to check that there are no duplicate names and that all players have names, and limit numbers of particular positions
     return (nPlayers() >= 11 && calculateCost() <= 1000 && colorsSelected() && hasTeamName());
 }
 
