@@ -99,7 +99,7 @@ class Challenge(models.Model):
     time_issued = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return self.challenger + ' vs ' + self.challengee
+        return self.challenger.slug + ' vs ' + self.challengee.slug
 
 
 class Position(models.Model):
