@@ -241,6 +241,7 @@ def start_match(home_team, away_team, first_kicking_team=None,
 
 def set_kickoff(match, kicking_team):
     """Set a kickoff for this match."""
+    # Work out which side of the pitch each team is on
     if ((match.home_first_direction == 'right' and match.turn_number <= 8) or
         (match.home_first_direction == 'left' and match.turn_number >= 9)):
         xpos_home = 0
@@ -248,16 +249,34 @@ def set_kickoff(match, kicking_team):
     else:
         xpos_home = 25
         xpos_away = 0
+    # Start placing players at the top of the pitch
     ypos_home = 0
     ypos_away = 0
     for pig in match.playeringame_set.all():
         if pig.player.team == match.home_team:
             pig.xpos = xpos_home
             pig.ypos = ypos_home
-            ypos_home += 1
+            if ypos_home == 14:
+                # Reached the bottom of the pitch, wrap back up to the top
+                ypos_home = 0
+                if xpos_home < 13:
+                    xpos_home += 1
+                else:
+                    xpos_home -= 1
+            else:
+                ypos_home += 1
         else:
             pig.xpos = xpos_away
             pig.ypos = ypos_away
+            if ypos_away == 14:
+                # Reached the bottom of the pitch, wrap back up to the top
+                ypos_away = 0
+                if xpos_away < 13:
+                    xpos_away += 1
+                else:
+                    xpos_away -= 1
+            else:
+                ypos_away += 1
             ypos_away += 1
         pig.down = False
         pig.stunned = False
