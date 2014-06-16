@@ -2,13 +2,13 @@ from django.contrib import admin
 from game.models import Match, Team, Player, PlayerInGame, Challenge, Race
 from game.models import Position, Step
 
-class PositionInline(admin.StackedInline):
+class PositionInline(admin.TabularInline):
     model = Position
 
 class RaceAdmin(admin.ModelAdmin):
     inlines = [PositionInline]
 
-class StepInline(admin.StackedInline):
+class StepInline(admin.TabularInline):
     model = Step
 
 class MatchAdmin(admin.ModelAdmin):
