@@ -167,7 +167,7 @@ var shapeDatabase = {
     },
     "goblin": {
         "Goblin": "diamond",
-    }
+    },
     "ogre": {
         "Ogre": "square",
     },
