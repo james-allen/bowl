@@ -2059,7 +2059,9 @@ var performedStepThisTurn = function(player, stepType) {
             return false;
         }
         if (history[index].stepType == stepType) {
-            return true;
+            if (findPlayer(history[index].side, history[index].num) == player) {
+                return true;
+            }
         }
     }
 }
