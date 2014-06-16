@@ -12,6 +12,9 @@ class Race(models.Model):
     plural = models.CharField(max_length=50)
     reroll_cost = models.IntegerField()
 
+    def __str__(self):
+        return self.singular
+
 
 class Team(models.Model):
     name = models.CharField(max_length=100)
@@ -25,6 +28,9 @@ class Team(models.Model):
     color_home_secondary = models.CharField(max_length=11)
     color_away_primary = models.CharField(max_length=11)
     color_away_secondary = models.CharField(max_length=11)
+
+    def __str__(self):
+        return self.slug
 
     def update_value(self):
         """Recalculate the value of the team."""
@@ -92,6 +98,9 @@ class Challenge(models.Model):
     challengee = models.ForeignKey(Team, related_name='challenges_received')
     time_issued = models.DateTimeField(auto_now_add=True)
 
+    def __str__(self):
+        return self.challenger + ' vs ' + self.challengee
+
 
 class Position(models.Model):
     title = models.CharField(max_length=30)
@@ -106,6 +115,9 @@ class Position(models.Model):
     skills = models.TextField()
     normal_skills = models.CharField(max_length=5)
     double_skills = models.CharField(max_length=5)
+
+    def __str__(self):
+        return self.team_race.singular + ' ' + self.title
 
 
 class Player(models.Model):
@@ -131,6 +143,9 @@ class Player(models.Model):
     mvps = models.IntegerField(default=0)
     niggles = models.IntegerField(default=0)
     dead = models.BooleanField(default=False)
+
+    def __str__(self):
+        return self.name
 
 def create_player(team, position_title, name, number):
     position = Position.objects.get(
@@ -173,6 +188,9 @@ class Match(models.Model):
     away_reroll_used_this_turn = models.BooleanField(default=False)
     n_to_place = models.IntegerField(default=0)
     kicking_team = models.CharField(max_length=4)
+
+    def __str__(self):
+        return self.home_team.slug + ' vs ' + self.away_team.slug
 
     def as_dict(self):
         result_dict = {
@@ -321,6 +339,9 @@ class PlayerInGame(models.Model):
     sent_off = models.BooleanField(default=False)
     tackle_zones = models.BooleanField(default=True)
 
+    def __str__(self):
+        return self.player.name
+
     def as_dict(self):
         result_dict = {
             'side': self.side,
@@ -407,6 +428,9 @@ class Step(models.Model):
 
     class Meta:
         unique_together = ('match', 'history_position')
+
+    def __str__(self):
+        return 'Match {} step {}'.format(self.match.id, self.history_position)
 
     def as_dict(self):
         if self.properties:
