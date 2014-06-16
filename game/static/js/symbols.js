@@ -165,6 +165,9 @@ var shapeDatabase = {
         "Catcher": "diamond",
         "Blitzer": "chevron",
     },
+    "goblin": {
+        "Goblin": "diamond",
+    }
     "ogre": {
         "Ogre": "square",
     },
