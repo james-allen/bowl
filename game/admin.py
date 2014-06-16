@@ -12,7 +12,7 @@ class StepInline(admin.StackedInline):
     model = Step
 
 class MatchAdmin(admin.ModelAdmin):
-    inlines = [Step]
+    inlines = [StepInline]
 
 admin.site.register(Match, MatchAdmin)
 admin.site.register(Team)
