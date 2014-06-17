@@ -4,10 +4,10 @@
 <h3>Issue challenge</h3>
 <form action="{% url 'game:issue_challenge_view' %}" method="post">{% csrf_token %}
 	<h4>From:</h4>
-	{% for team in own_teams %}<p><input type="radio" name="challenger" value="{{team.slug}}"/>{{team.name}}</p>
+	{% for team in own_teams %}<p><input type="radio" name="challenger" value="{{team.slug}}"/>{{team.name}} ({{team.race.plural}})</p>
 	{% endfor %}
 	<h4>Against:</h4>
-	{% for team in other_teams %}<p><input type="radio" name="challengee" value="{{team.slug}}"/>{{team.name}} ({{team.coach.username}})</p>
+	{% for team in other_teams %}<p><input type="radio" name="challengee" value="{{team.slug}}"/>{{team.name}} ({{team.race.plural}}, {{team.coach.username}})</p>
 	{% endfor %}
 	<input type="submit" value="Issue challenge"/>
 </form>
