@@ -131,7 +131,7 @@ def issue_challenge_view(request):
 		try:
 			challenger = Team.objects.get(slug=request.POST['challenger'])
 			challengee = Team.objects.get(slug=request.POST['challengee'])
-		except Team.DoesNotExist, KeyError:
+		except (Team.DoesNotExist, KeyError):
 			pass
 		else:
 			challenge = Challenge(challenger=challenger, challengee=challengee)
