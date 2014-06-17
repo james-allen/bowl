@@ -173,7 +173,7 @@ class Match(models.Model):
     away_team = models.ForeignKey(Team, related_name='away_match')
     home_score = models.IntegerField(default=0)
     away_score = models.IntegerField(default=0)
-    turn_number = models.IntegerField(default=0)
+    turn_number = models.IntegerField(default=1)
     turn_type = models.CharField(max_length=12, default='placePlayers')
     current_side = models.CharField(max_length=4)
     first_kicking_team = models.CharField(max_length=4)
