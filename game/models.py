@@ -295,7 +295,6 @@ def set_kickoff(match, kicking_team):
                     xpos_away -= 1
             else:
                 ypos_away += 1
-            ypos_away += 1
         pig.down = False
         pig.stunned = False
         pig.stunned_this_turn = False
