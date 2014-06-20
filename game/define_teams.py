@@ -31,7 +31,7 @@ HUMAN = {
     'positions': [
         (16, 'Lineman', 50, 6, 3, 3, 8, '', 'G', 'ASP', 'human'),
         (4, 'Catcher', 70, 8, 2, 3, 7, 'Catch,Dodge', 'GA', 'SP', 'human'),
-        (2, 'Thrower', 70, 6, 4, 4, 8, 'Sure Hands,Pass', 'GP', 'AS', 'human'),
+        (2, 'Thrower', 70, 6, 3, 3, 8, 'Sure Hands,Pass', 'GP', 'AS', 'human'),
         (4, 'Blitzer', 90, 7, 3, 3, 8, 'Block', 'GS', 'AP', 'human'),
         (1, 'Ogre', 140, 5, 5, 2, 9, 'Loner,Bone-head,Mighty Blow,Thick Skull,Throw Team-Mate', 'S', 'GAP', 'ogre'),
         ]
