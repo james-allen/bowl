@@ -565,7 +565,7 @@ def resolve(match, step_type, data):
             required_result = 2
         else:
             required_result = 4
-        result['success'] = dice['dice'][0] >= required_result
+        result['success'] = result['dice'][0] >= required_result
         result['requiredResult'] = required_result
         if result['success']:
             player.tackle_zones = True
