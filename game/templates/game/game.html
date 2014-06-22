@@ -1513,11 +1513,11 @@ var processEndTurn = function(step) {
         }
     }
     updateTurnIndicator();
+    stepStack = [];
     if (step.touchdown && !endOfHalf) {
         addStepToStack({stepType: "setKickoff", action: "setKickoff", kickingTeam: step.side})
         // setKickoff(step.side);
     }
-    stepStack = [];
     setAction(null, "");
     if (messageArray.length > 0) {
         displayMessage(messageArray, null, function(){postStep(step);});
