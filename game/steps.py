@@ -526,6 +526,9 @@ def resolve(match, step_type, data):
         match.x_ball = int(data['x1'])
         match.y_ball = int(data['y1'])
         match.save()
+        for player in match.playeringame_set.all():
+            player.has_ball = False
+            player.save()
         player = find_player(match, data)
         player.has_ball = True
         player.save()

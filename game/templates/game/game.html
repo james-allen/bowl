@@ -1574,6 +1574,9 @@ var processSubmitPlayers = function(step) {
 
 var processTouchback = function(step) {
     moveBall(step.x1, step.y1);
+    for (var i = 0; i < players.length; i += 1) {
+        players[i].hasBall = false;
+    }
     playerInPos(step.x1, step.y1).hasBall = true;
     postStep(step);
     stepStack.shift();
