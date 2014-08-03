@@ -1515,7 +1515,7 @@ var processEndTurn = function(step) {
     updateTurnIndicator();
     stepStack = [];
     if (step.touchdown && !endOfHalf) {
-        addStepToStack({stepType: "setKickoff", action: "setKickoff", kickingTeam: step.side})
+        addStepToStack({stepType: "setKickoff", action: "setKickoff", kickingTeam: otherSide(step.side)})
         // setKickoff(step.side);
     }
     setAction(null, "");
