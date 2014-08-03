@@ -172,11 +172,12 @@ def post_step_view(request):
     print('POST:', request.POST)
     match = Match.objects.get(id=request.POST['matchId'])
     # Check that it's the correct user
+    step_type = request.POST['stepType']
     if match.current_side == 'home':
         expected_user = match.home_team.coach.username
     else:
         expected_user = match.away_team.coach.username
-    if request.user.username != expected_user:
+    if request.user.username != expected_user and step_type != 'setKickoff':
         result = {'status': 'wrongUser'}
     else:
         # Check what steps have previously been saved
@@ -203,7 +204,6 @@ def post_step_view(request):
             properties = {key: value for key, value in request.POST.items() 
                           if key not in ['stepType', 'matchId', 'historyPosition']}
             print(str(history_position) + ':', properties)
-            step_type = request.POST['stepType']
             step = Step(
                 step_type=step_type,
                 match=match,
