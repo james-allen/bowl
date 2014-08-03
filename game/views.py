@@ -38,7 +38,7 @@ def game_view(request, match_id):
     data = {
         'players_json': players_json,
         'match_data': json.dumps(match.as_dict()),
-        'history': history,
+        'match_history': history,
         'username': request.user.username,
         'color_home_primary': color_home_primary,
         'color_home_secondary': color_home_secondary,

@@ -258,7 +258,7 @@ var selected = null;
 
 var players = {{ players_json | safe }};
 var matchData = {{ match_data | safe }};
-var history = {{ history | safe }};
+var matchHistory = {{ match_history | safe }};
 var username = "{{ username }}";
 
 var stepStack = new Array;
@@ -1623,8 +1623,8 @@ var removeFromPitch = function(player, reason) {
 var postStep = function(step) {
     // Tell the server about the move
     if (step.historyPosition == null) {
-        step.historyPosition = history.length;
-        history[step.historyPosition] = step;
+        step.historyPosition = matchHistory.length;
+        matchHistory[step.historyPosition] = step;
     }
     step.matchId = matchData.id;
     console.log("Sending move " + step.historyPosition + " to server");
@@ -1646,7 +1646,7 @@ var postStep = function(step) {
                     console.log(step.historyPosition + ": Resend step")
                     var index;
                     for (index = result.start; index <= step.historyPosition; index++) {
-                        postStep(history[index]);
+                        postStep(matchHistory[index]);
                     }
                     break;
                 case 0:
@@ -2005,9 +2005,9 @@ var postProcessReallyStupid = function(data) {
 var restoreTo = function(restorePosition) {
     console.log("Restoring to " + restorePosition);
     var position;
-    for (position = history.length - 1; position > restorePosition; position--) {
+    for (position = matchHistory.length - 1; position > restorePosition; position--) {
         console.log("Removing history item " + position);
-        step = history[position];
+        step = matchHistory[position];
         switch (step.stepType) {
         case "move":
             var index;
@@ -2021,7 +2021,7 @@ var restoreTo = function(restorePosition) {
             movePlayer(player, step.x0, step.y0);
             break;
         }
-        history.splice(-1, 1);
+        matchHistory.splice(-1, 1);
     }
 }
 
@@ -2031,11 +2031,11 @@ var isTurn = function(player) {
 
 var usedSkillThisTurn = function(player, skill) {
     // Check to see if a particular skill has been used by the player this turn.
-    for (var index = history.length-1; index >= 0; index--) {
-        if (history[index].stepType == "endTurn" || history[index].side != player.side || history[index].num != player.num) {
+    for (var index = matchHistory.length-1; index >= 0; index--) {
+        if (matchHistory[index].stepType == "endTurn" || matchHistory[index].side != player.side || matchHistory[index].num != player.num) {
             return false;
         }
-        if (history[index].stepType == "reroll" && history[index].rerollType == "skill" && history[index].rerollSkill == skill) {
+        if (matchHistory[index].stepType == "reroll" && matchHistory[index].rerollType == "skill" && matchHistory[index].rerollSkill == skill) {
             return true;
         }
     }
@@ -2044,11 +2044,11 @@ var usedSkillThisTurn = function(player, skill) {
 
 var usedActionThisTurn = function(action) {
     // Check to see if a particular action has been used this turn.
-    for (var index = history.length-1; index >= 0; index--) {
-        if (history[index].stepType == "endTurn") {
+    for (var index = matchHistory.length-1; index >= 0; index--) {
+        if (matchHistory[index].stepType == "endTurn") {
             return false;
         }
-        if (history[index].action == action) {
+        if (matchHistory[index].action == action) {
             return true;
         }
     }
@@ -2057,12 +2057,12 @@ var usedActionThisTurn = function(action) {
 
 var performedStepThisTurn = function(player, stepType) {
     // Check to see if the player has performed a particular step this turn.
-    for (var index = history.length-1; index >= 0; index--) {
-        if (history[index].stepType == "endTurn") {
+    for (var index = matchHistory.length-1; index >= 0; index--) {
+        if (matchHistory[index].stepType == "endTurn") {
             return false;
         }
-        if (history[index].stepType == stepType) {
-            if (findPlayer(history[index].side, history[index].num) == player) {
+        if (matchHistory[index].stepType == stepType) {
+            if (findPlayer(matchHistory[index].side, matchHistory[index].num) == player) {
                 return true;
             }
         }
@@ -2072,8 +2072,8 @@ var performedStepThisTurn = function(player, stepType) {
 var lastActivePlayer = function() {
     var activeSteps = ["move", "block", "standUp", "pass", "foul", "handOff"];
     var step;
-    for (var index = history.length-1; index >= 0; index--) {
-        step = history[index];
+    for (var index = matchHistory.length-1; index >= 0; index--) {
+        step = matchHistory[index];
         if (step.stepType == "endTurn") {
             return null;
         }
