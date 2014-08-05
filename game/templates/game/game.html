@@ -1491,13 +1491,13 @@ var processEndTurn = function(step) {
         gPitch.selectAll(".player").classed("finishedAction", false);
     }
     var endOfHalf = false;
+    var endOfMatch = false;
     if ((matchData.firstKickingTeam != matchData.currentSide && matchData.turnNumber <= 8) || (matchData.firstKickingTeam == matchData.currentSide && matchData.turnNumber >= 9) || skipTurn) {
         matchData.turnNumber += 1;
         if (matchData.turnNumber == 9) {
             matchData.homeRerolls = matchData.homeRerollsTotal;
             matchData.awayRerolls = matchData.awayRerollsTotal;
             addStepToStack({stepType: "setKickoff", action: "setKickoff", kickingTeam: otherSide(matchData.firstKickingTeam)});
-            // setKickoff(otherSide(matchData.firstKickingTeam));
             messageArray[messageArray.length] = "Second half";
             endOfHalf = true;
         } else if (matchData.turnNumber == 17) {
@@ -1509,14 +1509,15 @@ var processEndTurn = function(step) {
                 message = teamName(currentLeader()) + " win!";
             }
             messageArray[messageArray.length] = message;
-            endOfHalf = true;
+            endOfMatch = true;
         }
     }
     updateTurnIndicator();
     stepStack = [];
-    if (step.touchdown && !endOfHalf) {
-        addStepToStack({stepType: "setKickoff", action: "setKickoff", kickingTeam: otherSide(step.side)})
-        // setKickoff(step.side);
+    if (step.touchdown && !endOfHalf && !endOfMatch) {
+        addStepToStack({stepType: "setKickoff", action: "setKickoff", kickingTeam: otherSide(step.side)});
+    } elif (endOfHalf) {
+        addStepToStack({stepType: "setKickoff", action: "setKickoff", kickingTeam: otherSide(matchData.firstKickingTeam)});
     }
     setAction(null, "");
     if (messageArray.length > 0) {
