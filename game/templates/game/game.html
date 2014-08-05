@@ -1516,7 +1516,7 @@ var processEndTurn = function(step) {
     stepStack = [];
     if (step.touchdown && !endOfHalf && !endOfMatch) {
         addStepToStack({stepType: "setKickoff", action: "setKickoff", kickingTeam: otherSide(step.side)});
-    } elif (endOfHalf) {
+    } else if (endOfHalf) {
         addStepToStack({stepType: "setKickoff", action: "setKickoff", kickingTeam: otherSide(matchData.firstKickingTeam)});
     }
     setAction(null, "");
