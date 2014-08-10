@@ -250,9 +250,9 @@ class Match(models.Model):
     def resolve(self, step):
         """Resolve a step."""
         step_type = step.step_type
-        data = step.properties_dict()
         result = {}
         if step_type == 'reroll':
+            data = step.properties_dict()
             if data['rerollType'] == 'team':
                 if data['side'] == 'home':
                     self.home_rerolls -= 1
@@ -307,493 +307,585 @@ class Match(models.Model):
             player.save()
             return result
         elif step_type == 'block':
-            # A block step
-            # Find out which is the attacking player
-            if data['side'] == 'home':
-                attacking_team = self.home_team
-                defending_team = self.away_team
-            elif data['side'] == 'away':
-                attacking_team = self.away_team
-                defending_team = self.home_team
-            attacking_num = int(data['num'])
-            defending_num = int(data['targetNum'])
-            attacking_player = PlayerInGame.objects.get(
-                match=self, player__team=attacking_team, 
-                player__number=attacking_num)
-            attacking_player.set_action(data['action'])
-            defending_player = PlayerInGame.objects.get(
-                match=self, player__team=defending_team,
-                player__number=defending_num)
-            attack_st = attacking_player.player.st
-            for player in PlayerInGame.objects.filter(
-                match=self, player__team=attacking_team,
-                xpos__gt=(defending_player.xpos-2),
-                xpos__lt=(defending_player.xpos+2),
-                ypos__gt=(defending_player.ypos-2),
-                ypos__lt=(defending_player.ypos+2),
-                on_pitch=True, down=False, tackle_zones=True):
-                if (player != attacking_player and 
-                        player.n_tackle_zones(exclude=defending_player) == 0):
-                    attack_st += 1
-            defence_st = defending_player.player.st
-            for player in PlayerInGame.objects.filter(
-                match=self, player__team=defending_team,
-                xpos__gt=(attacking_player.xpos-2),
-                xpos__lt=(attacking_player.xpos+2),
-                ypos__gt=(attacking_player.ypos-2),
-                ypos__lt=(attacking_player.ypos+2),
-                on_pitch=True, down=False, tackle_zones=True):
-                if (player != defending_player and 
-                        player.n_tackle_zones(exclude=attacking_player) == 0):
-                    defence_st += 1
-            n_dice = 1
-            if attack_st > (2 * defence_st):
-                n_dice = 3
-            elif attack_st > defence_st:
-                n_dice = 2
-            elif (2 * attack_st) < defence_st:
-                n_dice = 3
-            elif attack_st < defence_st:
-                n_dice = 2
-            result.update(roll_block_dice(n_dice))
-            result['attackSt'] = attack_st
-            result['defenceSt'] = defence_st
-            if data['action'] == 'blitz':
-                attacking_player.move_left -= 1
-            if attacking_player.move_left == -2 or data['action'] != "blitz":
-                attacking_player.finished_action = True
-            attacking_player.save()
-            return result
+            return self.resolve_block(step, result)
         elif step_type == 'selectBlockDice':
             return result
         elif step_type == 'foul':
-            # A foul on a player
-            # Find out which is the attacking player
-            if data['side'] == 'home':
-                attacking_team = self.home_team
-                defending_team = self.away_team
-            elif data['side'] == 'away':
-                attacking_team = self.away_team
-                defending_team = self.home_team
-            attacking_num = int(data['num'])
-            defending_num = int(data['targetNum'])
-            attacking_player = PlayerInGame.objects.get(
-                match=self, player__team=attacking_team, 
-                player__number=attacking_num)
-            attacking_player.set_action(data['action'])
-            defending_player = PlayerInGame.objects.get(
-                match=self, player__team=defending_team,
-                player__number=defending_num)
-            modifier = 0
-            for player in PlayerInGame.objects.filter(
-                match=self, player__team=attacking_team,
-                xpos__gt=(defending_player.xpos-2),
-                xpos__lt=(defending_player.xpos+2),
-                ypos__gt=(defending_player.ypos-2),
-                ypos__lt=(defending_player.ypos+2),
-                on_pitch=True, down=False, tackle_zones=True):
-                if player != attacking_player and player.n_tackle_zones() == 0:
-                    modifier += 1
-            for player in PlayerInGame.objects.filter(
-                match=self, player__team=defending_team,
-                xpos__gt=(attacking_player.xpos-2),
-                xpos__lt=(attacking_player.xpos+2),
-                ypos__gt=(attacking_player.ypos-2),
-                ypos__lt=(attacking_player.ypos+2),
-                on_pitch=True, down=False, tackle_zones=True):
-                if (player != defending_player and
-                        player.n_tackle_zones(exclude=attacking_player) == 0):
-                    modifier -= 1
-            # Roll against armour
-            armour_roll = roll_armour_dice(defending_player, modifier)
-            if armour_roll['success']:
-                injury_roll = roll_injury_dice(defending_player)
-                if injury_roll['result'] == 'stunned':
-                    defending_player.stunned = True
-                    defending_player.stunned_this_turn = True
-                elif injury_roll['result'] == 'knockedOut':
-                    defending_player.knocked_out = True
-                    defending_player.on_pitch = False
-                elif injury_roll['result'] == 'casualty':
-                    defending_player.casualty = True
-                    defending_player.on_pitch = False
-                else:
-                    raise ValueError('Injury roll returned unexpected result: '+ 
-                                     injury_roll['result'])
-                defending_player.save()
-            else:
-                injury_roll = None
-            sent_off = (is_double(armour_roll['dice']) or 
-                        (armour_roll['success'] and 
-                         is_double(injury_roll['dice'])))
-            if sent_off:
-                attacking_player.sent_off = True
-                attacking_player.on_pitch = False
-            attacking_player.finished_action = True    
-            attacking_player.save()
-            result.update({'armourRoll': armour_roll, 'injuryRoll': injury_roll, 
-                           'sentOff': sent_off})
-            return result
+            return self.resolve_foul(step, result)
         elif step_type == 'knockDown':
-            # A player knocked over
-            player = step.player()
-            # Knock the player over in the database
-            player.down = True
-            player.tackle_zones = False
-            player.has_ball = False
-            player.save()
-            # Check for Mighty Blow skill
-            mighty_blow = data.get('mightyBlow', False)
-            # Roll against armour
-            modifier = 1 if mighty_blow == 'armour' else 0
-            armour_roll = roll_armour_dice(player, modifier=modifier)
-            if armour_roll['success']:
-                modifier = 1 if mighty_blow == 'injury' else 0
-                injury_roll = roll_injury_dice(player, modifier=modifier)
-                if injury_roll['result'] == 'stunned':
-                    player.stunned = True
-                    player.stunned_this_turn = True
-                elif injury_roll['result'] == 'knockedOut':
-                    player.knocked_out = True
-                    player.on_pitch = False
-                elif injury_roll['result'] == 'casualty':
-                    player.casualty = True
-                    player.on_pitch = False
-                else:
-                    raise ValueError('Injury roll returned unexpected result: '+
-                                     injury_roll['result'])
-                player.save()
-            else:
-                injury_roll = None
-            result.update({'armourRoll': armour_roll,
-                           'injuryRoll': injury_roll})
-            return result
+            return self.resolve_knock_down(step, result)
         elif step_type == 'standUp':
-            # A player standing up
-            player = step.player()
-            player.set_action(data['action'])
-            player.move_left -= 3
-            if player.move_left <= -2:
-                player.finished_action = True
-            if player.player.ma < 3:
-                dice = roll_dice(6, 1)
-                success = dice['dice'][0] >= 4
-            else:
-                dice = None
-                success = True
-            if success:
-                player.down = False
-                player.tackle_zones = True
-            player.save()
-            result.update({'dice': dice, 'success': success})
-            return result
+            return self.resolve_stand_up(step, result)
         elif step_type == 'pickUp':
-            # A player picking up the ball
-            player = step.player()
-            modifier = 1 - player.n_tackle_zones()
-            result.update(roll_agility_dice(player, modifier=modifier))
-            if result['success']:
-                player.has_ball = True
-                player.save()
-            return result
+            return self.resolve_pick_up(step, result)
         elif step_type == 'scatter':
-            # Scattering the ball
-            n_scatter = int(data['nScatter'])
-            dice = roll_dice(8, n_scatter)
-            x_ball = int(data['x0'])
-            y_ball = int(data['y0'])
-            for direction in dice['dice']:
-                last_x = x_ball
-                last_y = y_ball
-                if direction in [1, 4, 6]:
-                    x_ball -= 1
-                elif direction in [3, 5, 8]:
-                    x_ball += 1
-                if direction in [1, 2, 3]:
-                    y_ball -= 1
-                elif direction in [6, 7, 8]:
-                    y_ball += 1
-                if not on_pitch(x_ball, y_ball):
-                    break
-            self.x_ball = x_ball
-            self.y_ball = y_ball
-            self.save()
-            result.update({'dice': dice, 'direction': direction, 
-                           'x1': x_ball, 'y1': y_ball,
-                           'lastX': last_x, 'lastY': last_y})
-            return result
+            return self.resolve_scatter(step, result)
         elif step_type == 'catch':
-            # Catching the ball
-            player = step.player()
-            if player.down or player.affected('Bone-head'):
-                return {'success': False}
-            modifier = - player.n_tackle_zones()
-            if data['accurate'] == 'true':
-                modifier += 1
-            result.update(roll_agility_dice(player, modifier=modifier))
-            if result['success']:
-                player.has_ball = True
-                player.save()
-            return result
+            return self.resolve_catch(step, result)
         elif step_type == 'pass':
-            # Pass the ball
-            player = step.player()
-            player.set_action(data['action'])
-            delta_x = abs(int(data['x1']) - int(data['x0']))
-            delta_y = abs(int(data['y1']) - int(data['y0']))
-            pass_range = find_pass_range(delta_x, delta_y)
-            if pass_range == 'quickPass':
-                modifier = 1
-            elif pass_range == 'shortPass':
-                modifier = 0
-            elif pass_range == 'longPass':
-                modifier = -1
-            elif pass_range == 'longBomb':
-                modifier = -2
-            modifier -= player.n_tackle_zones()
-            result.update(roll_agility_dice(player, modifier=modifier))
-            fumble = (min(result['rawResult'], result['modifiedResult']) <= 1)
-            if fumble:
-                result['success'] = False
-            else:
-                self.x_ball = int(data['x1'])
-                self.y_ball = int(data['y1'])
-                self.save()
-                result['x1'] = self.x_ball
-                result['y1'] = self.y_ball
-            result['fumble'] = fumble
-            player.has_ball = False
-            player.finished_action = True
-            player.save()
-            return result
+            return self.resolve_pass(step, result)
         elif step_type == 'handOff':
-            # Hand-Off the ball to an adjacent player
-            # Always successful
-            player = step.player()
-            player.set_action(data['action'])
-            player.finished_action = True
-            player.save()
-            self.x_ball = int(data['x1'])
-            self.y_ball = int(data['y1'])
-            self.save()
-            return result
+            return self.resolve_hand_off(step, result)
         elif step_type == 'throwin':
-            x0 = int(data['lastX'])
-            y0 = int(data['lastY'])
-            if y0 == 0:
-                edge = 0
-            elif y0 == 14:
-                edge = 2
-            elif x0 == 0:
-                edge = 3
-            elif x0 == 25:
-                edge = 1
-            else:
-                raise ValueError(
-                    'Starting coordinates are not on the edge of the pitch!')
-            direction_dice = roll_dice(3, 1)
-            direction = direction_dice['dice'][0]
-            distance_dice = roll_dice(6, 2)
-            distance = sum(distance_dice['dice'])
-            compass = direction + 2 * edge
-            if compass == 0:
-                x_dir, y_dir = 1, 1
-            elif compass == 1:
-                x_dir, y_dir = 0, 1
-            elif compass == 2:
-                x_dir, y_dir = -1, 1
-            elif compass == 3:
-                x_dir, y_dir = -1, 0
-            elif compass == 4:
-                x_dir, y_dir = -1, -1
-            elif compass == 5:
-                x_dir, y_dir = 0, -1
-            elif compass == 6:
-                x_dir, y_dir = 1, -1
-            elif compass == 7:
-                x_dir, y_dir = 1, 0
-            x1 = x0 + (distance - 1) * x_dir
-            y1 = y0 + (distance - 1) * y_dir
-            last_x = x1 - x_dir
-            last_y = y1 - y_dir
-            while not on_pitch(x1, y1):
-                x1 = last_x
-                y1 = last_y
-                last_x = x1 - x_dir
-                last_y = y1 - y_dir
-            result.update({'x1': x1, 'y1': y1,
-                           'lastX': last_x, 'lastY': last_y})
-            return result
+            return self.resolve_throwin(step, result)
         elif step_type == 'goForIt':
-            result.update(roll_dice(6, 1))
-            result['success'] = (result['dice'][0] != 1)
-            return result
+            return self.resolve_go_for_it(step, result)
         elif step_type == 'endTurn':
-            self.home_reroll_used_this_turn = False
-            self.away_reroll_used_this_turn = False
-            skip_turn = False
-            if 'touchdown' in data and data['touchdown'] == 'true':
-                if data['side'] == 'home':
-                    self.home_score += 1
-                else:
-                    self.away_score += 1
-                if data['side'] != self.current_side:
-                    skip_turn = True
-                self.current_side = data['side']
-            else:
-                self.current_side = other_side(self.current_side)
-            # end_of_half = False
-            if ((self.current_side != self.first_kicking_team and 
-                 self.turn_number <= 8) or
-                (self.current_side == self.first_kicking_team and
-                 self.turn_number >= 9) or skip_turn):
-                self.turn_number += 1
-                if self.turn_number == 9:
-                    # set_kickoff(match, other_side(match.first_kicking_team))
-                    self.home_rerolls = self.home_rerolls_total
-                    self.away_rerolls = self.away_rerolls_total
-                    # end_of_half = True
-                if self.turn_number == 17:
-                    self.turn_type = 'end'
-                    # end_of_half = True
-            # if ('touchdown' in data and data['touchdown'] == 'true' and 
-            #     not end_of_half):
-            #     set_kickoff(match, data['side'])
-            self.save()
-            for player in PlayerInGame.objects.filter(match=self):
-                player.move_left = player.ma
-                player.action = ''
-                player.finished_action = False
-                if (player.player.team == self.team(self.current_side)
-                    and player.stunned and not player.stunned_this_turn):
-                    player.stunned = False
-                player.stunned_this_turn = False
-                player.save()
-            return result
+            return self.resolve_end_turn(step, result)
         elif step_type == 'setKickoff':
-            revive_result = {'revived': [], 'knockedOut': []}
-            for player in PlayerInGame.objects.filter(
-                    match=self, knocked_out=True):
-                dice = roll_dice(6, 1)
-                player_data = {'side': player.side, 'num': player.player.number,
-                               'dice': dice}
-                if dice['dice'][0] >= 4:
-                    revive_result['revived'].append(player_data)
-                    player.knocked_out = False
-                    player.save()
-                else:
-                    revive_result['knockedOut'].append(player_data)
-            set_kickoff(self, data['kickingTeam'])
-            self.save()
-            result.update(revive_result)
-            return result
+            return self.resolve_set_kickoff(step, result)
         elif step_type == 'placeBall':
-            self.x_ball = int(data['x1'])
-            self.y_ball = int(data['y1'])
-            self.save()
-            return result
+            return self.resolve_place_ball(step, result)
         elif step_type == 'placePlayer':
-            player = step.player()
-            if 'subs' in data and data['subs'] == 'true':
+            return self.resolve_place_player(step, result)
+        elif step_type == 'submitPlayers':
+            return self.resolve_submit_players(step, result)
+        elif step_type == 'submitBall':
+            return self.resolve_submit_ball(step, result)
+        elif step_type == 'touchback':
+            return self.resolve_touchback(step, result)
+        elif step_type == 'submitTouchback' or step_type == 'endKickoff':
+            return self.resolve_end_kickoff(step, result)
+        elif step_type == 'bonehead':
+            return self.resolve_bonehead(step, result)
+        elif step_type == 'reallyStupid':
+            return self.resolve_really_stupid(step, result)
+
+    def resolve_block(self, step, result):
+        """Resolve a block step."""
+        data = step.properties_dict()
+        # Find out which is the attacking player
+        if data['side'] == 'home':
+            attacking_team = self.home_team
+            defending_team = self.away_team
+        elif data['side'] == 'away':
+            attacking_team = self.away_team
+            defending_team = self.home_team
+        attacking_num = int(data['num'])
+        defending_num = int(data['targetNum'])
+        attacking_player = PlayerInGame.objects.get(
+            match=self, player__team=attacking_team, 
+            player__number=attacking_num)
+        attacking_player.set_action(data['action'])
+        defending_player = PlayerInGame.objects.get(
+            match=self, player__team=defending_team,
+            player__number=defending_num)
+        attack_st = attacking_player.player.st
+        for player in PlayerInGame.objects.filter(
+            match=self, player__team=attacking_team,
+            xpos__gt=(defending_player.xpos-2),
+            xpos__lt=(defending_player.xpos+2),
+            ypos__gt=(defending_player.ypos-2),
+            ypos__lt=(defending_player.ypos+2),
+            on_pitch=True, down=False, tackle_zones=True):
+            if (player != attacking_player and 
+                    player.n_tackle_zones(exclude=defending_player) == 0):
+                attack_st += 1
+        defence_st = defending_player.player.st
+        for player in PlayerInGame.objects.filter(
+            match=self, player__team=defending_team,
+            xpos__gt=(attacking_player.xpos-2),
+            xpos__lt=(attacking_player.xpos+2),
+            ypos__gt=(attacking_player.ypos-2),
+            ypos__lt=(attacking_player.ypos+2),
+            on_pitch=True, down=False, tackle_zones=True):
+            if (player != defending_player and 
+                    player.n_tackle_zones(exclude=attacking_player) == 0):
+                defence_st += 1
+        n_dice = 1
+        if attack_st > (2 * defence_st):
+            n_dice = 3
+        elif attack_st > defence_st:
+            n_dice = 2
+        elif (2 * attack_st) < defence_st:
+            n_dice = 3
+        elif attack_st < defence_st:
+            n_dice = 2
+        result.update(roll_block_dice(n_dice))
+        result['attackSt'] = attack_st
+        result['defenceSt'] = defence_st
+        if data['action'] == 'blitz':
+            attacking_player.move_left -= 1
+        if attacking_player.move_left == -2 or data['action'] != "blitz":
+            attacking_player.finished_action = True
+        attacking_player.save()
+        return result
+
+    def resolve_foul(self, step, result):
+        """Resolve a foul on a player."""
+        data = step.properties_dict()
+        # Find out which is the attacking player
+        if data['side'] == 'home':
+            attacking_team = self.home_team
+            defending_team = self.away_team
+        elif data['side'] == 'away':
+            attacking_team = self.away_team
+            defending_team = self.home_team
+        attacking_num = int(data['num'])
+        defending_num = int(data['targetNum'])
+        attacking_player = PlayerInGame.objects.get(
+            match=self, player__team=attacking_team, 
+            player__number=attacking_num)
+        attacking_player.set_action(data['action'])
+        defending_player = PlayerInGame.objects.get(
+            match=self, player__team=defending_team,
+            player__number=defending_num)
+        modifier = 0
+        for player in PlayerInGame.objects.filter(
+            match=self, player__team=attacking_team,
+            xpos__gt=(defending_player.xpos-2),
+            xpos__lt=(defending_player.xpos+2),
+            ypos__gt=(defending_player.ypos-2),
+            ypos__lt=(defending_player.ypos+2),
+            on_pitch=True, down=False, tackle_zones=True):
+            if player != attacking_player and player.n_tackle_zones() == 0:
+                modifier += 1
+        for player in PlayerInGame.objects.filter(
+            match=self, player__team=defending_team,
+            xpos__gt=(attacking_player.xpos-2),
+            xpos__lt=(attacking_player.xpos+2),
+            ypos__gt=(attacking_player.ypos-2),
+            ypos__lt=(attacking_player.ypos+2),
+            on_pitch=True, down=False, tackle_zones=True):
+            if (player != defending_player and
+                    player.n_tackle_zones(exclude=attacking_player) == 0):
+                modifier -= 1
+        # Roll against armour
+        armour_roll = roll_armour_dice(defending_player, modifier)
+        if armour_roll['success']:
+            injury_roll = roll_injury_dice(defending_player)
+            if injury_roll['result'] == 'stunned':
+                defending_player.stunned = True
+                defending_player.stunned_this_turn = True
+            elif injury_roll['result'] == 'knockedOut':
+                defending_player.knocked_out = True
+                defending_player.on_pitch = False
+            elif injury_roll['result'] == 'casualty':
+                defending_player.casualty = True
+                defending_player.on_pitch = False
+            else:
+                raise ValueError('Injury roll returned unexpected result: '+ 
+                                 injury_roll['result'])
+            defending_player.save()
+        else:
+            injury_roll = None
+        sent_off = (is_double(armour_roll['dice']) or 
+                    (armour_roll['success'] and 
+                     is_double(injury_roll['dice'])))
+        if sent_off:
+            attacking_player.sent_off = True
+            attacking_player.on_pitch = False
+        attacking_player.finished_action = True    
+        attacking_player.save()
+        result.update({'armourRoll': armour_roll, 'injuryRoll': injury_roll, 
+                       'sentOff': sent_off})
+        return result
+
+    def resolve_knock_down(self, step, result):
+        """Resolve a player being knocked over."""
+        data = step.properties_dict()
+        player = step.player()
+        # Knock the player over in the database
+        player.down = True
+        player.tackle_zones = False
+        player.has_ball = False
+        player.save()
+        # Check for Mighty Blow skill
+        mighty_blow = data.get('mightyBlow', False)
+        # Roll against armour
+        modifier = 1 if mighty_blow == 'armour' else 0
+        armour_roll = roll_armour_dice(player, modifier=modifier)
+        if armour_roll['success']:
+            modifier = 1 if mighty_blow == 'injury' else 0
+            injury_roll = roll_injury_dice(player, modifier=modifier)
+            if injury_roll['result'] == 'stunned':
+                player.stunned = True
+                player.stunned_this_turn = True
+            elif injury_roll['result'] == 'knockedOut':
+                player.knocked_out = True
+                player.on_pitch = False
+            elif injury_roll['result'] == 'casualty':
+                player.casualty = True
                 player.on_pitch = False
             else:
-                player.xpos = int(data['x1'])
-                player.ypos = int(data['y1'])
-                player.on_pitch = True
+                raise ValueError('Injury roll returned unexpected result: '+
+                                 injury_roll['result'])
             player.save()
-            return result
-        elif step_type == 'submitPlayers':
-            self.n_to_place -= 1
-            if self.n_to_place == 0:
-                self.turn_type = 'placeBall'
-            self.current_side = other_side(self.current_side)
-            self.save()
-            return result
-        elif step_type == 'submitBall':
-            distance_dice = roll_dice(6, 1)
-            distance = distance_dice['dice'][0]
-            direction_dice = roll_dice(8, 1)
-            direction = direction_dice['dice'][0]
-            x_ball = self.x_ball
-            y_ball = self.y_ball
+        else:
+            injury_roll = None
+        result.update({'armourRoll': armour_roll,
+                       'injuryRoll': injury_roll})
+        return result
+
+    def resolve_stand_up(self, step, result):
+        """Resolve a player standing up."""
+        data = step.properties_dict()
+        player = step.player()
+        player.set_action(data['action'])
+        player.move_left -= 3
+        if player.move_left <= -2:
+            player.finished_action = True
+        if player.player.ma < 3:
+            dice = roll_dice(6, 1)
+            success = dice['dice'][0] >= 4
+        else:
+            dice = None
+            success = True
+        if success:
+            player.down = False
+            player.tackle_zones = True
+        player.save()
+        result.update({'dice': dice, 'success': success})
+        return result
+
+    def resolve_pick_up(self, step, result):
+        """Resolve a player picking up the ball."""
+        player = step.player()
+        modifier = 1 - player.n_tackle_zones()
+        result.update(roll_agility_dice(player, modifier=modifier))
+        if result['success']:
+            player.has_ball = True
+            player.save()
+        return result
+
+    def resolve_scatter(self, step, result):
+        """Resolve the ball scattering."""
+        data = step.properties_dict()
+        n_scatter = int(data['nScatter'])
+        dice = roll_dice(8, n_scatter)
+        x_ball = int(data['x0'])
+        y_ball = int(data['y0'])
+        for direction in dice['dice']:
+            last_x = x_ball
+            last_y = y_ball
             if direction in [1, 4, 6]:
-                x_ball -= distance
+                x_ball -= 1
             elif direction in [3, 5, 8]:
-                x_ball += distance
+                x_ball += 1
             if direction in [1, 2, 3]:
-                y_ball -= distance
+                y_ball -= 1
             elif direction in [6, 7, 8]:
-                y_ball += distance
+                y_ball += 1
             if not on_pitch(x_ball, y_ball):
-                self.x_ball = None
-                self.y_ball = None
-                self.turn_type = 'touchback'
-                self.current_side = other_side(self.current_side)
-            else:
-                self.x_ball = x_ball
-                self.y_ball = y_ball
-            self.save()
-            result.update({'dice': direction_dice, 'direction': direction, 
-                           'distanceDice': distance_dice, 'distance': distance,
-                           'x1': x_ball, 'y1': y_ball})
-            return result
-        elif step_type == 'touchback':
+                break
+        self.x_ball = x_ball
+        self.y_ball = y_ball
+        self.save()
+        result.update({'dice': dice, 'direction': direction, 
+                       'x1': x_ball, 'y1': y_ball,
+                       'lastX': last_x, 'lastY': last_y})
+        return result
+
+    def resolve_catch(self, step, result):
+        """Resolve a player catching the ball."""
+        data = step.properties_dict()
+        player = step.player()
+        if player.down or player.affected('Bone-head'):
+            return {'success': False}
+        modifier = - player.n_tackle_zones()
+        if data['accurate'] == 'true':
+            modifier += 1
+        result.update(roll_agility_dice(player, modifier=modifier))
+        if result['success']:
+            player.has_ball = True
+            player.save()
+        return result
+
+    def resolve_pass(self, step, result):
+        """Resolve passing the ball."""
+        data = step.properties_dict()
+        player = step.player()
+        player.set_action(data['action'])
+        delta_x = abs(int(data['x1']) - int(data['x0']))
+        delta_y = abs(int(data['y1']) - int(data['y0']))
+        pass_range = find_pass_range(delta_x, delta_y)
+        if pass_range == 'quickPass':
+            modifier = 1
+        elif pass_range == 'shortPass':
+            modifier = 0
+        elif pass_range == 'longPass':
+            modifier = -1
+        elif pass_range == 'longBomb':
+            modifier = -2
+        modifier -= player.n_tackle_zones()
+        result.update(roll_agility_dice(player, modifier=modifier))
+        fumble = (min(result['rawResult'], result['modifiedResult']) <= 1)
+        if fumble:
+            result['success'] = False
+        else:
             self.x_ball = int(data['x1'])
             self.y_ball = int(data['y1'])
             self.save()
-            for player in self.playeringame_set.all():
-                player.has_ball = False
+            result['x1'] = self.x_ball
+            result['y1'] = self.y_ball
+        result['fumble'] = fumble
+        player.has_ball = False
+        player.finished_action = True
+        player.save()
+        return result
+
+    def resolve_hand_off(self, step, result):
+        """Resolve a player handing off the ball to an adjacent player."""
+        # Always successful
+        data = step.properties_dict()
+        player = step.player()
+        player.set_action(data['action'])
+        player.finished_action = True
+        player.save()
+        self.x_ball = int(data['x1'])
+        self.y_ball = int(data['y1'])
+        self.save()
+        return result
+
+    def resolve_throwin(self, step, result):
+        """Resolve a throwin by the crowd."""
+        data = step.properties_dict()
+        x0 = int(data['lastX'])
+        y0 = int(data['lastY'])
+        if y0 == 0:
+            edge = 0
+        elif y0 == 14:
+            edge = 2
+        elif x0 == 0:
+            edge = 3
+        elif x0 == 25:
+            edge = 1
+        else:
+            raise ValueError(
+                'Starting coordinates are not on the edge of the pitch!')
+        direction_dice = roll_dice(3, 1)
+        direction = direction_dice['dice'][0]
+        distance_dice = roll_dice(6, 2)
+        distance = sum(distance_dice['dice'])
+        compass = direction + 2 * edge
+        if compass == 0:
+            x_dir, y_dir = 1, 1
+        elif compass == 1:
+            x_dir, y_dir = 0, 1
+        elif compass == 2:
+            x_dir, y_dir = -1, 1
+        elif compass == 3:
+            x_dir, y_dir = -1, 0
+        elif compass == 4:
+            x_dir, y_dir = -1, -1
+        elif compass == 5:
+            x_dir, y_dir = 0, -1
+        elif compass == 6:
+            x_dir, y_dir = 1, -1
+        elif compass == 7:
+            x_dir, y_dir = 1, 0
+        x1 = x0 + (distance - 1) * x_dir
+        y1 = y0 + (distance - 1) * y_dir
+        last_x = x1 - x_dir
+        last_y = y1 - y_dir
+        while not on_pitch(x1, y1):
+            x1 = last_x
+            y1 = last_y
+            last_x = x1 - x_dir
+            last_y = y1 - y_dir
+        result.update({'x1': x1, 'y1': y1,
+                       'lastX': last_x, 'lastY': last_y})
+        return result
+
+    def resolve_go_for_it(self, step, result):
+        """Resolve a player going for it."""
+        result.update(roll_dice(6, 1))
+        result['success'] = (result['dice'][0] != 1)
+        return result
+
+    def resolve_end_turn(self, step, result):
+        """Resolve the end of a player's turn."""
+        data = step.properties_dict()
+        self.home_reroll_used_this_turn = False
+        self.away_reroll_used_this_turn = False
+        skip_turn = False
+        if 'touchdown' in data and data['touchdown'] == 'true':
+            if data['side'] == 'home':
+                self.home_score += 1
+            else:
+                self.away_score += 1
+            if data['side'] != self.current_side:
+                skip_turn = True
+            self.current_side = data['side']
+        else:
+            self.current_side = other_side(self.current_side)
+        # end_of_half = False
+        if ((self.current_side != self.first_kicking_team and 
+             self.turn_number <= 8) or
+            (self.current_side == self.first_kicking_team and
+             self.turn_number >= 9) or skip_turn):
+            self.turn_number += 1
+            if self.turn_number == 9:
+                # set_kickoff(match, other_side(match.first_kicking_team))
+                self.home_rerolls = self.home_rerolls_total
+                self.away_rerolls = self.away_rerolls_total
+                # end_of_half = True
+            if self.turn_number == 17:
+                self.turn_type = 'end'
+                # end_of_half = True
+        # if ('touchdown' in data and data['touchdown'] == 'true' and 
+        #     not end_of_half):
+        #     set_kickoff(match, data['side'])
+        self.save()
+        for player in PlayerInGame.objects.filter(match=self):
+            player.move_left = player.ma
+            player.action = ''
+            player.finished_action = False
+            if (player.player.team == self.team(self.current_side)
+                and player.stunned and not player.stunned_this_turn):
+                player.stunned = False
+            player.stunned_this_turn = False
+            player.save()
+        return result
+
+    def resolve_set_kickoff(self, step, result):
+        """Resolve setting up a new kickoff."""
+        data = step.properties_dict()
+        revive_result = {'revived': [], 'knockedOut': []}
+        for player in PlayerInGame.objects.filter(
+                match=self, knocked_out=True):
+            dice = roll_dice(6, 1)
+            player_data = {'side': player.side, 'num': player.player.number,
+                           'dice': dice}
+            if dice['dice'][0] >= 4:
+                revive_result['revived'].append(player_data)
+                player.knocked_out = False
                 player.save()
-            player = step.player()
-            player.has_ball = True
-            player.save()
-            return result
-        elif step_type == 'submitTouchback' or step_type == 'endKickoff':
-            self.turn_type = 'normal'
-            if 'touchback' in data and data['touchback'] == 'false':
-                self.current_side = other_side(self.current_side)
-            self.save()
-            return result
-        elif step_type == 'bonehead':
-            player = step.player()
-            player.set_action(data['action'])
-            result.update(roll_dice(6, 1))
-            result['success'] = (result['dice'][0] != 1)
-            if result['success']:
-                player.tackle_zones = True
-                player.remove_effect('Bone-head')
             else:
-                player.tackle_zones = False
-                player.add_effect('Bone-head')
-                player.finished_action = True
+                revive_result['knockedOut'].append(player_data)
+        set_kickoff(self, data['kickingTeam'])
+        self.save()
+        result.update(revive_result)
+        return result
+
+    def resolve_place_ball(self, step, result):
+        """Resolve placing the ball during kickoff."""
+        data = step.properties_dict()
+        self.x_ball = int(data['x1'])
+        self.y_ball = int(data['y1'])
+        self.save()
+        return result
+
+    def resolve_place_player(self, step, result):
+        """Resolve placing a player during kickoff."""
+        data = step.properties_dict()
+        player = step.player()
+        if 'subs' in data and data['subs'] == 'true':
+            player.on_pitch = False
+        else:
+            player.xpos = int(data['x1'])
+            player.ypos = int(data['y1'])
+            player.on_pitch = True
+        player.save()
+        return result
+
+    def resolve_submit_players(self, step, result):
+        """Resolve submitting the final player positions during kickoff."""
+        self.n_to_place -= 1
+        if self.n_to_place == 0:
+            self.turn_type = 'placeBall'
+        self.current_side = other_side(self.current_side)
+        self.save()
+        return result
+
+    def resolve_submit_ball(self, step, result):
+        """Resolve submitting the final ball position during kickoff."""
+        distance_dice = roll_dice(6, 1)
+        distance = distance_dice['dice'][0]
+        direction_dice = roll_dice(8, 1)
+        direction = direction_dice['dice'][0]
+        x_ball = self.x_ball
+        y_ball = self.y_ball
+        if direction in [1, 4, 6]:
+            x_ball -= distance
+        elif direction in [3, 5, 8]:
+            x_ball += distance
+        if direction in [1, 2, 3]:
+            y_ball -= distance
+        elif direction in [6, 7, 8]:
+            y_ball += distance
+        if not on_pitch(x_ball, y_ball):
+            self.x_ball = None
+            self.y_ball = None
+            self.turn_type = 'touchback'
+            self.current_side = other_side(self.current_side)
+        else:
+            self.x_ball = x_ball
+            self.y_ball = y_ball
+        self.save()
+        result.update({'dice': direction_dice, 'direction': direction, 
+                       'distanceDice': distance_dice, 'distance': distance,
+                       'x1': x_ball, 'y1': y_ball})
+        return result
+
+    def resolve_touchback(self, step, result):
+        """Resolve placing the ball during a touchback."""
+        data = step.properties_dict()
+        self.x_ball = int(data['x1'])
+        self.y_ball = int(data['y1'])
+        self.save()
+        for player in self.playeringame_set.all():
+            player.has_ball = False
             player.save()
-            return result
-        elif step_type == 'reallyStupid':
-            player = step.player()
-            player.set_action(data['action'])
-            result.update(roll_dice(6, 1))
-            n_helpers = PlayerInGame.objects.filter(
-                match=self, player__team=player.team,
-                xpos__gt=(player.xpos-2),
-                xpos__lt=(player.xpos+2),
-                ypos__gt=(player.ypos-2),
-                ypos__lt=(player.ypos+2),
-                on_pitch=True, down=False).count() - 1
-            if n_helpers > 0:
-                required_result = 2
-            else:
-                required_result = 4
-            result['success'] = result['dice'][0] >= required_result
-            result['requiredResult'] = required_result
-            if result['success']:
-                player.tackle_zones = True
-                player.remove_effect('Really Stupid')
-            else:
-                player.tackle_zones = False
-                player.add_effect('Really Stupid')
-                player.finished_action = True
-            player.save()
-            return result
+        player = step.player()
+        player.has_ball = True
+        player.save()
+        return result
+
+    def resolve_end_kickoff(self, step, result):
+        """Resolve the end of a kickoff."""
+        data = step.properties_dict()
+        self.turn_type = 'normal'
+        if 'touchback' in data and data['touchback'] == 'false':
+            self.current_side = other_side(self.current_side)
+        self.save()
+        return result
+
+    def resolve_bonehead(self, step, result):
+        """Resolve a bonehead throw."""
+        data = step.properties_dict()
+        player = step.player()
+        player.set_action(data['action'])
+        result.update(roll_dice(6, 1))
+        result['success'] = (result['dice'][0] != 1)
+        if result['success']:
+            player.tackle_zones = True
+            player.remove_effect('Bone-head')
+        else:
+            player.tackle_zones = False
+            player.add_effect('Bone-head')
+            player.finished_action = True
+        player.save()
+        return result
+
+    def resolve_really_stupid(self, step, result):
+        """Resolve a really stupid throw."""
+        data = step.properties_dict()
+        player = step.player()
+        player.set_action(data['action'])
+        result.update(roll_dice(6, 1))
+        n_helpers = PlayerInGame.objects.filter(
+            match=self, player__team=player.team,
+            xpos__gt=(player.xpos-2),
+            xpos__lt=(player.xpos+2),
+            ypos__gt=(player.ypos-2),
+            ypos__lt=(player.ypos+2),
+            on_pitch=True, down=False).count() - 1
+        if n_helpers > 0:
+            required_result = 2
+        else:
+            required_result = 4
+        result['success'] = result['dice'][0] >= required_result
+        result['requiredResult'] = required_result
+        if result['success']:
+            player.tackle_zones = True
+            player.remove_effect('Really Stupid')
+        else:
+            player.tackle_zones = False
+            player.add_effect('Really Stupid')
+            player.finished_action = True
+        player.save()
+        return result
 
 
 def start_match(home_team, away_team, first_kicking_team=None,
