@@ -272,44 +272,16 @@ class Match(models.Model):
                     result.update(step.previous().as_dict()['result'])
                     return result
             step_type = data['rerollStepType']
-        if step_type in ['move', 'push', 'followUp']:
-            # A move step
-            if step_type == 'followUp' and data['choice'] == 'false':
-                return {}
-            player = step.player()
-            if step_type == 'move':
-                player.set_action(data['action'])
-            # Update the player's position in the database
-            player.xpos = int(data['x1'])
-            player.ypos = int(data['y1'])
-            if step_type == 'move':
-                player.move_left -= 1
-                if player.move_left == -2:
-                    player.finished_action = True
-            if player.has_ball:
-                # Move the ball too
-                self.x_ball = data['x1']
-                self.y_ball = data['y1']
-                self.save()
-            if step_type == 'push' and data['offPitch'] == 'true':
-                player.on_pitch = False
-                injury_roll = roll_injury_dice(player)
-                if injury_roll['result'] == 'knockedOut':
-                    player.knocked_out = True
-                elif injury_roll['result'] == 'casualty':
-                    player.casualty = True
-                result.update({'injuryRoll': injury_roll})
-            elif step_type == 'move' and data['dodge'] == 'true':
-                modifier = 1 - player.n_tackle_zones()
-                result.update(roll_agility_dice(player, modifier=modifier))
-            else:
-                result.update({'success': True})
-            player.save()
-            return result
+        if step_type == 'move':
+            return self.resolve_move(step, result)
+        elif step_type == 'push':
+            return self.resolve_push(step, result)
+        elif step_type == 'followUp':
+            return self.resolve_follow_up(step, result)
         elif step_type == 'block':
             return self.resolve_block(step, result)
         elif step_type == 'selectBlockDice':
-            return result
+            return self.resolve_select_block_dice(step, result)
         elif step_type == 'foul':
             return self.resolve_foul(step, result)
         elif step_type == 'knockDown':
@@ -350,6 +322,71 @@ class Match(models.Model):
             return self.resolve_bonehead(step, result)
         elif step_type == 'reallyStupid':
             return self.resolve_really_stupid(step, result)
+
+    def resolve_move(self, step, result):
+        """Resolve a move step."""
+        data = step.properties_dict()
+        player = step.player()
+        player.set_action(data['action'])
+        # Update the player's position in the database
+        player.xpos = int(data['x1'])
+        player.ypos = int(data['y1'])
+        player.move_left -= 1
+        if player.move_left == -2 and (
+                player.action == 'move' or player.action == 'blitz'):
+            player.finished_action = True
+        if player.has_ball:
+            # Move the ball too
+            self.x_ball = data['x1']
+            self.y_ball = data['y1']
+            self.save()
+        if data['dodge'] == 'true':
+            modifier = 1 - player.n_tackle_zones()
+            result.update(roll_agility_dice(player, modifier=modifier))
+        else:
+            # Not sure if this is necessary
+            result.update({'success': True})
+        player.save()
+        return result
+
+    def resolve_push(self, step, result):
+        """Resolve a push step."""
+        data = step.properties_dict()
+        player = step.player()
+        # Update the player's position in the database
+        player.xpos = int(data['x1'])
+        player.ypos = int(data['y1'])
+        if player.has_ball:
+            # Move the ball too
+            self.x_ball = data['x1']
+            self.y_ball = data['y1']
+            self.save()
+        if data['offPitch'] == 'true':
+            player.on_pitch = False
+            injury_roll = roll_injury_dice(player)
+            if injury_roll['result'] == 'knockedOut':
+                player.knocked_out = True
+            elif injury_roll['result'] == 'casualty':
+                player.casualty = True
+            result.update({'injuryRoll': injury_roll})
+        player.save()
+        return result
+
+    def resolve_follow_up(self, step, result):
+        """Resolve a follow-up."""
+        data = step.properties_dict()
+        if data['choice'] == 'true':
+            player = step.player()
+            # Update the player's position in the database
+            player.xpos = int(data['x1'])
+            player.ypos = int(data['y1'])
+            if player.has_ball:
+                # Move the ball too
+                self.x_ball = data['x1']
+                self.y_ball = data['y1']
+                self.save()
+            player.save()
+        return result
 
     def resolve_block(self, step, result):
         """Resolve a block step."""
@@ -409,6 +446,10 @@ class Match(models.Model):
         if attacking_player.move_left == -2 or data['action'] != "blitz":
             attacking_player.finished_action = True
         attacking_player.save()
+        return result
+
+    def resolve_select_block_dice(self, step, result):
+        """Resolve a block dice being selected."""
         return result
 
     def resolve_foul(self, step, result):
