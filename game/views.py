@@ -10,7 +10,6 @@ from django.contrib.auth.decorators import login_required
 from django.core.urlresolvers import reverse
 
 from game.models import Match, PlayerInGame, Step, Team, Race, Challenge, create_player, create_team, start_match
-from game.steps import resolve
 
 # Create your views here.
 @login_required
@@ -218,7 +217,7 @@ def post_step_view(request):
                 # Carry out the step
                 print(str(history_position) + ':', "Carrying out the step")
                 try:
-                    result = resolve(match, step_type, properties)
+                    result = match.resolve(step)
                 except Exception as e:
                     print(e)
                     raise
