@@ -337,8 +337,8 @@ class Match(models.Model):
             player.finished_action = True
         if player.has_ball:
             # Move the ball too
-            self.x_ball = data['x1']
-            self.y_ball = data['y1']
+            self.x_ball = int(data['x1'])
+            self.y_ball = int(data['y1'])
             self.save()
         if data['dodge'] == 'true':
             modifier = 1 - player.n_tackle_zones()
