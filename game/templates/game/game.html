@@ -1513,7 +1513,7 @@ var processEndTurn = function(step) {
         }
     }
     updateTurnIndicator();
-    stepStack = [];
+    stepStack = [step];
     if (step.touchdown && !endOfHalf && !endOfMatch) {
         addStepToStack({stepType: "setKickoff", action: "setKickoff", kickingTeam: otherSide(step.side)});
     } else if (endOfHalf) {
@@ -1793,6 +1793,8 @@ var postProcessStep = function(step, result) {
         confirmResult(step, result, null, postProcessGoForIt);
         break;
     case "endTurn":
+        stepStack.shift();
+        processNextStep();
         break;
     case "setKickoff":
         stepStack.shift();
