@@ -236,7 +236,113 @@ class StepTests(TestCase):
         self.assertEqual(pig.on_pitch, False)
         self.assertEqual(pig.knocked_out, False)
         self.assertEqual(pig.casualty, False)
-        
+
+    def test_block_equal_strengths_step(self):
+        """
+        Test that a block between players of equal strength returns valid
+        results.
+        """
+        match = create_test_match('human', 'orc')
+        # Get a player
+        x0, y0 = 15, 5
+        x1, y1 = x0+1, y0+1
+        # Blitzer, strength 3
+        attacker = place_player(match, 'home', 5, x0, y0, False)
+        # Blitzer, strength 3
+        defender = place_player(match, 'away', 1, x0, y0, False)
+        # Throw the block
+        step = create_test_block_step(match, attacker, defender)
+        step.save()
+        result = match.resolve(step)
+        self.assertEqual(result['attackSt'], 3)
+        self.assertEqual(result['defenceSt'], 3)
+        self.assertEqual(result['nDice'], 1)
+
+    def test_block_attacker_strong_step(self):
+        """
+        Test that a block where the attacker is stronger returns valid
+        results.
+        """
+        match = create_test_match('human', 'orc')
+        # Get a player
+        x0, y0 = 15, 5
+        x1, y1 = x0+1, y0+1
+        # Ogre, strength 5
+        attacker = place_player(match, 'home', 3, x0, y0, False)
+        # Blitzer, strength 3
+        defender = place_player(match, 'away', 1, x0, y0, False)
+        # Throw the block
+        step = create_test_block_step(match, attacker, defender)
+        step.save()
+        result = match.resolve(step)
+        self.assertEqual(result['attackSt'], 5)
+        self.assertEqual(result['defenceSt'], 3)
+        self.assertEqual(result['nDice'], 2)
+
+    def test_block_defender_strong_step(self):
+        """
+        Test that a block where the defender is stronger returns valid
+        results.
+        """
+        match = create_test_match('human', 'orc')
+        # Get a player
+        x0, y0 = 15, 5
+        x1, y1 = x0+1, y0+1
+        # Ogre, strength 5
+        defender = place_player(match, 'home', 3, x0, y0, False)
+        # Blitzer, strength 3
+        attacker = place_player(match, 'away', 1, x0, y0, False)
+        # Throw the block
+        step = create_test_block_step(match, attacker, defender)
+        step.save()
+        result = match.resolve(step)
+        self.assertEqual(result['attackSt'], 3)
+        self.assertEqual(result['defenceSt'], 5)
+        self.assertEqual(result['nDice'], 2)
+
+    def test_block_attacker_very_strong_step(self):
+        """
+        Test that a block where the attacker is much stronger returns valid
+        results.
+        """
+        match = create_test_match('human', 'orc')
+        # Get a player
+        x0, y0 = 15, 5
+        x1, y1 = x0+1, y0+1
+        # Catcher, strength 2
+        defender = place_player(match, 'home', 1, x0, y0, False)
+        # Troll, strength 5
+        attacker = place_player(match, 'away', 5, x0, y0, False)
+        # Throw the block
+        step = create_test_block_step(match, attacker, defender)
+        step.save()
+        result = match.resolve(step)
+        self.assertEqual(result['attackSt'], 5)
+        self.assertEqual(result['defenceSt'], 2)
+        self.assertEqual(result['nDice'], 3)
+
+    def test_block_defender_very_strong_step(self):
+        """
+        Test that a block where the defender is much stronger returns valid
+        results.
+        """
+        match = create_test_match('human', 'orc')
+        # Get a player
+        x0, y0 = 15, 5
+        x1, y1 = x0+1, y0+1
+        # Catcher, strength 2
+        attacker = place_player(match, 'home', 1, x0, y0, False)
+        # Troll, strength 5
+        defender = place_player(match, 'away', 5, x0, y0, False)
+        # Throw the block
+        step = create_test_block_step(match, attacker, defender)
+        step.save()
+        result = match.resolve(step)
+        self.assertEqual(result['attackSt'], 2)
+        self.assertEqual(result['defenceSt'], 5)
+        self.assertEqual(result['nDice'], 3)
+
+
 
 def place_player(match, side, number, xpos, ypos, has_ball):
     """
@@ -261,12 +367,12 @@ def place_player(match, side, number, xpos, ypos, has_ball):
     return pig
 
 
-def create_test_match():
+def create_test_match(home_race_singular=None, away_race_singular=None):
     """
     Create a match with all the players sitting on the bench.
     """
-    home_team = create_test_team()
-    away_team = create_test_team()
+    home_team = create_test_team(home_race_singular)
+    away_team = create_test_team(away_race_singular)
     match = start_match(home_team, away_team)
     for pig in PlayerInGame.objects.filter(match=match):
         pig.on_pitch = False
@@ -276,13 +382,13 @@ def create_test_match():
     match.save()
     return match
 
-def create_test_team():
+def create_test_team(race_singular=None):
     """
     Create a test team.
     """
     define_all()
     coach = create_test_user()
-    for idx, race in enumerate(Race.objects.all()):
+    for idx, race in enumerate(Race.objects.all().order_by('singular')):
         name = 'Team {}'.format(idx)
         try:
             Team.objects.get(name=name)
@@ -290,6 +396,8 @@ def create_test_team():
             break
     else:
         raise ValueError('Ran out of test races')
+    if race_singular is not None:
+        race = Race.objects.get(singular=race_singular)
     team = create_team(name, race, coach,
         color_home_primary='31,120,180', color_home_secondary='51,160,44',
         color_away_primary='227,26,28', color_away_secondary='51,160,44',
@@ -331,10 +439,34 @@ def create_test_player(team):
         except Player.DoesNotExist:
             break
         number += 1
-    position_title = Position.objects.filter(team_race=team.race)[0].title
+    position_list = Position.objects.filter(team_race=team.race)
+    position_list = position_list.order_by('title')
+    position_title = position_list[number % len(position_list)].title
     name = 'Player {}'.format(number)
     player = create_player(team, position_title, name, number)
     player.save()
     return player
 
-
+def create_test_block_step(match, attacker, defender):
+    """
+    Create a step in which the attacker blocks the defender.
+    """
+    if attacker.player.team == match.home_team:
+        side = 'home'
+    else:
+        side = 'away'
+    step = Step.objects.create(
+        step_type='block',
+        action='block',
+        match=match,
+        history_position=0,
+        properties=json.dumps({
+            'action': 'block',
+            'x1': str(defender.xpos),
+            'y1': str(defender.ypos),
+            'side': side,
+            'num': str(attacker.player.number),
+            'targetNum': str(defender.player.number)
+        })
+    )
+    return step
