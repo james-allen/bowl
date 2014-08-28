@@ -1,4 +1,5 @@
 import json
+from unittest.mock import patch
 
 from django.test import TestCase
 from django.contrib.auth.models import User
@@ -70,6 +71,73 @@ class StepTests(TestCase):
         self.assertEqual(pig.ypos, y1)
         self.assertEqual(match.x_ball, x1)
         self.assertEqual(match.y_ball, y1)
+
+    @patch('random.randint', lambda a, b: 6)
+    def test_dodge_success_step(self):
+        """
+        Test that a successful dodge is returned.
+        """
+        match = create_test_match()
+        # Get a player
+        x0, y0 = 15, 5
+        x1, y1 = x0+1, y0+1
+        pig = place_player(match, 'home', 1, x0, y0, True)
+        # Move them
+        step = Step.objects.create(
+            step_type='move',
+            action='move',
+            match=match,
+            history_position=0,
+            properties=json.dumps({
+                'action': 'move',
+                'x1': str(x1),
+                'y1': str(y1),
+                'dodge': 'true',
+                'side': 'home',
+                'num': str(pig.player.number),
+            }))
+        step.save()
+        result = match.resolve(step)
+        # Reload the player
+        pig = PlayerInGame.objects.get(match=match, player=pig.player)
+        self.assertEqual(result['success'], True)
+        self.assertEqual(pig.xpos, x1)
+        self.assertEqual(pig.ypos, y1)
+        self.assertEqual(pig.down, False)
+
+    @patch('random.randint', lambda a, b: 1)
+    def test_dodge_failure_step(self):
+        """
+        Test that a failed dodge is returned.
+        """
+        match = create_test_match()
+        # Get a player
+        x0, y0 = 15, 5
+        x1, y1 = x0+1, y0+1
+        pig = place_player(match, 'home', 1, x0, y0, True)
+        # Move them
+        step = Step.objects.create(
+            step_type='move',
+            action='move',
+            match=match,
+            history_position=0,
+            properties=json.dumps({
+                'action': 'move',
+                'x1': str(x1),
+                'y1': str(y1),
+                'dodge': 'true',
+                'side': 'home',
+                'num': str(pig.player.number),
+            }))
+        step.save()
+        result = match.resolve(step)
+        # Reload the player
+        pig = PlayerInGame.objects.get(match=match, player=pig.player)
+        self.assertEqual(result['success'], False)
+        self.assertEqual(pig.xpos, x1)
+        self.assertEqual(pig.ypos, y1)
+        # The player is not knocked down yet, as they could reroll
+        self.assertEqual(pig.down, False)
 
 
 def place_player(match, side, number, xpos, ypos, has_ball):
