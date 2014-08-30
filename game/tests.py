@@ -494,6 +494,10 @@ class StepTests(TestCase):
         with patch('random.randint', RiggedDice((5, 6, 5, 6))):
             result = match.resolve(step)
         self.assertFalse(result['sentOff'])
+        attacker = PlayerInGame.objects.get(
+            match=match, player=attacker.player)
+        self.assertTrue(attacker.on_pitch)
+        self.assertFalse(attacker.sent_off)
         # Foul
         step = create_test_foul_step(match, attacker, defender)
         step.save()
@@ -501,6 +505,10 @@ class StepTests(TestCase):
         with patch('random.randint', RiggedDice((5, 6, 1, 1))):
             result = match.resolve(step)
         self.assertTrue(result['sentOff'])
+        attacker = PlayerInGame.objects.get(
+            match=match, player=attacker.player)
+        self.assertFalse(attacker.on_pitch)
+        self.assertTrue(attacker.sent_off)
         # Foul
         step = create_test_foul_step(match, attacker, defender)
         step.save()
@@ -508,6 +516,10 @@ class StepTests(TestCase):
         with patch('random.randint', RiggedDice((6, 6, 1, 2))):
             result = match.resolve(step)
         self.assertTrue(result['sentOff'])
+        attacker = PlayerInGame.objects.get(
+            match=match, player=attacker.player)
+        self.assertFalse(attacker.on_pitch)
+        self.assertTrue(attacker.sent_off)
 
 
 
