@@ -405,7 +405,7 @@ class StepTests(TestCase):
         self.assertEqual(result['attackSt'], 4)
         self.assertEqual(result['defenceSt'], 4)
         
-    def test_foul_step(self):
+    def test_foul_modifiers(self):
         """
         Test that foul modifiers are correctly calculated.
         """
@@ -475,6 +475,40 @@ class StepTests(TestCase):
         self.assertEqual(result['armourRoll']['modifiedResult'] -
                          result['armourRoll']['rawResult'], 0)
         
+    def foul_sent_off(self):
+        """
+        Test that players are sent off for double throws.
+        """
+        match = create_test_match('human', 'orc')
+        # Get attacker and defender
+        x0, y0 = 15, 5
+        attacker = place_player(match, 'home', 1, x0, y0, False)
+        defender = place_player(match, 'away', 1, x0+1, y0, False)
+        defender.down = True
+        defender.tackle_zones = False
+        defender.save()
+        # Foul
+        step = create_test_foul_step(match, attacker, defender)
+        step.save()
+        # No doubles
+        with patch('random.randint', RiggedDice((5, 6, 5, 6))):
+            result = match.resolve(step)
+        self.assertEqual(result['sentOff'], False)
+        # Foul
+        step = create_test_foul_step(match, attacker, defender)
+        step.save()
+        # Double in injury dice
+        with patch('random.randint', RiggedDice((5, 6, 1, 1))):
+            result = match.resolve(step)
+        self.assertEqual(result['sentOff'], True)
+        # Foul
+        step = create_test_foul_step(match, attacker, defender)
+        step.save()
+        # Double in armour dice
+        with patch('random.randint', RiggedDice((6, 6, 1, 2))):
+            result = match.resolve(step)
+        self.assertEqual(result['sentOff'], True)
+
 
 
 
@@ -641,3 +675,19 @@ def create_test_foul_step(match, attacker, defender):
         })
     )
     return step
+
+class RiggedDice():
+    """
+    A rigged dice for testing. Initialise with the desired sequence of rolls.
+    """
+
+    def __init__(self, seq):
+        self.seq = seq
+        self.idx = 0
+        self.n = len(seq)
+
+    def __call__(self, a, b):
+        value = self.seq(self.idx % self.n)
+        self.idx += 1
+        return value
+
