@@ -100,10 +100,10 @@ class StepTests(TestCase):
         result = match.resolve(step)
         # Reload the player
         pig = PlayerInGame.objects.get(match=match, player=pig.player)
-        self.assertEqual(result['success'], True)
+        self.assertTrue(result['success'])
         self.assertEqual(pig.xpos, x1)
         self.assertEqual(pig.ypos, y1)
-        self.assertEqual(pig.down, False)
+        self.assertFalse(pig.down)
 
     @patch('random.randint', lambda a, b: 1)
     def test_dodge_failure_step(self):
@@ -133,11 +133,11 @@ class StepTests(TestCase):
         result = match.resolve(step)
         # Reload the player
         pig = PlayerInGame.objects.get(match=match, player=pig.player)
-        self.assertEqual(result['success'], False)
+        self.assertFalse(result['success'])
         self.assertEqual(pig.xpos, x1)
         self.assertEqual(pig.ypos, y1)
         # The player is not knocked down yet, as they could reroll
-        self.assertEqual(pig.down, False)
+        self.assertFalse(pig.down)
 
     def test_push_step(self):
         """
@@ -233,9 +233,9 @@ class StepTests(TestCase):
         match.resolve(step)
         # Reload the player
         pig = PlayerInGame.objects.get(match=match, player=pig.player)
-        self.assertEqual(pig.on_pitch, False)
-        self.assertEqual(pig.knocked_out, False)
-        self.assertEqual(pig.casualty, False)
+        self.assertFalse(pig.on_pitch)
+        self.assertFalse(pig.knocked_out)
+        self.assertFalse(pig.casualty)
 
     def test_block_equal_strengths_step(self):
         """
@@ -493,21 +493,21 @@ class StepTests(TestCase):
         # No doubles
         with patch('random.randint', RiggedDice((5, 6, 5, 6))):
             result = match.resolve(step)
-        self.assertEqual(result['sentOff'], False)
+        self.assertFalse(result['sentOff'])
         # Foul
         step = create_test_foul_step(match, attacker, defender)
         step.save()
         # Double in injury dice
         with patch('random.randint', RiggedDice((5, 6, 1, 1))):
             result = match.resolve(step)
-        self.assertEqual(result['sentOff'], True)
+        self.assertTrue(result['sentOff'])
         # Foul
         step = create_test_foul_step(match, attacker, defender)
         step.save()
         # Double in armour dice
         with patch('random.randint', RiggedDice((6, 6, 1, 2))):
             result = match.resolve(step)
-        self.assertEqual(result['sentOff'], True)
+        self.assertTrue(result['sentOff'])
 
 
 
