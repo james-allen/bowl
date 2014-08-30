@@ -1121,7 +1121,7 @@ class PlayerInGame(models.Model):
         opponents = opponents.exclude(
             player__team=self.player.team)
         if exclude is not None:
-            opponents.exclude(player__number=exclude.player.number)
+            opponents = opponents.exclude(player__number=exclude.player.number)
         return opponents.count()
 
 

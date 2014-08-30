@@ -249,7 +249,7 @@ class StepTests(TestCase):
         # Blitzer, strength 3
         attacker = place_player(match, 'home', 5, x0, y0, False)
         # Blitzer, strength 3
-        defender = place_player(match, 'away', 1, x0, y0, False)
+        defender = place_player(match, 'away', 1, x1, y1, False)
         # Throw the block
         step = create_test_block_step(match, attacker, defender)
         step.save()
@@ -270,7 +270,7 @@ class StepTests(TestCase):
         # Ogre, strength 5
         attacker = place_player(match, 'home', 3, x0, y0, False)
         # Blitzer, strength 3
-        defender = place_player(match, 'away', 1, x0, y0, False)
+        defender = place_player(match, 'away', 1, x1, y1, False)
         # Throw the block
         step = create_test_block_step(match, attacker, defender)
         step.save()
@@ -291,7 +291,7 @@ class StepTests(TestCase):
         # Ogre, strength 5
         defender = place_player(match, 'home', 3, x0, y0, False)
         # Blitzer, strength 3
-        attacker = place_player(match, 'away', 1, x0, y0, False)
+        attacker = place_player(match, 'away', 1, x1, y1, False)
         # Throw the block
         step = create_test_block_step(match, attacker, defender)
         step.save()
@@ -312,7 +312,7 @@ class StepTests(TestCase):
         # Catcher, strength 2
         defender = place_player(match, 'home', 1, x0, y0, False)
         # Troll, strength 5
-        attacker = place_player(match, 'away', 5, x0, y0, False)
+        attacker = place_player(match, 'away', 5, x1, y1, False)
         # Throw the block
         step = create_test_block_step(match, attacker, defender)
         step.save()
@@ -333,7 +333,7 @@ class StepTests(TestCase):
         # Catcher, strength 2
         attacker = place_player(match, 'home', 1, x0, y0, False)
         # Troll, strength 5
-        defender = place_player(match, 'away', 5, x0, y0, False)
+        defender = place_player(match, 'away', 5, x1, y1, False)
         # Throw the block
         step = create_test_block_step(match, attacker, defender)
         step.save()
@@ -341,6 +341,72 @@ class StepTests(TestCase):
         self.assertEqual(result['attackSt'], 2)
         self.assertEqual(result['defenceSt'], 5)
         self.assertEqual(result['nDice'], 3)
+
+    def test_block_assists_step(self):
+        """
+        Test that assists are correctly found and counted.
+        """
+        match = create_test_match('human', 'orc')
+        # Get attacker and defender
+        x0, y0 = 15, 5
+        # Blitzer, strength 3
+        attacker = place_player(match, 'home', 5, x0, y0, False)
+        # Blitzer, strength 3
+        defender = place_player(match, 'away', 1, x0+1, y0, False)
+        # Place an assisting player for the attacker
+        attack_1 = place_player(match, 'home', 1, x0, y0+1, False)
+        # Throw a block
+        step = create_test_block_step(match, attacker, defender)
+        step.save()
+        result = match.resolve(step)
+        self.assertEqual(result['attackSt'], 4)
+        self.assertEqual(result['defenceSt'], 3)
+        # Place an assisting player for the defender
+        defend_1 = place_player(match, 'away', 2, x0+1, y0-1, False)
+        # Throw a block
+        step = create_test_block_step(match, attacker, defender)
+        step.save()
+        result = match.resolve(step)
+        self.assertEqual(result['attackSt'], 4)
+        self.assertEqual(result['defenceSt'], 4)
+        # Place a tackle zone on the attacking assist to negate it
+        defend_2 = place_player(match, 'away', 3, x0+1, y0+1, False)
+        # Throw a block
+        step = create_test_block_step(match, attacker, defender)
+        step.save()
+        result = match.resolve(step)
+        self.assertEqual(result['attackSt'], 3)
+        self.assertEqual(result['defenceSt'], 4)
+        # Place a tackle zone on the defending assist to negate it
+        attack_2 = place_player(match, 'home', 2, x0, y0-1, False)
+        # Throw a block
+        step = create_test_block_step(match, attacker, defender)
+        step.save()
+        result = match.resolve(step)
+        self.assertEqual(result['attackSt'], 3)
+        self.assertEqual(result['defenceSt'], 3)
+        # Knock one of the extra players over and remove their tackle zones
+        defend_2.down = True
+        defend_2.tackle_zones = False
+        defend_2.save()
+        # Throw a block
+        step = create_test_block_step(match, attacker, defender)
+        step.save()
+        result = match.resolve(step)
+        self.assertEqual(result['attackSt'], 4)
+        self.assertEqual(result['defenceSt'], 3)
+        # Remove tackle zones from another player without knocking them down
+        attack_2.tackle_zones = False
+        attack_2.save()
+        # Throw a block
+        step = create_test_block_step(match, attacker, defender)
+        step.save()
+        result = match.resolve(step)
+        self.assertEqual(result['attackSt'], 4)
+        self.assertEqual(result['defenceSt'], 4)
+        
+        
+
 
 
 
@@ -455,11 +521,17 @@ def create_test_block_step(match, attacker, defender):
         side = 'home'
     else:
         side = 'away'
+    history_saved = Step.objects.filter(match=match).values_list(
+        'history_position', flat=True).order_by('history_position')
+    if len(history_saved) == 0:
+        history_position = 0
+    else:
+        history_position = history_saved[len(history_saved)-1] + 1
     step = Step.objects.create(
         step_type='block',
         action='block',
         match=match,
-        history_position=0,
+        history_position=history_position,
         properties=json.dumps({
             'action': 'block',
             'x1': str(defender.xpos),
