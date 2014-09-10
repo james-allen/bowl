@@ -408,6 +408,7 @@ class Match(models.Model):
             match=self, player__team=defending_team,
             player__number=defending_num)
         attack_st = attacking_player.player.st
+        result['rawAttackSt'] = attack_st
         for player in PlayerInGame.objects.filter(
             match=self, player__team=attacking_team,
             xpos__gt=(defending_player.xpos-2),
@@ -419,6 +420,7 @@ class Match(models.Model):
                     player.n_tackle_zones(exclude=defending_player) == 0):
                 attack_st += 1
         defence_st = defending_player.player.st
+        result['rawDefenceSt'] = defence_st
         for player in PlayerInGame.objects.filter(
             match=self, player__team=defending_team,
             xpos__gt=(attacking_player.xpos-2),
