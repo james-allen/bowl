@@ -69,6 +69,44 @@ class BloodBowlTestCase(TestCase):
         """
         return self.place_player_of_position(side, None, xpos, ypos, has_ball)
 
+    def create_test_step(self, step_type, action, properties):
+        """
+        Create a step object.
+        """
+        history_saved = Step.objects.filter(match=self.match).values_list(
+            'history_position', flat=True).order_by('history_position')
+        if len(history_saved) == 0:
+            history_position = 0
+        else:
+            history_position = history_saved[len(history_saved)-1] + 1
+        step = Step.objects.create(
+            step_type=step_type,
+            action=action,
+            match=self.match,
+            history_position=history_position,
+            properties=json.dumps(properties)
+        )
+        return step
+
+    def side_of_team(self, team):
+        """
+        Return 'home' or 'away' corresponding to the Team.
+        """
+        if team == self.match.home_team:
+            side = 'home'
+        elif team == self.match.away_team:
+            side = 'away'
+        else:
+            raise ValueError('The provided team is not in the match.')
+        return side
+
+    def side_of_pig(self, pig):
+        """
+        Return 'home' or 'away' corresponding to the PlayerInGame.
+        """
+        return self.side_of_team(pig.player.team)
+
+
 
 class StepTests(TestCase):
 
@@ -324,31 +362,15 @@ class BlockAndFoulTests(BloodBowlTestCase):
         """
         Create a step in which the attacker blocks the defender.
         """
-        if attacker.player.team == self.match.home_team:
-            side = 'home'
-        else:
-            side = 'away'
-        history_saved = Step.objects.filter(match=self.match).values_list(
-            'history_position', flat=True).order_by('history_position')
-        if len(history_saved) == 0:
-            history_position = 0
-        else:
-            history_position = history_saved[len(history_saved)-1] + 1
-        step = Step.objects.create(
-            step_type='block',
-            action='block',
-            match=self.match,
-            history_position=history_position,
-            properties=json.dumps({
-                'action': 'block',
-                'x1': str(defender.xpos),
-                'y1': str(defender.ypos),
-                'side': side,
-                'num': str(attacker.player.number),
-                'targetNum': str(defender.player.number)
-            })
-        )
-        return step
+        properties = {
+            'action': 'block',
+            'x1': str(defender.xpos),
+            'y1': str(defender.ypos),
+            'side': self.side_of_pig(attacker),
+            'num': str(attacker.player.number),
+            'targetNum': str(defender.player.number),
+        }
+        return self.create_test_step('block', 'block', properties)
 
     def commit_foul(self, attacker, defender):
         """
@@ -636,6 +658,121 @@ class BlockAndFoulTests(BloodBowlTestCase):
             match=self.match, player=attacker.player)
         self.assertFalse(attacker.on_pitch)
         self.assertTrue(attacker.sent_off)
+
+
+class KnockDownTests(BloodBowlTestCase):
+
+    xpos = 15
+    ypos = 5
+
+    def setUp(self):
+        """
+        Create a suitable match.
+        """
+        self.match = create_test_match('human', 'orc')
+
+    def create_test_knock_down_step(self, victim, mighty_blow=False):
+        """
+        Create a knock down step for the unfortunate victim.
+        """
+        properties = {
+            'action': 'move',
+            'num': victim.player.number,
+            'side': self.side_of_pig(victim),
+            'mightyBlow': mighty_blow,
+        }
+        return self.create_test_step('knockDown', 'move', properties)
+
+    def test_knock_down_fail_armour(self):
+        """
+        Test that the player is knocked down and loses the ball.
+        """
+        victim = self.place_player('home', self.xpos, self.ypos, True)
+        step = self.create_test_knock_down_step(victim, False)
+        with patch('random.randint', RiggedDice((1, 1))):
+            result = self.match.resolve(step)
+        victim = PlayerInGame.objects.get(
+            match=self.match, player=victim.player)
+        self.assertTrue(victim.down)
+        self.assertFalse(victim.tackle_zones)
+        self.assertFalse(victim.has_ball)
+        self.assertTrue(victim.on_pitch)
+        self.assertFalse(victim.stunned)
+        self.assertFalse(result['armourRoll']['success'])
+
+    def test_knock_down_stunned(self):
+        """
+        Test that the victim is stunned.
+        """
+        victim = self.place_player('home', self.xpos, self.ypos, True)
+        step = self.create_test_knock_down_step(victim, False)
+        with patch('random.randint', RiggedDice((6, 6, 1, 1))):
+            result = self.match.resolve(step)
+        victim = PlayerInGame.objects.get(
+            match=self.match, player=victim.player)
+        self.assertTrue(victim.down)
+        self.assertFalse(victim.tackle_zones)
+        self.assertFalse(victim.has_ball)
+        self.assertTrue(victim.on_pitch)
+        self.assertTrue(victim.stunned)
+        self.assertTrue(result['armourRoll']['success'])
+        self.assertEqual(result['injuryRoll']['result'], 'stunned')
+
+    def test_knock_down_knocked_out(self):
+        """
+        Test that the victim is knocked out.
+        """
+        victim = self.place_player('home', self.xpos, self.ypos, True)
+        step = self.create_test_knock_down_step(victim, False)
+        with patch('random.randint', RiggedDice((6, 6, 4, 5))):
+            result = self.match.resolve(step)
+        victim = PlayerInGame.objects.get(
+            match=self.match, player=victim.player)
+        self.assertFalse(victim.on_pitch)
+        self.assertTrue(victim.knocked_out)
+        self.assertTrue(result['armourRoll']['success'])
+        self.assertEqual(result['injuryRoll']['result'], 'knockedOut')
+
+    def test_knock_down_casualty(self):
+        """
+        Test that the victim is a casualty.
+        """
+        victim = self.place_player('home', self.xpos, self.ypos, True)
+        step = self.create_test_knock_down_step(victim, False)
+        with patch('random.randint', RiggedDice((6, 6, 6, 6))):
+            result = self.match.resolve(step)
+        victim = PlayerInGame.objects.get(
+            match=self.match, player=victim.player)
+        self.assertFalse(victim.on_pitch)
+        self.assertTrue(victim.casualty)
+        self.assertTrue(result['armourRoll']['success'])
+        self.assertEqual(result['injuryRoll']['result'], 'casualty')
+
+    def test_knock_down_mighty_blow_armour(self):
+        """
+        Test that a modifier is added to the armour roll.
+        """
+        victim = self.place_player('home', self.xpos, self.ypos, True)
+        step = self.create_test_knock_down_step(victim, 'armour')
+        with patch('random.randint', RiggedDice((6, 6, 1, 1))):
+            result = self.match.resolve(step)
+        self.assertEqual(result['armourRoll']['rawResult'], 12)
+        self.assertEqual(result['armourRoll']['modifiedResult'], 13)
+        self.assertEqual(result['injuryRoll']['rawResult'], 2)
+        self.assertEqual(result['injuryRoll']['modifiedResult'], 2)
+
+    def test_knock_down_mighty_blow_injury(self):
+        """
+        Test that a modifier is added to the armour roll.
+        """
+        victim = self.place_player('home', self.xpos, self.ypos, True)
+        step = self.create_test_knock_down_step(victim, 'injury')
+        with patch('random.randint', RiggedDice((6, 6, 1, 1))):
+            result = self.match.resolve(step)
+        self.assertEqual(result['armourRoll']['rawResult'], 12)
+        self.assertEqual(result['armourRoll']['modifiedResult'], 12)
+        self.assertEqual(result['injuryRoll']['rawResult'], 2)
+        self.assertEqual(result['injuryRoll']['modifiedResult'], 3)
 
 
 
