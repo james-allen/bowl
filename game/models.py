@@ -623,7 +623,8 @@ class Match(models.Model):
         """Resolve a player catching the ball."""
         data = step.properties_dict()
         player = step.player()
-        if player.down or player.affected('Bone-head'):
+        if (player.down or player.affected('Bone-head') or 
+                player.affected('Really Stupid')):
             return {'success': False}
         modifier = - player.n_tackle_zones()
         if data['accurate'] == 'true':
