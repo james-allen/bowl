@@ -946,6 +946,110 @@ class ScatterTests(BloodBowlTestCase):
         # Strictly speaking, the third dice roll is unnecessary
         self.assertEqual(len(result['dice']['dice']), 3)
 
+class CatchTests(BloodBowlTestCase):
+
+    xpos = 15
+    ypos = 5
+
+    def setUp(self):
+        """
+        Create a suitable match.
+        """
+        self.match = create_test_match('human', 'orc')
+        self.catcher = self.place_player('home', self.xpos, self.ypos)
+        self.match.x_ball = self.xpos
+        self.match.y_ball = self.ypos
+        self.match.save()
+
+    def create_test_catch_step(self, pig, accurate):
+        """
+        Create a test step to try and catch the ball.
+        """
+        properties = {
+            'action': 'pass',
+            'num': pig.player.number,
+            'side': self.side_of_pig(pig),
+            'accurate': 'true' if accurate else 'false',
+        }
+        return self.create_test_step('catch', 'pass', properties)
+
+    @patch('random.randint', RiggedDice((6,)))
+    def test_catch_success_accurate(self):
+        """
+        Test that the player catches the ball.
+        """
+        step = self.create_test_catch_step(self.catcher, True)
+        result = self.match.resolve(step)
+        self.catcher = self.reload_pig(self.catcher)
+        self.assertTrue(self.catcher.has_ball)
+        self.assertTrue(result['success'])
+        modifier = result['modifiedResult'] - result['rawResult']
+        self.assertEqual(modifier, 1)
+
+    @patch('random.randint', RiggedDice((6,)))
+    def test_catch_success_inaccurate(self):
+        """
+        Test that the player catches the ball from an inaccurate pass.
+        """
+        step = self.create_test_catch_step(self.catcher, False)
+        result = self.match.resolve(step)
+        self.catcher = self.reload_pig(self.catcher)
+        self.assertTrue(self.catcher.has_ball)
+        self.assertTrue(result['success'])
+        modifier = result['modifiedResult'] - result['rawResult']
+        self.assertEqual(modifier, 0)
+
+    @patch('random.randint', RiggedDice((1,)))
+    def test_catch_failure(self):
+        """
+        Test that the player fails to catch the ball.
+        """
+        step = self.create_test_catch_step(self.catcher, True)
+        result = self.match.resolve(step)
+        self.catcher = self.reload_pig(self.catcher)
+        self.assertFalse(self.catcher.has_ball)
+        self.assertFalse(result['success'])
+        
+    @patch('random.randint', RiggedDice((6,)))
+    def test_catch_success_tackle_zones(self):
+        """
+        Test that tackle zones make catching the ball more difficult.
+        """
+        opponent = self.place_player('away', self.xpos+1, self.ypos)
+        step = self.create_test_catch_step(self.catcher, True)
+        result = self.match.resolve(step)
+        self.catcher = self.reload_pig(self.catcher)
+        self.assertTrue(self.catcher.has_ball)
+        self.assertTrue(result['success'])
+        modifier = result['modifiedResult'] - result['rawResult']
+        self.assertEqual(modifier, 0)
+
+    @patch('random.randint', RiggedDice((6,)))
+    def test_catch_bone_head(self):
+        """
+        Test that a player affected by Bone-head always fails.
+        """
+        self.catcher.add_effect('Bone-head')
+        step = self.create_test_catch_step(self.catcher, True)
+        result = self.match.resolve(step)
+        self.catcher = self.reload_pig(self.catcher)
+        self.assertFalse(self.catcher.has_ball)
+        self.assertFalse(result['success'])
+
+    @patch('random.randint', RiggedDice((6,)))
+    def test_catch_really_stupid(self):
+        """
+        Test that a player affected by Really Stupid always fails.
+        """
+        self.catcher.add_effect('Really Stupid')
+        step = self.create_test_catch_step(self.catcher, True)
+        result = self.match.resolve(step)
+        self.catcher = self.reload_pig(self.catcher)
+        self.assertFalse(self.catcher.has_ball)
+        self.assertFalse(result['success'])
+
+
+
 
 
 def place_player(match, side, number, xpos, ypos, has_ball):
