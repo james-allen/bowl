@@ -743,6 +743,15 @@ class Match(models.Model):
     def resolve_end_turn(self, step, result):
         """Resolve the end of a player's turn."""
         data = step.properties_dict()
+        for player in PlayerInGame.objects.filter(match=self):
+            player.move_left = player.ma
+            player.action = ''
+            player.finished_action = False
+            if (player.player.team == self.team(self.current_side)
+                and player.stunned and not player.stunned_this_turn):
+                player.stunned = False
+            player.stunned_this_turn = False
+            player.save()
         self.home_reroll_used_this_turn = False
         self.away_reroll_used_this_turn = False
         skip_turn = False
@@ -774,15 +783,6 @@ class Match(models.Model):
         #     not end_of_half):
         #     set_kickoff(match, data['side'])
         self.save()
-        for player in PlayerInGame.objects.filter(match=self):
-            player.move_left = player.ma
-            player.action = ''
-            player.finished_action = False
-            if (player.player.team == self.team(self.current_side)
-                and player.stunned and not player.stunned_this_turn):
-                player.stunned = False
-            player.stunned_this_turn = False
-            player.save()
         return result
 
     def resolve_set_kickoff(self, step, result):

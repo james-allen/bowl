@@ -7,6 +7,7 @@ from django.contrib.auth.models import User
 from game.models import Race, Team, Player, PlayerInGame, Step, Position, Match
 from game.models import start_match, create_team, create_player
 from game.define_teams import define_all
+from game.utils import other_side
 
 class RiggedDice():
     """
@@ -1326,6 +1327,141 @@ class GoForItTests(BloodBowlTestCase):
         self.assertFalse(result['success'])
 
 
+class EndTurnTests(BloodBowlTestCase):
+
+    def setUp(self):
+        """
+        Create a suitable match.
+        """
+        self.match = create_test_match('human', 'orc')
+        self.match.first_kicking_team = 'home'
+        self.match.turn_type = 'normal'
+        self.match.turn_number = 1
+        self.match.save()
+
+    def end_turn(self, touchdown_side=None):
+        """
+        End the current turn.
+        """
+        if touchdown_side is None:
+            properties = {}
+        else:
+            properties = {
+                'touchdown': 'true',
+                'side': touchdown_side,
+            }
+        step = self.create_test_step('endTurn', 'endTurn', properties)
+        self.match.resolve(step)
+        self.reload_match()
+
+    def test_end_turn_reroll_used(self):
+        """
+        Test that rerolls are marked as unused at end of turn.
+        """
+        self.match.home_reroll_used_this_turn = True
+        self.match.away_reroll_used_this_turn = True
+        self.match.save()
+        self.end_turn()
+        self.assertFalse(self.match.home_reroll_used_this_turn)
+        self.assertFalse(self.match.away_reroll_used_this_turn)
+
+    def test_end_turn_touchdown(self):
+        """
+        Test that a touchdown is correctly added to the score.
+        """
+        self.end_turn('home')
+        self.assertEqual(self.match.home_score, 1)
+        self.assertEqual(self.match.away_score, 0)
+        self.end_turn('away')
+        self.assertEqual(self.match.home_score, 1)
+        self.assertEqual(self.match.away_score, 1)
+
+    def test_end_turn_turn_number(self):
+        """
+        Test that the turn number changes appropriately.
+        """
+        self.match.current_side = other_side(self.match.first_kicking_team)
+        self.end_turn()
+        self.assertEqual(
+            self.match.current_side, self.match.first_kicking_team)
+        self.assertEqual(self.match.turn_number, 1)
+        self.end_turn()
+        self.assertEqual(
+            self.match.current_side, other_side(self.match.first_kicking_team))
+        self.assertEqual(self.match.turn_number, 2)
+
+    def test_end_turn_end_half(self):
+        """
+        Test that the half ends appropriately.
+        """
+        self.match.turn_number = 8
+        self.match.current_side = self.match.first_kicking_team
+        self.match.home_rerolls = 0
+        self.match.away_rerolls = 0
+        self.match.save()
+        self.end_turn()
+        self.assertEqual(self.match.turn_number, 9)
+        self.assertEqual(
+            self.match.home_rerolls, self.match.home_rerolls_total)
+        self.assertEqual(
+            self.match.away_rerolls, self.match.away_rerolls_total)
+
+    def test_end_turn_end_match(self):
+        """
+        Test that the match ends appropriately.
+        """
+        self.match.turn_number = 16
+        self.match.current_side = other_side(self.match.first_kicking_team)
+        self.match.save()
+        self.end_turn()
+        self.assertEqual(self.match.turn_type, 'end')
+
+    def test_end_turn_stunned(self):
+        """
+        Test that stunned players act correctly at the end of the turn.
+        """
+        pig_list = [
+            self.place_player('home', 0, 0),
+            self.place_player('home', 0, 1),
+            self.place_player('away', 0, 2),
+            self.place_player('away', 0, 3),
+        ]
+        for idx, pig in enumerate(pig_list):
+            pig.down = True
+            pig.stunned = True
+            pig.stunned_this_turn = (idx == 1 or idx == 3)
+            pig.save()
+        self.match.current_side = 'home'
+        self.match.save()
+        self.end_turn()
+        for idx, pig in enumerate(pig_list):
+            pig_list[idx] = self.reload_pig(pig)
+            self.assertTrue(pig_list[idx].down)
+            self.assertFalse(pig_list[idx].stunned_this_turn)
+        self.assertFalse(pig_list[0].stunned)
+        self.assertTrue(pig_list[1].stunned)
+        self.assertTrue(pig_list[2].stunned)
+        self.assertTrue(pig_list[3].stunned)
+
+    def test_end_turn_players(self):
+        """
+        Test that players are reset at the start of each turn.
+        """
+        pig_list = [
+            self.place_player('home', 0, 0),
+            self.place_player('away', 0, 1),
+        ]
+        for pig in pig_list:
+            pig.move_left = 1
+            pig.action = 'move'
+            pig.finished_action = True
+            pig.save()
+        self.end_turn()
+        for pig in pig_list:
+            pig = self.reload_pig(pig)
+            self.assertEqual(pig.move_left, pig.ma)
+            self.assertEqual(pig.action, '')
+            self.assertFalse(pig.finished_action)
 
 
 def place_player(match, side, number, xpos, ypos, has_ball):
