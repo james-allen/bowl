@@ -1048,6 +1048,172 @@ class CatchTests(BloodBowlTestCase):
         self.assertFalse(self.catcher.has_ball)
         self.assertFalse(result['success'])
 
+class ThrowTests(BloodBowlTestCase):
+
+    xpos = 0
+    ypos = 5
+
+    def setUp(self):
+        """
+        Create a suitable match.
+        """
+        self.match = create_test_match('human', 'orc')
+        self.thrower = self.place_player('home', self.xpos, self.ypos, True)
+        self.match.x_ball = self.xpos
+        self.match.y_ball = self.ypos
+        self.match.save()
+
+    def create_test_throw_step(self, pig, x1, y1):
+        """
+        Create a test step to try and throw the ball.
+        """
+        properties = {
+            'action': 'pass',
+            'num': pig.player.number,
+            'side': self.side_of_pig(pig),
+            'x0': pig.xpos,
+            'y0': pig.ypos,
+            'x1': x1,
+            'y1': y1,
+        }
+        return self.create_test_step('pass', 'pass', properties)
+
+    @patch('random.randint', RiggedDice((6,)))
+    def test_throw_quick_success(self):
+        """
+        Test throwing a quick pass successfully.
+        """
+        x1 = self.xpos + 3
+        y1 = self.ypos
+        step = self.create_test_throw_step(self.thrower, x1, y1)
+        result = self.match.resolve(step)
+        self.reload_match()
+        self.thrower = self.reload_pig(self.thrower)
+        self.assertTrue(result['success'])
+        self.assertFalse(result['fumble'])
+        self.assertEqual(result['x1'], x1)
+        self.assertEqual(result['y1'], y1)
+        modifier = result['modifiedResult'] - result['rawResult']
+        self.assertEqual(modifier, 1)
+        self.assertEqual(self.match.x_ball, x1)
+        self.assertEqual(self.match.y_ball, y1)
+        self.assertFalse(self.thrower.has_ball)
+        self.assertTrue(self.thrower.finished_action)
+
+    @patch('random.randint', RiggedDice((2,)))
+    def test_throw_quick_fail(self):
+        """
+        Test throwing a quick pass unsuccessfully.
+        """
+        x1 = self.xpos + 3
+        y1 = self.ypos
+        step = self.create_test_throw_step(self.thrower, x1, y1)
+        result = self.match.resolve(step)
+        self.reload_match()
+        self.thrower = self.reload_pig(self.thrower)
+        self.assertFalse(result['success'])
+        self.assertFalse(result['fumble'])
+        self.assertEqual(result['x1'], x1)
+        self.assertEqual(result['y1'], y1)
+        self.assertEqual(self.match.x_ball, x1)
+        self.assertEqual(self.match.y_ball, y1)
+        self.assertFalse(self.thrower.has_ball)
+        self.assertTrue(self.thrower.finished_action)
+
+    @patch('random.randint', RiggedDice((1,)))
+    def test_throw_quick_fumble(self):
+        """
+        Test fumbling a quick pass.
+        """
+        x1 = self.xpos + 3
+        y1 = self.ypos
+        step = self.create_test_throw_step(self.thrower, x1, y1)
+        result = self.match.resolve(step)
+        self.reload_match()
+        self.thrower = self.reload_pig(self.thrower)
+        self.assertFalse(result['success'])
+        self.assertTrue(result['fumble'])
+        self.assertEqual(self.match.x_ball, self.xpos)
+        self.assertEqual(self.match.y_ball, self.ypos)
+        self.assertFalse(self.thrower.has_ball)
+        self.assertTrue(self.thrower.finished_action)
+
+    @patch('random.randint', RiggedDice((6,)))
+    def test_throw_quick_tackle_zone(self):
+        """
+        Test throwing a quick pass successfully.
+        """
+        x1 = self.xpos + 3
+        y1 = self.ypos
+        opponent = self.place_player('away', self.xpos+1, self.ypos)
+        step = self.create_test_throw_step(self.thrower, x1, y1)
+        result = self.match.resolve(step)
+        self.reload_match()
+        self.thrower = self.reload_pig(self.thrower)
+        self.assertTrue(result['success'])
+        self.assertFalse(result['fumble'])
+        modifier = result['modifiedResult'] - result['rawResult']
+        self.assertEqual(modifier, 0)
+        
+    @patch('random.randint', RiggedDice((6,)))
+    def test_throw_short_success(self):
+        """
+        Test throwing a short pass successfully.
+        """
+        x1 = self.xpos + 6
+        y1 = self.ypos
+        step = self.create_test_throw_step(self.thrower, x1, y1)
+        result = self.match.resolve(step)
+        self.reload_match()
+        self.thrower = self.reload_pig(self.thrower)
+        modifier = result['modifiedResult'] - result['rawResult']
+        self.assertEqual(modifier, 0)
+
+    @patch('random.randint', RiggedDice((6,)))
+    def test_throw_long_success(self):
+        """
+        Test throwing a long pass successfully.
+        """
+        x1 = self.xpos + 10
+        y1 = self.ypos
+        step = self.create_test_throw_step(self.thrower, x1, y1)
+        result = self.match.resolve(step)
+        self.reload_match()
+        self.thrower = self.reload_pig(self.thrower)
+        modifier = result['modifiedResult'] - result['rawResult']
+        self.assertEqual(modifier, -1)
+
+    @patch('random.randint', RiggedDice((6,)))
+    def test_throw_long_bomb_success(self):
+        """
+        Test throwing a quick pass successfully.
+        """
+        x1 = self.xpos + 13
+        y1 = self.ypos
+        step = self.create_test_throw_step(self.thrower, x1, y1)
+        result = self.match.resolve(step)
+        self.reload_match()
+        self.thrower = self.reload_pig(self.thrower)
+        modifier = result['modifiedResult'] - result['rawResult']
+        self.assertEqual(modifier, -2)
+
+    @patch('random.randint', RiggedDice((2,)))
+    def test_throw_long_bomb_fumble(self):
+        """
+        Test fumbling a long bomb, via a modified <=1.
+        """
+        x1 = self.xpos + 13
+        y1 = self.ypos
+        step = self.create_test_throw_step(self.thrower, x1, y1)
+        result = self.match.resolve(step)
+        self.reload_match()
+        self.thrower = self.reload_pig(self.thrower)
+        self.assertFalse(result['success'])
+        self.assertTrue(result['fumble'])
+        self.assertEqual(self.match.x_ball, self.xpos)
+        self.assertEqual(self.match.y_ball, self.ypos)
+        self.assertFalse(self.thrower.has_ball)
+        self.assertTrue(self.thrower.finished_action)
 
 
 
