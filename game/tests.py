@@ -1242,6 +1242,59 @@ class ThrowTests(BloodBowlTestCase):
         self.assertTrue(self.thrower.finished_action)
 
 
+class ThrowTests(BloodBowlTestCase):
+
+    def setUp(self):
+        """
+        Create a suitable match.
+        """
+        self.match = create_test_match('human', 'orc')
+
+    def create_test_throwin_step(self, last_x, last_y):
+        """
+        Create a test throwin step.
+        """
+        properties = {
+            'action': 'pass',
+            'lastX': str(last_x),
+            'lastY': str(last_y),
+        }
+        return self.create_test_step('throwin', 'pass', properties)
+
+    @patch('random.randint', RiggedDice((2, 1, 6)))
+    def test_throwin_on_pitch(self):
+        """
+        Test a throwin that lands on the pitch.
+        """
+        last_x = 1
+        last_y = 0
+        step = self.create_test_throwin_step(last_x, last_y)
+        result = self.match.resolve(step)
+        self.reload_match()
+        self.assertEqual(self.match.x_ball, last_x)
+        self.assertEqual(self.match.y_ball, last_y + 6)
+        self.assertEqual(result['x1'], last_x)
+        self.assertEqual(result['y1'], last_y + 6)
+
+    @patch('random.randint', RiggedDice((3, 1, 6)))
+    def test_throwin_off_pitch(self):
+        """
+        Test a throwin that lands off the pitch.
+        """
+        last_x = 1
+        last_y = 0
+        step = self.create_test_throwin_step(last_x, last_y)
+        result = self.match.resolve(step)
+        self.reload_match()
+        self.assertEqual(self.match.x_ball, last_x - 2)
+        self.assertEqual(self.match.y_ball, last_y + 2)
+        self.assertEqual(result['x1'], last_x - 2)
+        self.assertEqual(result['y1'], last_y + 2)
+        self.assertEqual(result['lastX'], last_x - 1)
+        self.assertEqual(result['lastY'], last_y + 1)
+
+
+
 
 def place_player(match, side, number, xpos, ypos, has_ball):
     """

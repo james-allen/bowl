@@ -701,7 +701,7 @@ class Match(models.Model):
         direction = direction_dice['dice'][0]
         distance_dice = roll_dice(6, 2)
         distance = sum(distance_dice['dice'])
-        compass = direction + 2 * edge
+        compass = direction + 2 * edge - 1
         if compass == 0:
             x_dir, y_dir = 1, 1
         elif compass == 1:
@@ -722,11 +722,14 @@ class Match(models.Model):
         y1 = y0 + (distance - 1) * y_dir
         last_x = x1 - x_dir
         last_y = y1 - y_dir
-        while not on_pitch(x1, y1):
+        while not on_pitch(last_x, last_y):
             x1 = last_x
             y1 = last_y
             last_x = x1 - x_dir
             last_y = y1 - y_dir
+        self.x_ball = x1
+        self.y_ball = y1
+        self.save()
         result.update({'x1': x1, 'y1': y1,
                        'lastX': last_x, 'lastY': last_y})
         return result
