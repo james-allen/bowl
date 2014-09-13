@@ -126,42 +126,42 @@ def create_team_view(request):
 
 @login_required
 def issue_challenge_view(request):
-	if request.method == 'POST':
-		try:
-			challenger = Team.objects.get(slug=request.POST['challenger'])
-			challengee = Team.objects.get(slug=request.POST['challengee'])
-		except (Team.DoesNotExist, KeyError):
-			pass
-		else:
-			challenge = Challenge(challenger=challenger, challengee=challengee)
-			challenge.save()
-			url = reverse('user_profile',
-						  kwargs={'username': request.user.username})
-			return HttpResponseRedirect(url)
-	data = {
-		'own_teams': request.user.team_set.all(),
-		'other_teams': Team.objects.exclude(coach=request.user),
-	}
-	return render(request, 'game/issue-challenge.html', data)
-	
+    if request.method == 'POST':
+        try:
+            challenger = Team.objects.get(slug=request.POST['challenger'])
+            challengee = Team.objects.get(slug=request.POST['challengee'])
+        except (Team.DoesNotExist, KeyError):
+            pass
+        else:
+            challenge = Challenge(challenger=challenger, challengee=challengee)
+            challenge.save()
+            url = reverse('user_profile',
+                          kwargs={'username': request.user.username})
+            return HttpResponseRedirect(url)
+    data = {
+        'own_teams': request.user.team_set.all(),
+        'other_teams': Team.objects.exclude(coach=request.user),
+    }
+    return render(request, 'game/issue-challenge.html', data)
+    
 @login_required
 def accept_challenge_view(request, challenge_id):
-	challenge = get_object_or_404(Challenge, id=challenge_id)
-	if challenge.challengee.coach != request.user:
-		raise Http404
-	match = start_match(challenge.challenger, challenge.challengee)
-	challenge.delete()
-	url = reverse('game:game_view', kwargs={'match_id': match.id})
-	return HttpResponseRedirect(url)
-	
+    challenge = get_object_or_404(Challenge, id=challenge_id)
+    if challenge.challengee.coach != request.user:
+        raise Http404
+    match = start_match(challenge.challenger, challenge.challengee)
+    challenge.delete()
+    url = reverse('game:game_view', kwargs={'match_id': match.id})
+    return HttpResponseRedirect(url)
+    
 @login_required
 def reject_challenge_view(request, challenge_id):
-	challenge = get_object_or_404(Challenge, id=challenge_id)
-	if challenge.challengee.coach != request.user:
-		raise Http404
-	challenge.delete()
-	url = reverse('user_profile', kwargs={'username': request.user.username})
-	return HttpResponseRedirect(url)
+    challenge = get_object_or_404(Challenge, id=challenge_id)
+    if challenge.challengee.coach != request.user:
+        raise Http404
+    challenge.delete()
+    url = reverse('user_profile', kwargs={'username': request.user.username})
+    return HttpResponseRedirect(url)
 
 @login_required
 def post_step_view(request):
