@@ -1633,7 +1633,8 @@ var postStep = function(step) {
     $.ajax({
         type: "POST",
         url: "/game/post_step", 
-        data: step,
+        data: JSON.stringify(step),
+        contentType: "application/json; charset=utf-8",
         dataType: "json",
         success: function(result) {
             console.log(step.historyPosition + ": Result");

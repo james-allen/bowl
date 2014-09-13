@@ -168,10 +168,11 @@ def post_step_view(request):
     # sleep(randint(1, 5))
     # Get the match in question
     print('post_step_view')
-    print('POST:', request.POST)
-    match = Match.objects.get(id=request.POST['matchId'])
+    data = json.loads(request.body.decode('utf-8'))
+    print('data:', data)
+    match = Match.objects.get(id=data['matchId'])
     # Check that it's the correct user
-    step_type = request.POST['stepType']
+    step_type = data['stepType']
     if match.current_side == 'home':
         expected_user = match.home_team.coach.username
     else:
@@ -187,7 +188,7 @@ def post_step_view(request):
         else:
             expected_position = history_saved[len(history_saved)-1] + 1
         # Check where this new step fits in with the history
-        history_position = int(request.POST['historyPosition'])
+        history_position = int(data['historyPosition'])
         print('expected:', expected_position, 'actual:', history_position)
         if history_position > expected_position:
             # Missing some history, so request it be resent
@@ -200,7 +201,7 @@ def post_step_view(request):
         else:
             # This is the next step, as expected
             # Turn the POST data into a model step
-            properties = {key: value for key, value in request.POST.items() 
+            properties = {key: value for key, value in data.items() 
                           if key not in ['stepType', 'matchId', 'historyPosition']}
             print(str(history_position) + ':', properties)
             step = Step(
