@@ -1293,6 +1293,38 @@ class ThrowTests(BloodBowlTestCase):
         self.assertEqual(result['lastX'], last_x - 1)
         self.assertEqual(result['lastY'], last_y + 1)
 
+class GoForItTests(BloodBowlTestCase):
+
+    def setUp(self):
+        """
+        Create a suitable match.
+        """
+        self.match = create_test_match('human', 'orc')
+
+    def create_test_go_for_it_step(self):
+        """
+        Create a go for it attempt.
+        """
+        return self.create_test_step('goForIt', 'move', {})
+
+    @patch('random.randint', RiggedDice((2,)))
+    def test_go_for_it_success(self):
+        """
+        Test a successful go for it.
+        """
+        step = self.create_test_go_for_it_step()
+        result = self.match.resolve(step)
+        self.assertTrue(result['success'])
+
+    @patch('random.randint', RiggedDice((1,)))
+    def test_go_for_it_failure(self):
+        """
+        Test an unsuccessful go for it.
+        """
+        step = self.create_test_go_for_it_step()
+        result = self.match.resolve(step)
+        self.assertFalse(result['success'])
+
 
 
 
