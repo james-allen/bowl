@@ -1078,6 +1078,21 @@ class ThrowTests(BloodBowlTestCase):
         }
         return self.create_test_step('pass', 'pass', properties)
 
+    def create_test_hand_off_step(self, pig, x1, y1):
+        """
+        Create a test step to try and hand off the ball.
+        """
+        properties = {
+            'action': 'handOff',
+            'num': pig.player.number,
+            'side': self.side_of_pig(pig),
+            'x0': pig.xpos,
+            'y0': pig.ypos,
+            'x1': x1,
+            'y1': y1,
+        }
+        return self.create_test_step('handOff', 'handOff', properties)
+
     @patch('random.randint', RiggedDice((6,)))
     def test_throw_quick_success(self):
         """
@@ -1215,6 +1230,16 @@ class ThrowTests(BloodBowlTestCase):
         self.assertFalse(self.thrower.has_ball)
         self.assertTrue(self.thrower.finished_action)
 
+    def test_hand_off(self):
+        x1 = self.xpos + 1
+        y1 = self.ypos + 1
+        step = self.create_test_hand_off_step(self.thrower, x1, y1)
+        self.match.resolve(step)
+        self.reload_match()
+        self.thrower = self.reload_pig(self.thrower)
+        self.assertEqual(self.match.x_ball, x1)
+        self.assertEqual(self.match.y_ball, y1)
+        self.assertTrue(self.thrower.finished_action)
 
 
 
