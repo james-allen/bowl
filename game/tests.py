@@ -4,7 +4,7 @@ from unittest.mock import patch
 from django.test import TestCase
 from django.contrib.auth.models import User
 
-from game.models import Race, Team, Player, PlayerInGame, Step, Position
+from game.models import Race, Team, Player, PlayerInGame, Step, Position, Match
 from game.models import start_match, create_team, create_player
 from game.define_teams import define_all
 
@@ -113,6 +113,12 @@ class BloodBowlTestCase(TestCase):
         return PlayerInGame.objects.get(
             match=self.match, player=pig.player)
 
+    def reload_match(self):
+        """
+        Reload the match that's being tested.
+        """
+        self.match = Match.objects.get(id=self.match.id)
+        return self.match
 
 
 
@@ -808,7 +814,7 @@ class KnockDownTests(BloodBowlTestCase):
         self.assertTrue(pig.tackle_zones)
         self.assertTrue(result['success'])
 
-class BallTests(BloodBowlTestCase):
+class PickUpTests(BloodBowlTestCase):
 
     xpos = 15
     ypos = 5
@@ -869,6 +875,76 @@ class BallTests(BloodBowlTestCase):
         modifier = result['modifiedResult'] - result['rawResult']
         self.assertEqual(modifier, 0)
 
+class ScatterTests(BloodBowlTestCase):
+
+    xpos = 0
+    ypos = 5
+
+    def setUp(self):
+        """
+        Create a suitable match.
+        """
+        self.match = create_test_match('human', 'orc')
+        self.match.x_ball = self.xpos
+        self.match.y_ball = self.ypos
+        self.match.save()
+
+    def create_test_scatter_step(self, n_scatter):
+        """
+        Create a test step where the ball scatters.
+        """
+        properties = {
+            'action': 'move',
+            'x0': str(self.match.x_ball),
+            'y0': str(self.match.y_ball),
+            'nScatter': str(n_scatter),
+        }
+        return self.create_test_step('scatter', 'move', properties)
+
+    @patch('random.randint', RiggedDice((3,)))
+    def test_scatter_1(self):
+        """
+        Scatter the ball a single square, on the pitch.
+        """
+        step = self.create_test_scatter_step(1)
+        result = self.match.resolve(step)
+        self.reload_match()
+        self.assertEqual(self.match.x_ball, self.xpos+1)
+        self.assertEqual(self.match.y_ball, self.ypos-1)
+        self.assertEqual(result['x1'], self.match.x_ball)
+        self.assertEqual(result['y1'], self.match.y_ball)
+        self.assertEqual(len(result['dice']['dice']), 1)
+
+    @patch('random.randint', RiggedDice((3, 8, 8)))
+    def test_scatter_3(self):
+        """
+        Scatter the ball three times, still on the pitch.
+        """
+        step = self.create_test_scatter_step(3)
+        result = self.match.resolve(step)
+        self.reload_match()
+        self.assertEqual(self.match.x_ball, self.xpos+3)
+        self.assertEqual(self.match.y_ball, self.ypos+1)
+        self.assertEqual(result['x1'], self.match.x_ball)
+        self.assertEqual(result['y1'], self.match.y_ball)
+        self.assertEqual(len(result['dice']['dice']), 3)
+
+    @patch('random.randint', RiggedDice((2, 1, 1)))
+    def test_scatter_off_pitch(self):
+        """
+        Scatter the ball off the pitch.
+        """
+        step = self.create_test_scatter_step(3)
+        result = self.match.resolve(step)
+        self.reload_match()
+        self.assertEqual(self.match.x_ball, self.xpos-1)
+        self.assertEqual(self.match.y_ball, self.ypos-2)
+        self.assertEqual(result['x1'], self.match.x_ball)
+        self.assertEqual(result['y1'], self.match.y_ball)
+        self.assertEqual(result['lastX'], self.xpos)
+        self.assertEqual(result['lastY'], self.ypos-1)
+        # Strictly speaking, the third dice roll is unnecessary
+        self.assertEqual(len(result['dice']['dice']), 3)
 
 
 
