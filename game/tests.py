@@ -106,6 +106,14 @@ class BloodBowlTestCase(TestCase):
         """
         return self.side_of_team(pig.player.team)
 
+    def reload_pig(self, pig):
+        """
+        Reload the given player from the database.
+        """
+        return PlayerInGame.objects.get(
+            match=self.match, player=pig.player)
+
+
 
 
 class StepTests(TestCase):
@@ -683,6 +691,17 @@ class KnockDownTests(BloodBowlTestCase):
         }
         return self.create_test_step('knockDown', 'move', properties)
 
+    def create_test_stand_up_step(self, pig):
+        """
+        Create a step where the player stands up.
+        """
+        properties = {
+            'action': 'move',
+            'num': pig.player.number,
+            'side': self.side_of_pig(pig),
+        }
+        return self.create_test_step('standUp', 'move', properties)
+
     def test_knock_down_fail_armour(self):
         """
         Test that the player is knocked down and loses the ball.
@@ -774,6 +793,20 @@ class KnockDownTests(BloodBowlTestCase):
         self.assertEqual(result['injuryRoll']['rawResult'], 2)
         self.assertEqual(result['injuryRoll']['modifiedResult'], 3)
 
+    def test_stand_up(self):
+        """
+        Test that a player successfully stands up.
+        """
+        pig = self.place_player('home', self.xpos, self.ypos)
+        pig.down = True
+        pig.tackle_zones = False
+        pig.save()
+        step = self.create_test_stand_up_step(pig)
+        result = self.match.resolve(step)
+        pig = self.reload_pig(pig)
+        self.assertFalse(pig.down)
+        self.assertTrue(pig.tackle_zones)
+        self.assertTrue(result['success'])
 
 
 
