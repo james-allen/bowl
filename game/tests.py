@@ -808,6 +808,67 @@ class KnockDownTests(BloodBowlTestCase):
         self.assertTrue(pig.tackle_zones)
         self.assertTrue(result['success'])
 
+class BallTests(BloodBowlTestCase):
+
+    xpos = 15
+    ypos = 5
+
+    def setUp(self):
+        """
+        Create a suitable match.
+        """
+        self.match = create_test_match('human', 'orc')
+        self.pig = self.place_player('home', self.xpos, self.ypos)
+        self.match.x_ball = self.xpos
+        self.match.y_ball = self.ypos
+        self.match.save()
+
+    def create_test_pick_up_step(self, pig):
+        """
+        Create a step where the player stands up.
+        """
+        properties = {
+            'action': 'move',
+            'num': pig.player.number,
+            'side': self.side_of_pig(pig),
+        }
+        return self.create_test_step('pickUp', 'move', properties)
+
+    @patch('random.randint', RiggedDice((6, )))
+    def test_pick_up_success(self):
+        """
+        Test that the ball is successfully picked up.
+        """
+        step = self.create_test_pick_up_step(self.pig)
+        result = self.match.resolve(step)
+        self.pig = self.reload_pig(self.pig)
+        self.assertTrue(self.pig.has_ball)
+        self.assertTrue(result['success'])
+        modifier = result['modifiedResult'] - result['rawResult']
+        self.assertEqual(modifier, 1)
+
+    @patch('random.randint', RiggedDice((1, )))
+    def test_pick_up_success(self):
+        """
+        Test that the ball is unsuccessfully picked up.
+        """
+        step = self.create_test_pick_up_step(self.pig)
+        result = self.match.resolve(step)
+        self.pig = self.reload_pig(self.pig)
+        self.assertFalse(self.pig.has_ball)
+        self.assertFalse(result['success'])
+        
+    @patch('random.randint', RiggedDice((6, )))
+    def test_pick_up_tackle_zone(self):
+        """
+        Test that an opposing player changes the modifier.
+        """
+        opponent = self.place_player('away', self.xpos+1, self.ypos)
+        step = self.create_test_pick_up_step(self.pig)
+        result = self.match.resolve(step)
+        modifier = result['modifiedResult'] - result['rawResult']
+        self.assertEqual(modifier, 0)
+
 
 
 
