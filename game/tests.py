@@ -1,5 +1,6 @@
 import json
 from unittest.mock import patch
+from itertools import product
 
 from django.test import TestCase
 from django.contrib.auth.models import User
@@ -1462,6 +1463,97 @@ class EndTurnTests(BloodBowlTestCase):
             self.assertEqual(pig.move_left, pig.ma)
             self.assertEqual(pig.action, '')
             self.assertFalse(pig.finished_action)
+
+
+class KickoffTests(BloodBowlTestCase):
+
+    def setUp(self):
+        """
+        Create a suitable match.
+        """
+        self.match = create_test_match('human', 'orc')
+
+    def create_test_set_kickoff_step(self, kicking_team):
+        """
+        Create a test kickoff step.
+        """
+        properties = {
+            'action': 'setKickoff',
+            'kickingTeam': kicking_team,
+        }
+        return self.create_test_step(
+            'setKickoff', 'setKickoff', properties=properties)
+
+    def set_kickoff(self, kicking_team):
+        """
+        Set a kickoff.
+        """
+        step = self.create_test_set_kickoff_step(kicking_team)
+        result = self.match.resolve(step)
+        self.reload_match()
+        return result
+
+    def test_set_kickoff(self):
+        """
+        Test that everything is reset correctly for the kickoff.
+        """
+        for num, side in product(range(1, 12), ('home', 'away')):
+            pig = PlayerInGame.objects.get(
+                match=self.match, player__number=num,
+                player__team=self.match.team(side))
+            pig.xpos = num
+            if side == 'away':
+                pig.xpos += 11
+            pig.down = True
+            pig.stunned = True
+            pig.stunned_this_turn = True
+            pig.tackle_zones = False
+            pig.move_left = 0
+            pig.action = 'move'
+            pig.finished_action = True
+            pig.save()
+        pig.has_ball = True
+        pig.save()
+        self.set_kickoff('home')
+        for pig in PlayerInGame.objects.filter(match=self.match):
+            self.assertFalse(pig.down)
+            self.assertFalse(pig.stunned)
+            self.assertFalse(pig.stunned_this_turn)
+            self.assertTrue(pig.tackle_zones)
+            self.assertFalse(pig.has_ball)
+            self.assertEqual(pig.move_left, pig.ma)
+            self.assertEqual(pig.action, '')
+            self.assertFalse(pig.finished_action)
+        self.assertEqual(self.match.n_to_place, 2)
+        self.assertEqual(self.match.kicking_team, 'home')
+        self.assertEqual(self.match.current_side, 'home')
+        self.assertIsNone(self.match.x_ball)
+        self.assertIsNone(self.match.y_ball)
+        self.assertEqual(self.match.turn_type, 'placePlayers')
+
+    @patch('random.randint', RiggedDice((3, 4, 3, 4)))
+    def test_set_kickoff_reviving(self):
+        """
+        Test that some players are revived when kicking off.
+        """
+        for pig in PlayerInGame.objects.filter(
+                match=self.match, player__number__lt=3):
+            pig.knocked_out = True
+            pig.save()
+        result = self.set_kickoff('home')
+        self.assertEqual(len(result['revived']), 2)
+        self.assertEqual(len(result['knockedOut']), 2)
+        for player_data in result['revived']:
+            pig = PlayerInGame.objects.get(
+                match=self.match, player__number=player_data['num'],
+                player__team=self.match.team(player_data['side']))
+            self.assertFalse(pig.knocked_out)
+        for player_data in result['knockedOut']:
+            pig = PlayerInGame.objects.get(
+                match=self.match, player__number=player_data['num'],
+                player__team=self.match.team(player_data['side']))
+            self.assertTrue(pig.knocked_out)
+
 
 
 def place_player(match, side, number, xpos, ypos, has_ball):
