@@ -340,7 +340,7 @@ class Match(models.Model):
             self.x_ball = int(data['x1'])
             self.y_ball = int(data['y1'])
             self.save()
-        if data['dodge'] == 'true':
+        if data['dodge']:
             modifier = 1 - player.n_tackle_zones()
             result.update(roll_agility_dice(player, modifier=modifier))
         else:
@@ -361,7 +361,7 @@ class Match(models.Model):
             self.x_ball = int(data['x1'])
             self.y_ball = int(data['y1'])
             self.save()
-        if data['offPitch'] == 'true':
+        if data['offPitch']:
             player.on_pitch = False
             injury_roll = roll_injury_dice(player)
             if injury_roll['result'] == 'knockedOut':
@@ -375,7 +375,7 @@ class Match(models.Model):
     def resolve_follow_up(self, step, result):
         """Resolve a follow-up."""
         data = step.properties_dict()
-        if data['choice'] == 'true':
+        if data['choice']:
             player = step.player()
             # Update the player's position in the database
             player.xpos = int(data['x1'])
@@ -627,7 +627,7 @@ class Match(models.Model):
                 player.affected('Really Stupid')):
             return {'success': False}
         modifier = - player.n_tackle_zones()
-        if data['accurate'] == 'true':
+        if data['accurate']:
             modifier += 1
         result.update(roll_agility_dice(player, modifier=modifier))
         if result['success']:
@@ -755,7 +755,7 @@ class Match(models.Model):
         self.home_reroll_used_this_turn = False
         self.away_reroll_used_this_turn = False
         skip_turn = False
-        if 'touchdown' in data and data['touchdown'] == 'true':
+        if 'touchdown' in data and data['touchdown']:
             if data['side'] == 'home':
                 self.home_score += 1
             else:
@@ -817,7 +817,7 @@ class Match(models.Model):
         """Resolve placing a player during kickoff."""
         data = step.properties_dict()
         player = step.player()
-        if 'subs' in data and data['subs'] == 'true':
+        if 'subs' in data and data['subs']:
             player.on_pitch = False
         else:
             player.xpos = int(data['x1'])
@@ -883,7 +883,7 @@ class Match(models.Model):
         """Resolve the end of a kickoff."""
         data = step.properties_dict()
         self.turn_type = 'normal'
-        if 'touchback' in data and data['touchback'] == 'false':
+        if 'touchback' in data and data['touchback']:
             self.current_side = other_side(self.current_side)
         self.save()
         return result

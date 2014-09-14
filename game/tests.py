@@ -145,7 +145,7 @@ class StepTests(TestCase):
                 'action': 'move',
                 'x1': str(x1),
                 'y1': str(y1),
-                'dodge': 'false',
+                'dodge': False,
                 'side': 'home',
                 'num': str(pig.player.number),
             }))
@@ -175,7 +175,7 @@ class StepTests(TestCase):
                 'action': 'move',
                 'x1': str(x1),
                 'y1': str(y1),
-                'dodge': 'false',
+                'dodge': False,
                 'side': 'home',
                 'num': str(pig.player.number),
             }))
@@ -208,7 +208,7 @@ class StepTests(TestCase):
                 'action': 'move',
                 'x1': str(x1),
                 'y1': str(y1),
-                'dodge': 'true',
+                'dodge': True,
                 'side': 'home',
                 'num': str(pig.player.number),
             }))
@@ -241,7 +241,7 @@ class StepTests(TestCase):
                 'action': 'move',
                 'x1': str(x1),
                 'y1': str(y1),
-                'dodge': 'true',
+                'dodge': True,
                 'side': 'home',
                 'num': str(pig.player.number),
             }))
@@ -274,10 +274,10 @@ class StepTests(TestCase):
                 'action': 'block',
                 'x1': str(x1),
                 'y1': str(y1),
-                'dodge': 'false',
+                'dodge': False,
                 'side': 'home',
                 'num': str(pig.player.number),
-                'offPitch': 'false',
+                'offPitch': False,
             }))
         step.save()
         match.resolve(step)
@@ -305,10 +305,10 @@ class StepTests(TestCase):
                 'action': 'push',
                 'x1': str(x1),
                 'y1': str(y1),
-                'dodge': 'false',
+                'dodge': False,
                 'side': 'home',
                 'num': str(pig.player.number),
-                'offPitch': 'false',
+                'offPitch': False,
             }))
         step.save()
         match.resolve(step)
@@ -340,10 +340,10 @@ class StepTests(TestCase):
                 'action': 'block',
                 'x1': str(x1),
                 'y1': str(y1),
-                'dodge': 'false',
+                'dodge': False,
                 'side': 'home',
                 'num': str(pig.player.number),
-                'offPitch': 'true',
+                'offPitch': True,
             }))
         step.save()
         match.resolve(step)
@@ -971,7 +971,7 @@ class CatchTests(BloodBowlTestCase):
             'action': 'pass',
             'num': pig.player.number,
             'side': self.side_of_pig(pig),
-            'accurate': 'true' if accurate else 'false',
+            'accurate': accurate,
         }
         return self.create_test_step('catch', 'pass', properties)
 
@@ -1348,7 +1348,7 @@ class EndTurnTests(BloodBowlTestCase):
             properties = {}
         else:
             properties = {
-                'touchdown': 'true',
+                'touchdown': True,
                 'side': touchdown_side,
             }
         step = self.create_test_step('endTurn', 'endTurn', properties)

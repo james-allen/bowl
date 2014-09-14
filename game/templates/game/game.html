@@ -265,6 +265,11 @@ var stepStack = new Array;
 
 var addStepToStack = function(step) {
     if (step != null) {
+        if (viewData.activityType == "normal" && step.waitForServer) {
+            console.log("activityType set to waitForServer by the following step being added to the stack.");
+            console.log(step);
+            viewData.activityType = "waitForServer";
+        }
         stepStack[stepStack.length] = step;
         if (stepStack.length == 1) {
             processNextStep();
@@ -383,8 +388,9 @@ var standUp = function() {
             "stepType": "standUp",
             "action": selectedAction,
             "side": selected.side,
-            "num": selected.num
-        }
+            "num": selected.num,
+            "waitForServer": (selected.ma < 3)
+        };
         addStepToStack(step);
         d3.select("#standUpButton").classed("inactive", true);
     }
@@ -1155,6 +1161,11 @@ var processNextStep = function() {
 var processStep = function(step) {
     console.log("Processing step: ", step);
     if (step != null) {
+        if (step.waitForServer) {
+            console.log("activityType being set to waitForServer by the following step being processed.");
+            console.log(step);
+            viewData.activityType = "waitForServer";
+        }
         if (selected != null && selected.action == "") {
             setAction(selected, selectedAction);
             // Only do Bone-head and Really Stupid checks for actions that the player actually does,
@@ -1166,7 +1177,8 @@ var processStep = function(step) {
                         action: selectedAction,
                         stepType: "bonehead",
                         side: selected.side,
-                        num: selected.num
+                        num: selected.num,
+                        waitForServer: true
                     }
                     stepStack.unshift(boneheadStep);
                     processNextStep();
@@ -1177,7 +1189,8 @@ var processStep = function(step) {
                         action: selectedAction,
                         stepType: "reallyStupid",
                         side: selected.side,
-                        num: selected.num
+                        num: selected.num,
+                        waitForServer: true
                     }
                     stepStack.unshift(reallyStupidStep);
                     processNextStep();
@@ -1497,7 +1510,7 @@ var processEndTurn = function(step) {
         if (matchData.turnNumber == 9) {
             matchData.homeRerolls = matchData.homeRerollsTotal;
             matchData.awayRerolls = matchData.awayRerollsTotal;
-            addStepToStack({stepType: "setKickoff", action: "setKickoff", kickingTeam: otherSide(matchData.firstKickingTeam)});
+            addStepToStack(defineSetKickoff(otherSide(matchData.firstKickingTeam)));
             messageArray[messageArray.length] = "Second half";
             endOfHalf = true;
         } else if (matchData.turnNumber == 17) {
@@ -1515,9 +1528,7 @@ var processEndTurn = function(step) {
     updateTurnIndicator();
     stepStack = [step];
     if (step.touchdown && !endOfHalf && !endOfMatch) {
-        addStepToStack({stepType: "setKickoff", action: "setKickoff", kickingTeam: otherSide(step.side)});
-    } else if (endOfHalf) {
-        addStepToStack({stepType: "setKickoff", action: "setKickoff", kickingTeam: otherSide(matchData.firstKickingTeam)});
+        addStepToStack(defineSetKickoff(otherSide(step.side)));
     }
     setAction(null, "");
     if (messageArray.length > 0) {
@@ -1672,6 +1683,11 @@ var postStep = function(step) {
 }
 
 var postProcessStep = function(step, result) {
+    if (step.waitForServer) {
+        console.log("activityType set to normal by the following step being post-processed.");
+        console.log(step);
+        viewData.activityType = "normal";
+    }
     var stepType = (step.stepType == "reroll") ? step.rerollStepType : step.stepType;
     switch (stepType) {
     case "move":
@@ -2105,6 +2121,7 @@ var defineStep = function(xpos, ypos) {
             step.stepType = "move";
             step.dodge = (nTackleZones(selected) > 0);
             step.goForIt = (selected.moveLeft <= 0);
+            step.waitForServer = step.dodge;
         } else {
             step = null;
         }
@@ -2115,6 +2132,7 @@ var defineStep = function(xpos, ypos) {
             step.stepType = "block";
             step.targetNum = targetPlayer.num;
             step.targetSide = targetPlayer.side;
+            step.waitForServer = true;
         } else {
             step = null;
         }
@@ -2126,11 +2144,13 @@ var defineStep = function(xpos, ypos) {
                 step.stepType = "move";
                 step.dodge = (nTackleZones(selected) > 0);
                 step.goForIt = (selected.moveLeft <= 0);
+                step.waitForServer = step.dodge;
             } else if (targetPlayer.side != selected.side && !targetPlayer.down && !performedStepThisTurn(selected, "block")) {
                 step.stepType = "block";
                 step.targetNum = targetPlayer.num;
                 step.targetSide = targetPlayer.side;
                 step.goForIt = (selected.moveLeft <= 0);
+                step.waitForServer = true;
             } else {
                 step = null;
             }
@@ -2144,8 +2164,10 @@ var defineStep = function(xpos, ypos) {
             step.stepType = "move";
             step.dodge = (nTackleZones(selected) > 0);
             step.goForIt = (selected.moveLeft <= 0);
+            step.waitForServer = step.dodge;
         } else if (inPassRange(xpos, ypos) && selected.hasBall) {
             step.stepType = "pass";
+            step.waitForServer = true;
         } else {
             step = null;
         }
@@ -2158,11 +2180,13 @@ var defineStep = function(xpos, ypos) {
                     step.stepType = "move";
                     step.dodge = (nTackleZones(selected) > 0);
                     step.goForIt = (selected.moveLeft <= 0);
+                    step.waitForServer = step.dodge;
                 } else {
                     step = null;
                 }
             } else if (selected.hasBall) {
                 step.stepType = "handOff";
+                step.waitForServer = true;
             } else {
                 step = null;
             }
@@ -2178,6 +2202,7 @@ var defineStep = function(xpos, ypos) {
                     step.stepType = "move";
                     step.dodge = (nTackleZones(selected) > 0);
                     step.goForIt = (selected.moveLeft <= 0);
+                    step.waitForServer = step.dodge;
                 } else {
                     step = null;
                 }
@@ -2185,6 +2210,7 @@ var defineStep = function(xpos, ypos) {
                 step.stepType = "foul";
                 step.targetNum = targetPlayer.num;
                 step.targetSide = targetPlayer.side;
+                step.waitForServer = true;
             } else {
                 step = null;
             }
@@ -2239,7 +2265,7 @@ var defineStep = function(xpos, ypos) {
     var stepArray = [];
     if (step != null) {
         if (step.goForIt) {
-            stepArray[0] = {"stepType": "goForIt"};
+            stepArray[0] = {stepType: "goForIt", waitForServer: true};
         }
         stepArray[stepArray.length] = step;
         for (var i = 0; i < stepArray.length; i++) {
@@ -2261,6 +2287,7 @@ var defineKnockDown = function(step, dice, victim) {
     var newStep = {}
     newStep.action = selectedAction;
     newStep.stepType = "knockDown";
+    newStep.waitForServer = true;
     var attacker = findPlayer(step.side, step.num);
     var defender = findPlayer(step.targetSide, step.targetNum);
     var player, perpetrator;
@@ -2298,6 +2325,7 @@ var defineFall = function(player) {
     step.stepType = "knockDown";
     step.num = player.num;
     step.side = player.side;
+    step.waitForServer = true;
     return step;
 }
 
@@ -2337,6 +2365,7 @@ var definePickUp = function(player) {
     step.xpos = player.xpos;
     step.ypos = player.ypos;
     step.action = selectedAction;
+    step.waitForServer = true;
     return step;
 }
 
@@ -2350,7 +2379,8 @@ var defineScatter = function(nScatter, bounceAgain, potentialTurnover) {
     step.y0 = matchData.yBall;
     step.nScatter = nScatter;
     step.bounceAgain = bounceAgain;
-    step.potentialTurnover = potentialTurnover
+    step.potentialTurnover = potentialTurnover;
+    step.waitForServer = true;
     return step;
 }
 
@@ -2376,6 +2406,7 @@ var defineThrowin = function(lastX, lastY, potentialTurnover) {
     step.bounceAgain = true;
     step.action = selectedAction;
     step.potentialTurnover = potentialTurnover;
+    step.waitForServer = true;
     return step;
 }
 
@@ -2386,6 +2417,22 @@ var defineTurnover = function() {
         oldSide: matchData.currentSide,
         turnover: true
     };
+    return step;
+}
+
+var defineSetKickoff = function(kickingTeam) {
+    var waitForServer = false;
+    for (var idx = 0; idx < players.length; idx++) {
+        if (players[idx].knockedOut) {
+            waitForServer = true;
+            break;
+        }
+    }
+    var step = {
+        stepType: "setKickoff",
+        kickingTeam: kickingTeam,
+        waitForServer: waitForServer
+    }
     return step;
 }
 
@@ -2429,6 +2476,8 @@ var selectPush = function(step) {
         squares[2] = [xC, yC];
     }
     if (squares.length > 0) {
+        console.log("activityType set to selectPush by the following step.");
+        console.log(step);
         viewData.activityType = "selectPush";
         pitch.on("click", null);
         for (var index = 0; index < squares.length; index++) {
@@ -2543,9 +2592,13 @@ var displayMessage = function(message, data, callback) {
 
 var selectFromOptions = function(options, message, data, callback, teamReroll, skillReroll, proReroll, rerollSkill, labels) {
     labels = (typeof labels === "undefined") ? options : labels
+    console.log("activityType set to selectFromOptions by the following data.");
+    console.log(data);
     viewData.activityType = "selectFromOptions";
     var selectOption = function(d) {
         if (d.inactive) { return; }
+        console.log("activityType set to normal by the following option being selected.");
+        console.log(d);
         viewData.activityType = "normal";
         gPitch.select("#optionsWindow").style("visibility", "hidden");
         gPitch.select("#optionsForeignObject").style("visibility", "hidden");
@@ -2615,6 +2668,7 @@ var blockDice = function(data) {
     step.stepType = "selectBlockDice";
     step.historyPosition = null;
     step.selectedDice = dice;
+    step.waitForServer = false;
     postStep(step);
     var nextStep = null;
     var followingStep = null;
@@ -2659,6 +2713,8 @@ var followUp = function(data) {
 var push = function(step, xpos, ypos) {
     gPitch.selectAll(".gridOption")
         .classed("gridOption", false)
+    console.log("activityType set to normal by the following step going through the push function.");
+    console.log(step);
     viewData.activityType = "normal";
     pitch.on("click", clickPitch);
     var player = findPlayer(step.side, step.num);
@@ -2672,6 +2728,7 @@ var push = function(step, xpos, ypos) {
     newStep.x1 = xpos;
     newStep.y1 = ypos;
     newStep.offPitch = !onPitch(xpos, ypos);
+    newStep.waitForServer = newStep.offPitch;
     processPush(newStep);
 }
 
@@ -2832,6 +2889,11 @@ var reroll = function(data, rerollType, rerollSkill) {
                 .classed("away", false)
                 .classed("rerollUsed", true);
         }
+    }
+    if (viewData.activityType == "normal") {
+        console.log("activityType set to waitForServer by the following reroll.");
+        console.log(step);
+        viewData.activityType = "waitForServer";
     }
     stepStack[0] = step;
     processNextStep();
