@@ -1497,17 +1497,17 @@ var processEndTurn = function(step) {
     if (step.turnover) {
         messageArray[messageArray.length] = "Turnover!"
     }
-    var skipTurn = false;
+    // var skipTurn = false;
     if (step.touchdown) {
         matchData[step.side+"Score"] += 1;
         d3.select("#"+step.side+"Score").text(matchData[step.side+"Score"]);
-        if (step.side != matchData.currentSide) {
-            skipTurn = true;
-        }
-        matchData.currentSide = step.side;
+        // if (step.side != matchData.currentSide) {
+        //     skipTurn = true;
+        // }
+        // matchData.currentSide = step.side;
         messageArray[messageArray.length] = "Touchdown!";
-    } else {
-        matchData.currentSide = otherSide(matchData.currentSide);
+    // } else {
+    //     matchData.currentSide = otherSide(matchData.currentSide);
     }
     for (var i = 0; i < players.length; i++) {
         players[i].moveLeft = players[i].ma;
@@ -1521,33 +1521,33 @@ var processEndTurn = function(step) {
         players[i].stunnedThisTurn = false;
         gPitch.selectAll(".player").classed("finishedAction", false);
     }
-    var endOfHalf = false;
-    var endOfMatch = false;
-    if ((matchData.firstKickingTeam != matchData.currentSide && matchData.turnNumber <= 8) || (matchData.firstKickingTeam == matchData.currentSide && matchData.turnNumber >= 9) || skipTurn) {
-        matchData.turnNumber += 1;
-        if (matchData.turnNumber == 9) {
-            matchData.homeRerolls = matchData.homeRerollsTotal;
-            matchData.awayRerolls = matchData.awayRerollsTotal;
-            addStepToStack(defineSetKickoff(otherSide(matchData.firstKickingTeam)));
-            messageArray[messageArray.length] = "Second half";
-            endOfHalf = true;
-        } else if (matchData.turnNumber == 17) {
-            endMatch();
-            var message;
-            if (currentLeader() == null) {
-                message = "Draw!";
-            } else {
-                message = teamName(currentLeader()) + " win!";
-            }
-            messageArray[messageArray.length] = message;
-            endOfMatch = true;
-        }
-    }
-    updateTurnIndicator();
+    // var endOfHalf = false;
+    // var endOfMatch = false;
+    // if ((matchData.firstKickingTeam != matchData.currentSide && matchData.turnNumber <= 8) || (matchData.firstKickingTeam == matchData.currentSide && matchData.turnNumber >= 9) || skipTurn) {
+    //     matchData.turnNumber += 1;
+    //     if (matchData.turnNumber == 9) {
+    //         matchData.homeRerolls = matchData.homeRerollsTotal;
+    //         matchData.awayRerolls = matchData.awayRerollsTotal;
+    //         addStepToStack(defineSetKickoff(otherSide(matchData.firstKickingTeam)));
+    //         messageArray[messageArray.length] = "Second half";
+    //         endOfHalf = true;
+    //     } else if (matchData.turnNumber == 17) {
+    //         endMatch();
+    //         var message;
+    //         if (currentLeader() == null) {
+    //             message = "Draw!";
+    //         } else {
+    //             message = teamName(currentLeader()) + " win!";
+    //         }
+    //         messageArray[messageArray.length] = message;
+    //         endOfMatch = true;
+    //     }
+    // }
+    // updateTurnIndicator();
     stepStack = [step];
-    if (step.touchdown && !endOfHalf && !endOfMatch) {
-        addStepToStack(defineSetKickoff(otherSide(step.side)));
-    }
+    // if (step.touchdown && !endOfHalf && !endOfMatch) {
+    //     addStepToStack(defineSetKickoff(otherSide(step.side)));
+    // }
     setAction(null, "");
     if (messageArray.length > 0) {
         displayMessage(messageArray, null, function(){postStep(step);});
@@ -1831,35 +1831,51 @@ var postProcessStep = function(step, result) {
         confirmResult(step, result, null, postProcessGoForIt);
         break;
     case "endTurn":
-        stepStack.shift();
-        processNextStep();
-        break;
-    case "setKickoff":
-        stepStack.shift();
-        if (result.revived.length + result.knockedOut.length > 0) {
-            var message = "";
-            var player;
-            if (result.revived.length > 0) {
-                message = message + "Revived:"
-                for (var index = 0; index < result.revived.length; index++) {
-                    player = findPlayer(result.revived[index].side, result.revived[index].num);
-                    d3.select("#"+playerId(player)).transition().style("opacity", 0).remove();
-                    drawPlayer(player, svgBottom);
-                    player.knockedOut = false;
-                    message = message + "<br/>" + player.name;
-                }
-                if (result.knockedOut.length > 0) { message = message + "<br/>"; }
+        if (result.nextTurnNumber) {
+            matchData.turnNumber += 1;
+        }
+        matchData.currentSide = otherSide(matchData.currentSide);
+        updateTurnIndicator();
+        if (result.endOfMatch) {
+            endMatch();
+            var message;
+            if (currentLeader() == null) {
+                message = "Draw!";
+            } else {
+                message = teamName(currentLeader()) + " win!";
             }
-            if (result.knockedOut.length > 0) {
-                message = message + "Still out:"
-                for (var index = 0; index < result.knockedOut.length; index++) {
-                    player = findPlayer(result.knockedOut[index].side, result.knockedOut[index].num);
-                    message = message + "<br/>" + player.name;
-                }
+            displayMessage(message, null, function(){});
+        }
+        stepStack.shift();
+        if (result.kickingTeam) {
+            var messageArray = [];
+            if (result.endOfHalf) {
+                messageArray[messageArray.length] = "Second half";
             }
-            displayMessage(message, null, function(d) {setKickoff(step.kickingTeam);});
-        } else {
-            setKickoff(step.kickingTeam);
+            if (result.revived.length + result.knockedOut.length > 0) {
+                var message = "";
+                var player;
+                if (result.revived.length > 0) {
+                    message = message + "Revived:"
+                    for (var index = 0; index < result.revived.length; index++) {
+                        player = findPlayer(result.revived[index].side, result.revived[index].num);
+                        d3.select("#"+playerId(player)).transition().style("opacity", 0).remove();
+                        drawPlayer(player, svgBottom);
+                        player.knockedOut = false;
+                        message = message + "<br/>" + player.name;
+                    }
+                    if (result.knockedOut.length > 0) { message = message + "<br/>"; }
+                }
+                if (result.knockedOut.length > 0) {
+                    message = message + "Still out:"
+                    for (var index = 0; index < result.knockedOut.length; index++) {
+                        player = findPlayer(result.knockedOut[index].side, result.knockedOut[index].num);
+                        message = message + "<br/>" + player.name;
+                    }
+                }
+                messageArray[messageArray.length] = message;
+            }
+            displayMessage(messageArray, null, function(d) {setKickoff(result.kickingTeam);});
         }
         break;
     case "submitBall":

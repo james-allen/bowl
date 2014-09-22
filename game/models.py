@@ -783,13 +783,14 @@ class Match(models.Model):
             player.action = ''
             player.finished_action = False
             if (player.player.team == self.team(self.current_side)
-                and player.stunned and not player.stunned_this_turn):
+                    and player.stunned and not player.stunned_this_turn):
                 player.stunned = False
             player.stunned_this_turn = False
             player.save()
         self.home_reroll_used_this_turn = False
         self.away_reroll_used_this_turn = False
         skip_turn = False
+        kicking_team = None
         if 'touchdown' in data and data['touchdown']:
             if data['side'] == 'home':
                 self.home_score += 1
@@ -798,25 +799,47 @@ class Match(models.Model):
             if data['side'] != self.current_side:
                 skip_turn = True
             self.current_side = data['side']
+            kicking_team = data['side']
         else:
             self.current_side = other_side(self.current_side)
-        # end_of_half = False
-        if ((self.current_side != self.first_kicking_team and 
+        next_turn_number = (
+            (self.current_side != self.first_kicking_team and 
              self.turn_number <= 8) or
             (self.current_side == self.first_kicking_team and
-             self.turn_number >= 9) or skip_turn):
+             self.turn_number >= 9) or
+            skip_turn)
+        end_of_half = False
+        end_of_match = False
+        if next_turn_number:
             self.turn_number += 1
             if self.turn_number == 9:
-                # set_kickoff(match, other_side(match.first_kicking_team))
                 self.home_rerolls = self.home_rerolls_total
                 self.away_rerolls = self.away_rerolls_total
-                # end_of_half = True
+                end_of_half = True
+                kicking_team = other_side(self.first_kicking_team)
             if self.turn_number == 17:
                 self.turn_type = 'end'
-                # end_of_half = True
-        # if ('touchdown' in data and data['touchdown'] == 'true' and 
-        #     not end_of_half):
-        #     set_kickoff(match, data['side'])
+                end_of_match = True
+                kicking_team = None
+        if kicking_team is not None:
+            revive_result = {'revived': [], 'knockedOut': []}
+            for player in PlayerInGame.objects.filter(
+                    match=self, knocked_out=True):
+                dice = roll_dice(6, 1)
+                player_data = {'side': player.side, 'num': player.player.number,
+                               'dice': dice}
+                if dice['dice'][0] >= 4:
+                    revive_result['revived'].append(player_data)
+                    player.knocked_out = False
+                    player.save()
+                else:
+                    revive_result['knockedOut'].append(player_data)
+            set_kickoff(self, kicking_team)
+            result.update(revive_result)
+        result['nextTurnNumber'] = next_turn_number
+        result['kickingTeam'] = kicking_team
+        result['endOfHalf'] = end_of_half
+        result['endOfMatch'] = end_of_match
         self.save()
         return result
 
