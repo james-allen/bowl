@@ -277,6 +277,24 @@ var addStepToStack = function(step) {
     }
 }
 
+var addStepArrayToStack = function(stepArray) {
+    if (stepArray != null) {
+        var step;
+        for (var idx = 0; idx < stepArray.length; idx++) {
+            step = stepArray[idx];
+            if (viewData.activityType == "normal" && step.waitForServer) {
+                console.log("activityType set to waitForServer by the following step being added to the stack.");
+                console.log(step);
+                viewData.activityType = "waitForServer";
+            }
+            stepStack[stepStack.length] = step;
+        }
+        if (stepStack.length == stepArray.length) {
+            processNextStep();
+        }
+    }
+}
+
 var playersOnPitch = function() {
     var onPitch = new Array;
     for (var index = 0; index < players.length; index++) {
@@ -1729,6 +1747,9 @@ var postProcessStep = function(step, result) {
             selectFromOptions(result.dice, message, data, blockDice, teamReroll, false, false, null, labels);
         }
         break;
+    case "selectBlockDice":
+        addStepArrayToStack(result.nextStep);
+        break;
     case "knockDown":
         var data = {"step": step, "result": result};
         var message = "Armour roll: ";
@@ -2668,34 +2689,34 @@ var blockDice = function(data) {
     step.stepType = "selectBlockDice";
     step.historyPosition = null;
     step.selectedDice = dice;
-    step.waitForServer = false;
+    step.waitForServer = true;
     postStep(step);
-    var nextStep = null;
-    var followingStep = null;
-    var thirdStep = null;
-    switch (dice) {
-    case "attackerDown":
-        nextStep = defineKnockDown(step, dice, "attacker");
-        break;
-    case "bothDown":
-        nextStep = defineKnockDown(step, dice, "defender");
-        followingStep = defineKnockDown(step, dice, "attacker");
-        break;
-    case "pushed":
-        nextStep = definePush(step);
-        followingStep = defineFollowUp(step);
-        break;
-    case "defenderStumbles":
-    case "defenderDown":
-        nextStep = definePush(step);
-        followingStep = defineFollowUp(step);
-        thirdStep = defineKnockDown(step, dice, "defender");
-        break;
-    }
+    // var nextStep = null;
+    // var followingStep = null;
+    // var thirdStep = null;
+    // switch (dice) {
+    // case "attackerDown":
+    //     nextStep = defineKnockDown(step, dice, "attacker");
+    //     break;
+    // case "bothDown":
+    //     nextStep = defineKnockDown(step, dice, "defender");
+    //     followingStep = defineKnockDown(step, dice, "attacker");
+    //     break;
+    // case "pushed":
+    //     nextStep = definePush(step);
+    //     followingStep = defineFollowUp(step);
+    //     break;
+    // case "defenderStumbles":
+    // case "defenderDown":
+    //     nextStep = definePush(step);
+    //     followingStep = defineFollowUp(step);
+    //     thirdStep = defineKnockDown(step, dice, "defender");
+    //     break;
+    // }
     stepStack.shift();
-    addStepToStack(nextStep);
-    addStepToStack(followingStep);
-    addStepToStack(thirdStep);
+    // addStepToStack(nextStep);
+    // addStepToStack(followingStep);
+    // addStepToStack(thirdStep);
 }
 
 var followUp = function(data) {

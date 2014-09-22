@@ -8,7 +8,7 @@ from django.template.defaultfilters import slugify
 
 from game.utils import roll_dice, roll_agility_dice, roll_injury_dice
 from game.utils import roll_armour_dice, roll_block_dice, is_double
-from game.utils import on_pitch, find_pass_range, other_side
+from game.utils import on_pitch, find_pass_range, other_side, add_next_step
 
 
 class Race(models.Model):
@@ -231,6 +231,19 @@ class Match(models.Model):
         else:
             raise ValueError('Unrecognised side: ' + side)
 
+    def side(self, team):
+        if team == self.home_team:
+            return 'home'
+        elif team == self.away_team:
+            return 'away'
+        else:
+            raise ValueError('Unrecognised team: ' + repr(team))
+
+    def find_player(self, side, num):
+        """Return a PlayerInGame object."""
+        return PlayerInGame.objects.get(
+            match=self, player__team=self.team(side), player__number=int(num))
+
     def finish_previous_action(self, current_player):
         active_steps = ('move', 'block', 'standUp', 'pass', 'foul', 'handOff')
         step_set = Step.objects.filter(match=self).order_by('-history_position')
@@ -452,6 +465,28 @@ class Match(models.Model):
 
     def resolve_select_block_dice(self, step, result):
         """Resolve a block dice being selected."""
+        data = step.properties_dict()
+        attacker = self.find_player(data['side'], data['num'])
+        defender = self.find_player(data['targetSide'], data['targetNum'])
+        if data['selectedDice'] == 'attackerDown':
+            add_next_step(result, self.define_knock_down(data, 'attacker'))
+        elif data['selectedDice'] == 'bothDown':
+            if not defender.has_skill('Block'):
+                add_next_step(result, self.define_knock_down(data, 'defender'))
+            if not attacker.has_skill('Block'):
+                add_next_step(result, self.define_knock_down(data, 'attacker'))
+        elif data['selectedDice'] == 'pushed':
+            add_next_step(result, self.define_push(data))
+            add_next_step(result, self.define_follow_up(data))
+        elif data['selectedDice'] == 'defenderStumbles':
+            add_next_step(result, self.define_push(data))
+            add_next_step(result, self.define_follow_up(data))
+            if not defender.has_skill('Dodge'):
+                add_next_step(result, self.define_knock_down(data, 'defender'))
+        elif data['selectedDice'] == 'defenderDown':
+            add_next_step(result, self.define_push(data))
+            add_next_step(result, self.define_follow_up(data))
+            add_next_step(result, self.define_knock_down(data, 'defender'))            
         return result
 
     def resolve_foul(self, step, result):
@@ -933,6 +968,66 @@ class Match(models.Model):
             player.finished_action = True
         player.save()
         return result
+
+    def define_knock_down(self, data, victim):
+        """Define a knockDown dict."""
+        attacker = self.find_player(data['side'], data['num'])
+        defender = self.find_player(data['targetSide'], data['targetNum'])
+        if victim == 'attacker':
+            player = attacker
+            perpetrator = defender
+        else:
+            player = defender
+            perpetrator = attacker
+        if perpetrator.has_skill('Mighty Blow'):
+            if perpetrator == defender:
+                mighty_blow = 'armour'
+            else:
+                mighty_blow = True
+        else:
+            mighty_blow = False
+        new_step = {
+            'action': data['action'],
+            'stepType': 'knockDown',
+            'waitForServer': True,
+            'num': player.player.number,
+            'side': self.side(player.player.team),
+            'perpNum': perpetrator.player.number,
+            'perpSide': self.side(perpetrator.player.team),
+            'mightyBlow': mighty_blow,
+        }
+        return new_step
+
+    def define_push(self, data):
+        """Define a push dict."""
+        new_step = {
+            'action': data['action'],
+            'stepType': 'push',
+            'side': data['targetSide'],
+            'num': data['targetNum'],
+            'x0': data['x0'],
+            'y0': data['y0'],
+            'x1': data['x1'],
+            'y1': data['y1'],
+        }
+        return new_step
+
+    def define_follow_up(self, data):
+        """Define a followUp dict."""
+        new_step = {
+            'action': data['action'],
+            'stepType': 'followUp',
+            'targetNum': data['targetNum'],
+            'side': data['side'],
+            'num': data['num'],
+            'x0': data['x0'],
+            'y0': data['y0'],
+            'x1': data['x1'],
+            'y1': data['y1'],
+            'choice': None,
+        }
+        return new_step
+
 
 
 def start_match(home_team, away_team, first_kicking_team=None,

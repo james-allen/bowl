@@ -111,4 +111,10 @@ def other_side(side):
         return 'home'
     else:
         raise ValueError('Unrecognised side: ' + side)
-        
+
+def add_next_step(result, next_step):
+    """Add a nextStep to the result dictionary."""
+    if 'nextStep' not in result:
+        result['nextStep'] = []
+    result['nextStep'].append(next_step)
+    return        
