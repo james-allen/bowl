@@ -676,6 +676,265 @@ class BlockAndFoulTests(BloodBowlTestCase):
         self.assertTrue(attacker.sent_off)
 
 
+class SelectBlockDiceTests(BloodBowlTestCase):
+
+    xpos = 15
+    ypos = 5
+
+    def setUp(self):
+        """
+        Create a suitable match.
+        """
+        self.match = create_test_match('human', 'orc')
+
+    def select_dice(self, attacker, defender, selection):
+        """
+        Create and process a step in which the player selects a block result.
+        """
+        step = self.create_test_select_block_dice_step(
+            attacker, defender, selection)
+        step.save()
+        result = self.match.resolve(step)
+        return result
+
+    def create_test_select_block_dice_step(self, attacker, defender,
+                                           selection):
+        """
+        Create a step in which the player selects a block result.
+        """
+        properties = {
+            'action': 'block',
+            'selectedDice': selection,
+            'x0': str(attacker.xpos),
+            'y0': str(attacker.ypos),
+            'x1': str(defender.xpos),
+            'y1': str(defender.ypos),
+            'side': self.side_of_pig(attacker),
+            'num': str(attacker.player.number),
+            'targetSide': self.side_of_pig(defender),
+            'targetNum': str(defender.player.number),
+        }
+        return self.create_test_step('selectBlockDice', 'block', properties)
+
+    def test_attacker_down(self):
+        """Test that the correct details are returned for an attacker down."""
+        attacker = self.place_player_of_position(
+            'home', 'Lineman', self.xpos, self.ypos)
+        defender = self.place_player_of_position(
+            'away', 'Lineman', self.xpos+1, self.ypos)
+        result = self.select_dice(attacker, defender, 'attackerDown')
+        self.assertEqual(len(result['nextStep']), 1)
+        next_step = result['nextStep'][0]
+        self.assertEqual(next_step['stepType'], 'knockDown')
+        self.assertEqual(next_step['num'], attacker.player.number)
+        self.assertEqual(next_step['side'], self.side_of_pig(attacker))
+        self.assertEqual(next_step['perpNum'], defender.player.number)
+        self.assertEqual(next_step['perpSide'], self.side_of_pig(defender))
+        self.assertFalse(next_step['mightyBlow'])
+
+    def test_attacker_down_mighty_blow(self):
+        """Test that mightyBlow is set to 'armour' automatically."""
+        attacker = self.place_player_of_position(
+            'home', 'Lineman', self.xpos, self.ypos)
+        defender = self.place_player_of_position(
+            'away', 'Troll', self.xpos+1, self.ypos)
+        result = self.select_dice(attacker, defender, 'attackerDown')
+        self.assertEqual(len(result['nextStep']), 1)
+        next_step = result['nextStep'][0]
+        self.assertEqual(next_step['stepType'], 'knockDown')
+        self.assertEqual(next_step['num'], attacker.player.number)
+        self.assertEqual(next_step['side'], self.side_of_pig(attacker))
+        self.assertEqual(next_step['perpNum'], defender.player.number)
+        self.assertEqual(next_step['perpSide'], self.side_of_pig(defender))
+        self.assertEqual(next_step['mightyBlow'], 'armour')
+
+    def test_both_down_no_block(self):
+        """Test that both players are knocked down for a bothDown result."""
+        attacker = self.place_player_of_position(
+            'home', 'Lineman', self.xpos, self.ypos)
+        defender = self.place_player_of_position(
+            'away', 'Lineman', self.xpos+1, self.ypos)
+        result = self.select_dice(attacker, defender, 'bothDown')
+        self.assertEqual(len(result['nextStep']), 2)
+        next_step = result['nextStep'][0]
+        self.assertEqual(next_step['stepType'], 'knockDown')
+        self.assertEqual(next_step['num'], defender.player.number)
+        self.assertEqual(next_step['side'], self.side_of_pig(defender))
+        self.assertEqual(next_step['perpNum'], attacker.player.number)
+        self.assertEqual(next_step['perpSide'], self.side_of_pig(attacker))
+        self.assertFalse(next_step['mightyBlow'])
+        next_step = result['nextStep'][1]
+        self.assertEqual(next_step['stepType'], 'knockDown')
+        self.assertEqual(next_step['num'], attacker.player.number)
+        self.assertEqual(next_step['side'], self.side_of_pig(attacker))
+        self.assertEqual(next_step['perpNum'], defender.player.number)
+        self.assertEqual(next_step['perpSide'], self.side_of_pig(defender))
+        self.assertFalse(next_step['mightyBlow'])
+
+    def test_both_down_attacker_block(self):
+        """Test that only the defender goes down if the attacker has Block."""
+        attacker = self.place_player_of_position(
+            'home', 'Blitzer', self.xpos, self.ypos)
+        defender = self.place_player_of_position(
+            'away', 'Lineman', self.xpos+1, self.ypos)
+        result = self.select_dice(attacker, defender, 'bothDown')
+        self.assertEqual(len(result['nextStep']), 1)
+        next_step = result['nextStep'][0]
+        self.assertEqual(next_step['stepType'], 'knockDown')
+        self.assertEqual(next_step['num'], defender.player.number)
+        self.assertEqual(next_step['side'], self.side_of_pig(defender))
+        self.assertEqual(next_step['perpNum'], attacker.player.number)
+        self.assertEqual(next_step['perpSide'], self.side_of_pig(attacker))
+        self.assertFalse(next_step['mightyBlow'])
+
+    def test_both_down_defender_block(self):
+        """Test that only the attacker goes down if the defender has Block."""
+        attacker = self.place_player_of_position(
+            'home', 'Lineman', self.xpos, self.ypos)
+        defender = self.place_player_of_position(
+            'away', 'Blitzer', self.xpos+1, self.ypos)
+        result = self.select_dice(attacker, defender, 'bothDown')
+        self.assertEqual(len(result['nextStep']), 1)
+        next_step = result['nextStep'][0]
+        self.assertEqual(next_step['stepType'], 'knockDown')
+        self.assertEqual(next_step['num'], attacker.player.number)
+        self.assertEqual(next_step['side'], self.side_of_pig(attacker))
+        self.assertEqual(next_step['perpNum'], defender.player.number)
+        self.assertEqual(next_step['perpSide'], self.side_of_pig(defender))
+        self.assertFalse(next_step['mightyBlow'])
+
+    def test_both_down_both_block(self):
+        """Test that nothing happens if both players have Block."""
+        attacker = self.place_player_of_position(
+            'home', 'Blitzer', self.xpos, self.ypos)
+        defender = self.place_player_of_position(
+            'away', 'Blitzer', self.xpos+1, self.ypos)
+        result = self.select_dice(attacker, defender, 'bothDown')
+        self.assertFalse('nextStep' in result)
+
+    def test_pushed(self):
+        """Test that a push step is successfully created."""
+        attacker = self.place_player_of_position(
+            'home', 'Lineman', self.xpos, self.ypos)
+        defender = self.place_player_of_position(
+            'away', 'Lineman', self.xpos+1, self.ypos)
+        result = self.select_dice(attacker, defender, 'pushed')
+        self.assertEqual(len(result['nextStep']), 2)
+        next_step = result['nextStep'][0]
+        self.assertEqual(next_step['stepType'], 'push')
+        self.assertEqual(int(next_step['num']), defender.player.number)
+        self.assertEqual(next_step['side'], self.side_of_pig(defender))
+        self.assertEqual(int(next_step['x0']), attacker.xpos)
+        self.assertEqual(int(next_step['y0']), attacker.ypos)
+        self.assertEqual(int(next_step['x1']), defender.xpos)
+        self.assertEqual(int(next_step['y1']), defender.ypos)
+        next_step = result['nextStep'][1]
+        self.assertEqual(next_step['stepType'], 'followUp')
+        self.assertEqual(int(next_step['targetNum']), defender.player.number)
+        self.assertEqual(next_step['side'], self.side_of_pig(attacker))
+        self.assertEqual(int(next_step['num']), attacker.player.number)
+        self.assertEqual(int(next_step['x0']), attacker.xpos)
+        self.assertEqual(int(next_step['y0']), attacker.ypos)
+        self.assertEqual(int(next_step['x1']), defender.xpos)
+        self.assertEqual(int(next_step['y1']), defender.ypos)
+        self.assertIsNone(next_step['choice'])
+
+    def test_defender_stumbles(self):
+        """Test that the defender is pushed and knocked over."""
+        attacker = self.place_player_of_position(
+            'home', 'Lineman', self.xpos, self.ypos)
+        defender = self.place_player_of_position(
+            'away', 'Lineman', self.xpos+1, self.ypos)
+        result = self.select_dice(attacker, defender, 'defenderStumbles')
+        self.assertEqual(len(result['nextStep']), 3)
+        next_step = result['nextStep'][0]
+        self.assertEqual(next_step['stepType'], 'push')
+        self.assertEqual(int(next_step['num']), defender.player.number)
+        self.assertEqual(next_step['side'], self.side_of_pig(defender))
+        self.assertEqual(int(next_step['x0']), attacker.xpos)
+        self.assertEqual(int(next_step['y0']), attacker.ypos)
+        self.assertEqual(int(next_step['x1']), defender.xpos)
+        self.assertEqual(int(next_step['y1']), defender.ypos)
+        next_step = result['nextStep'][1]
+        self.assertEqual(next_step['stepType'], 'followUp')
+        self.assertEqual(int(next_step['targetNum']), defender.player.number)
+        self.assertEqual(next_step['side'], self.side_of_pig(attacker))
+        self.assertEqual(int(next_step['num']), attacker.player.number)
+        self.assertEqual(int(next_step['x0']), attacker.xpos)
+        self.assertEqual(int(next_step['y0']), attacker.ypos)
+        self.assertEqual(int(next_step['x1']), defender.xpos)
+        self.assertEqual(int(next_step['y1']), defender.ypos)
+        self.assertIsNone(next_step['choice'])
+        next_step = result['nextStep'][2]
+        self.assertEqual(next_step['stepType'], 'knockDown')
+        self.assertEqual(next_step['num'], defender.player.number)
+        self.assertEqual(next_step['side'], self.side_of_pig(defender))
+        self.assertEqual(next_step['perpNum'], attacker.player.number)
+        self.assertEqual(next_step['perpSide'], self.side_of_pig(attacker))
+
+    def test_defender_stumbles_dodge(self):
+        """Test that the defender is not knocked over with Dodge."""
+        attacker = self.place_player_of_position(
+            'away', 'Lineman', self.xpos, self.ypos)
+        defender = self.place_player_of_position(
+            'home', 'Catcher', self.xpos+1, self.ypos)
+        result = self.select_dice(attacker, defender, 'defenderStumbles')
+        self.assertEqual(len(result['nextStep']), 2)
+        next_step = result['nextStep'][0]
+        self.assertEqual(next_step['stepType'], 'push')
+        self.assertEqual(int(next_step['num']), defender.player.number)
+        self.assertEqual(next_step['side'], self.side_of_pig(defender))
+        self.assertEqual(int(next_step['x0']), attacker.xpos)
+        self.assertEqual(int(next_step['y0']), attacker.ypos)
+        self.assertEqual(int(next_step['x1']), defender.xpos)
+        self.assertEqual(int(next_step['y1']), defender.ypos)
+        next_step = result['nextStep'][1]
+        self.assertEqual(next_step['stepType'], 'followUp')
+        self.assertEqual(int(next_step['targetNum']), defender.player.number)
+        self.assertEqual(next_step['side'], self.side_of_pig(attacker))
+        self.assertEqual(int(next_step['num']), attacker.player.number)
+        self.assertEqual(int(next_step['x0']), attacker.xpos)
+        self.assertEqual(int(next_step['y0']), attacker.ypos)
+        self.assertEqual(int(next_step['x1']), defender.xpos)
+        self.assertEqual(int(next_step['y1']), defender.ypos)
+        self.assertIsNone(next_step['choice'])
+
+    def test_defender_down(self):
+        """Test that the defender is knocked down, even with Dodge."""
+        attacker = self.place_player_of_position(
+            'away', 'Lineman', self.xpos, self.ypos)
+        defender = self.place_player_of_position(
+            'home', 'Catcher', self.xpos+1, self.ypos)
+        result = self.select_dice(attacker, defender, 'defenderDown')
+        self.assertEqual(len(result['nextStep']), 3)
+        next_step = result['nextStep'][0]
+        self.assertEqual(next_step['stepType'], 'push')
+        self.assertEqual(int(next_step['num']), defender.player.number)
+        self.assertEqual(next_step['side'], self.side_of_pig(defender))
+        self.assertEqual(int(next_step['x0']), attacker.xpos)
+        self.assertEqual(int(next_step['y0']), attacker.ypos)
+        self.assertEqual(int(next_step['x1']), defender.xpos)
+        self.assertEqual(int(next_step['y1']), defender.ypos)
+        next_step = result['nextStep'][1]
+        self.assertEqual(next_step['stepType'], 'followUp')
+        self.assertEqual(int(next_step['targetNum']), defender.player.number)
+        self.assertEqual(next_step['side'], self.side_of_pig(attacker))
+        self.assertEqual(int(next_step['num']), attacker.player.number)
+        self.assertEqual(int(next_step['x0']), attacker.xpos)
+        self.assertEqual(int(next_step['y0']), attacker.ypos)
+        self.assertEqual(int(next_step['x1']), defender.xpos)
+        self.assertEqual(int(next_step['y1']), defender.ypos)
+        self.assertIsNone(next_step['choice'])
+        next_step = result['nextStep'][2]
+        self.assertEqual(next_step['stepType'], 'knockDown')
+        self.assertEqual(next_step['num'], defender.player.number)
+        self.assertEqual(next_step['side'], self.side_of_pig(defender))
+        self.assertEqual(next_step['perpNum'], attacker.player.number)
+        self.assertEqual(next_step['perpSide'], self.side_of_pig(attacker))
+        
+
+
+
 class KnockDownTests(BloodBowlTestCase):
 
     xpos = 15
