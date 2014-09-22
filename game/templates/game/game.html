@@ -2304,41 +2304,41 @@ var defineStep = function(xpos, ypos) {
     return stepArray;
 }
 
-var defineKnockDown = function(step, dice, victim) {
-    var newStep = {}
-    newStep.action = selectedAction;
-    newStep.stepType = "knockDown";
-    newStep.waitForServer = true;
-    var attacker = findPlayer(step.side, step.num);
-    var defender = findPlayer(step.targetSide, step.targetNum);
-    var player, perpetrator;
-    if (victim == "defender") {
-        player = defender;
-        perpetrator = attacker;
-    } else {
-        player = attacker;
-        perpetrator = defender;
-    }
-    newStep.num = player.num;
-    newStep.side = player.side;
-    newStep.perpNum = perpetrator.num;
-    newStep.perpSide = perpetrator.side;
-    if (hasSkill(perpetrator, "Mighty Blow")) {
-        if (perpetrator == defender) {
-            newStep.mightyBlow = "armour";
-        } else {
-            newStep.mightyBlow = true;
-        }
-    } else {
-        newStep.mightyBlow = false;
-    }
-    if ((dice == "bothDown" && hasSkill(player, "Block")) || (dice == "defenderStumbles" && hasSkill(player, "Dodge")) || !player.onPitch) {
-        // Avoid a Both Down result with the block skill, or a Defender Stumbles with the dodge skill. Do nothing if the player has been pushed off the pitch.
-        return null;
-    } else {
-        return newStep;
-    }
-}
+// var defineKnockDown = function(step, dice, victim) {
+//     var newStep = {}
+//     newStep.action = selectedAction;
+//     newStep.stepType = "knockDown";
+//     newStep.waitForServer = true;
+//     var attacker = findPlayer(step.side, step.num);
+//     var defender = findPlayer(step.targetSide, step.targetNum);
+//     var player, perpetrator;
+//     if (victim == "defender") {
+//         player = defender;
+//         perpetrator = attacker;
+//     } else {
+//         player = attacker;
+//         perpetrator = defender;
+//     }
+//     newStep.num = player.num;
+//     newStep.side = player.side;
+//     newStep.perpNum = perpetrator.num;
+//     newStep.perpSide = perpetrator.side;
+//     if (hasSkill(perpetrator, "Mighty Blow")) {
+//         if (perpetrator == defender) {
+//             newStep.mightyBlow = "armour";
+//         } else {
+//             newStep.mightyBlow = true;
+//         }
+//     } else {
+//         newStep.mightyBlow = false;
+//     }
+//     if ((dice == "bothDown" && hasSkill(player, "Block")) || (dice == "defenderStumbles" && hasSkill(player, "Dodge")) || !player.onPitch) {
+//         // Avoid a Both Down result with the block skill, or a Defender Stumbles with the dodge skill. Do nothing if the player has been pushed off the pitch.
+//         return null;
+//     } else {
+//         return newStep;
+//     }
+// }
 
 var defineFall = function(player) {
     var step = {};
@@ -2363,20 +2363,20 @@ var definePush = function(lastStep) {
     return step
 }
 
-var defineFollowUp = function(blockStep) {
-    var step = {};
-    step.stepType = "followUp";
-    step.targetNum = blockStep.targetNum;
-    step.action = blockStep.action;
-    step.side = blockStep.side;
-    step.num = blockStep.num;
-    step.x0 = blockStep.x0;
-    step.y0 = blockStep.y0;
-    step.x1 = blockStep.x1;
-    step.y1 = blockStep.y1;
-    step.choice = null;
-    return step
-}
+// var defineFollowUp = function(blockStep) {
+//     var step = {};
+//     step.stepType = "followUp";
+//     step.targetNum = blockStep.targetNum;
+//     step.action = blockStep.action;
+//     step.side = blockStep.side;
+//     step.num = blockStep.num;
+//     step.x0 = blockStep.x0;
+//     step.y0 = blockStep.y0;
+//     step.x1 = blockStep.x1;
+//     step.y1 = blockStep.y1;
+//     step.choice = null;
+//     return step
+// }
 
 var definePickUp = function(player) {
     var step = {};
