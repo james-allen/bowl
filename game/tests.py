@@ -1218,19 +1218,28 @@ class CatchTests(BloodBowlTestCase):
         """
         self.match = create_test_match('human', 'orc')
         self.catcher = self.place_player('home', self.xpos, self.ypos)
+        self.thrower = self.place_player('home', self.xpos, self.ypos)
         self.match.x_ball = self.xpos
         self.match.y_ball = self.ypos
         self.match.save()
 
-    def create_test_catch_step(self, pig, accurate):
+    def create_test_catch_step(self, pig, accurate, thrower=None):
         """
         Create a test step to try and catch the ball.
         """
+        if thrower is None:
+            pass_side = None
+            pass_num = None
+        else:
+            pass_side = self.side_of_pig(thrower)
+            pass_num = thrower.player.number
         properties = {
             'action': 'pass',
             'num': pig.player.number,
             'side': self.side_of_pig(pig),
             'accurate': accurate,
+            'passSide': pass_side,
+            'passNum': pass_num,
         }
         return self.create_test_step('catch', 'pass', properties)
 
@@ -1239,37 +1248,46 @@ class CatchTests(BloodBowlTestCase):
         """
         Test that the player catches the ball.
         """
-        step = self.create_test_catch_step(self.catcher, True)
+        step = self.create_test_catch_step(self.catcher, True, self.thrower)
         result = self.match.resolve(step)
         self.catcher = self.reload_pig(self.catcher)
+        self.thrower = self.reload_pig(self.thrower)
         self.assertTrue(self.catcher.has_ball)
         self.assertTrue(result['success'])
         modifier = result['modifiedResult'] - result['rawResult']
         self.assertEqual(modifier, 1)
+        self.assertEqual(self.thrower.completions, 1)
+        self.assertTrue(result['completion'])
 
     @patch('random.randint', RiggedDice((6,)))
     def test_catch_success_inaccurate(self):
         """
         Test that the player catches the ball from an inaccurate pass.
         """
-        step = self.create_test_catch_step(self.catcher, False)
+        step = self.create_test_catch_step(self.catcher, False, self.thrower)
         result = self.match.resolve(step)
         self.catcher = self.reload_pig(self.catcher)
+        self.thrower = self.reload_pig(self.thrower)
         self.assertTrue(self.catcher.has_ball)
         self.assertTrue(result['success'])
         modifier = result['modifiedResult'] - result['rawResult']
         self.assertEqual(modifier, 0)
+        self.assertEqual(self.thrower.completions, 0)
+        self.assertFalse(result['completion'])
 
     @patch('random.randint', RiggedDice((1,)))
     def test_catch_failure(self):
         """
         Test that the player fails to catch the ball.
         """
-        step = self.create_test_catch_step(self.catcher, True)
+        step = self.create_test_catch_step(self.catcher, True, self.thrower)
         result = self.match.resolve(step)
         self.catcher = self.reload_pig(self.catcher)
+        self.thrower = self.reload_pig(self.thrower)
         self.assertFalse(self.catcher.has_ball)
         self.assertFalse(result['success'])
+        self.assertEqual(self.thrower.completions, 0)
+        self.assertFalse(result['completion'])
         
     @patch('random.randint', RiggedDice((6,)))
     def test_catch_success_tackle_zones(self):
@@ -1284,6 +1302,21 @@ class CatchTests(BloodBowlTestCase):
         self.assertTrue(result['success'])
         modifier = result['modifiedResult'] - result['rawResult']
         self.assertEqual(modifier, 0)
+
+    @patch('random.randint', RiggedDice((6,)))
+    def test_catch_success_wrong_team(self):
+        """
+        Test that a completion is not recorded for passing to the other team.
+        """
+        idiot = self.place_player('away', self.xpos+2, self.ypos)
+        step = self.create_test_catch_step(self.catcher, True, idiot)
+        result = self.match.resolve(step)
+        self.catcher = self.reload_pig(self.catcher)
+        idiot = self.reload_pig(idiot)
+        self.assertTrue(self.catcher.has_ball)
+        self.assertTrue(result['success'])
+        self.assertEqual(self.thrower.completions, 0)
+        self.assertFalse(result['completion'])
 
     @patch('random.randint', RiggedDice((6,)))
     def test_catch_bone_head(self):

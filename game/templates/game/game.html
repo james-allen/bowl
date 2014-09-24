@@ -1470,7 +1470,7 @@ var processHandOff = function(step) {
     moveBall(step.x1, step.y1);
     postStep(step);
     var receivingPlayer = playerInPos(step.x1, step.y1);
-    var nextStep = defineCatch(receivingPlayer, true, true);
+    var nextStep = defineCatch(receivingPlayer, true, true, null);
     stepStack[0] = nextStep;
     processNextStep();
 }
@@ -1931,7 +1931,7 @@ var postProcessPass = function(data) {
         moveBall(result.x1, result.y1);
         var receivingPlayer = playerInPos(result.x1, result.y1);
         if (receivingPlayer != null) {
-            nextStep = defineCatch(receivingPlayer, true, true);
+            nextStep = defineCatch(receivingPlayer, true, true, player);
         } else {
             nextStep = defineScatter(1, false, true);
         }
@@ -2421,11 +2421,18 @@ var defineScatter = function(nScatter, bounceAgain, potentialTurnover) {
     return step;
 }
 
-var defineCatch = function(player, accurate, potentialTurnover) {
+var defineCatch = function(player, accurate, potentialTurnover, passingPlayer) {
     var step = {};
     step.stepType = "catch";
     step.side = player.side;
     step.num = player.num;
+    if (passingPlayer == null) {
+        step.passSide = null;
+        step.passNum = null;
+    } else {
+        step.passSide = passingPlayer.side;
+        step.passNum = passingPlayer.num;
+    }
     step.xpos = player.xpos;
     step.ypos = player.ypos;
     step.accurate = accurate;
@@ -2789,7 +2796,7 @@ var scatterBall = function(step, result) {
     } else {
         var player = playerInPos(xpos, ypos);
         if (player != null) {
-            var nextStep = defineCatch(player, false, step.potentialTurnover);
+            var nextStep = defineCatch(player, false, step.potentialTurnover, null);
             stepStack[0] = nextStep;
         } else {
             if (step.bounceAgain) {

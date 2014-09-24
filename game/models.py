@@ -668,6 +668,19 @@ class Match(models.Model):
         if result['success']:
             player.has_ball = True
             player.save()
+        completion = (data['accurate'] and result['success'] and
+                      data['passSide'] == data['side'])
+        if completion:
+            if data['passSide'] == 'home':
+                team = self.home_team
+            else:
+                team = self.away_team
+            passing_player = PlayerInGame.objects.get(
+                match=self, player__team=team,
+                player__number=data['passNum'])
+            passing_player.completions += 1
+            passing_player.save()
+        result['completion'] = completion
         return result
 
     def resolve_pass(self, step, result):
