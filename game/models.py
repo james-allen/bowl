@@ -1161,6 +1161,10 @@ class PlayerInGame(models.Model):
     casualty = models.BooleanField(default=False)
     sent_off = models.BooleanField(default=False)
     tackle_zones = models.BooleanField(default=True)
+    completions = models.IntegerField(default=0)
+    casualties = models.IntegerField(default=0)
+    interceptions = models.IntegerField(default=0)
+    touchdowns = models.IntegerField(default=0)
 
     def __str__(self):
         return self.player.name
