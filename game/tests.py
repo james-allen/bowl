@@ -1595,6 +1595,7 @@ class EndTurnTests(BloodBowlTestCase):
         """
         self.match = create_test_match('human', 'orc')
         self.match.first_kicking_team = 'home'
+        self.match.current_side = 'home'
         self.match.turn_type = 'normal'
         self.match.turn_number = 1
         self.match.save()
@@ -1611,8 +1612,19 @@ class EndTurnTests(BloodBowlTestCase):
                 'side': touchdown_side,
             }
         step = self.create_test_step('endTurn', 'endTurn', properties)
-        self.match.resolve(step)
+        result = self.match.resolve(step)
         self.reload_match()
+        return result
+
+    def test_end_turn_side(self):
+        """
+        Check that the side switches back and forth as expected.
+        """
+        self.assertEqual(self.match.current_side, 'home')
+        self.end_turn()
+        self.assertEqual(self.match.current_side, 'away')
+        self.end_turn()
+        self.assertEqual(self.match.current_side, 'home')
 
     def test_end_turn_reroll_used(self):
         """
@@ -1629,12 +1641,30 @@ class EndTurnTests(BloodBowlTestCase):
         """
         Test that a touchdown is correctly added to the score.
         """
-        self.end_turn('home')
+        result = self.end_turn('home')
         self.assertEqual(self.match.home_score, 1)
         self.assertEqual(self.match.away_score, 0)
-        self.end_turn('away')
+        self.assertEqual(result['kickingTeam'], 'home')
+        self.assertEqual(self.match.turn_type, 'placePlayers')
+        self.assertEqual(self.match.current_side, 'home')
+        result = self.end_turn('away')
         self.assertEqual(self.match.home_score, 1)
         self.assertEqual(self.match.away_score, 1)
+        self.assertEqual(result['kickingTeam'], 'away')
+        self.assertEqual(self.match.turn_type, 'placePlayers')
+        self.assertEqual(self.match.current_side, 'away')
+
+    def test_end_turn_skip(self):
+        """
+        Test that if the 'wrong' team scores, the turn is skipped along.
+        """
+        self.assertEqual(self.match.current_side, 'home')
+        self.assertEqual(self.match.turn_number, 1)
+        result = self.end_turn('away')
+        self.assertTrue(result['nextTurnNumber'])
+        self.assertEqual(result['kickingTeam'], 'away')
+        self.assertEqual(self.match.turn_type, 'placePlayers')
+        self.assertEqual(self.match.current_side, 'away')
 
     def test_end_turn_turn_number(self):
         """
@@ -1649,6 +1679,17 @@ class EndTurnTests(BloodBowlTestCase):
         self.assertEqual(
             self.match.current_side, other_side(self.match.first_kicking_team))
         self.assertEqual(self.match.turn_number, 2)
+        self.match.current_side = self.match.first_kicking_team
+        self.match.turn_number = 9
+        self.match.save()
+        self.end_turn()
+        self.assertEqual(
+            self.match.current_side, other_side(self.match.first_kicking_team))
+        self.assertEqual(self.match.turn_number, 9)
+        self.end_turn()
+        self.assertEqual(
+            self.match.current_side, self.match.first_kicking_team)
+        self.assertEqual(self.match.turn_number, 10)
 
     def test_end_turn_end_half(self):
         """
@@ -1659,12 +1700,30 @@ class EndTurnTests(BloodBowlTestCase):
         self.match.home_rerolls = 0
         self.match.away_rerolls = 0
         self.match.save()
-        self.end_turn()
+        result = self.end_turn()
         self.assertEqual(self.match.turn_number, 9)
         self.assertEqual(
             self.match.home_rerolls, self.match.home_rerolls_total)
         self.assertEqual(
             self.match.away_rerolls, self.match.away_rerolls_total)
+        self.assertTrue(result['endOfHalf'])
+        self.assertEqual(
+            result['kickingTeam'], other_side(self.match.first_kicking_team))
+        self.assertEqual(
+            self.match.current_side, other_side(self.match.first_kicking_team))
+
+    def test_end_turn_end_half_touchdown(self):
+        """
+        Test that the new half kickoff overrules the touchdown kickoff.
+        """
+        self.match.turn_number = 8
+        self.assertEqual(self.match.first_kicking_team, 'home')
+        result = self.end_turn('home')
+        self.assertEqual(self.match.turn_number, 9)
+        self.assertTrue(result['endOfHalf'])
+        self.assertEqual(result['kickingTeam'], 'away')
+        self.assertEqual(self.match.current_side, 'away')
+        self.assertEqual(self.match.turn_type, 'placePlayers')
 
     def test_end_turn_end_match(self):
         """
@@ -1673,8 +1732,9 @@ class EndTurnTests(BloodBowlTestCase):
         self.match.turn_number = 16
         self.match.current_side = other_side(self.match.first_kicking_team)
         self.match.save()
-        self.end_turn()
+        result = self.end_turn()
         self.assertEqual(self.match.turn_type, 'end')
+        self.assertTrue(result['endOfMatch'])
 
     def test_end_turn_stunned(self):
         """

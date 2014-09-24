@@ -789,25 +789,23 @@ class Match(models.Model):
             player.save()
         self.home_reroll_used_this_turn = False
         self.away_reroll_used_this_turn = False
-        skip_turn = False
         kicking_team = None
+        next_turn_number = (
+            (self.current_side == self.first_kicking_team and 
+             self.turn_number <= 8) or
+            (self.current_side != self.first_kicking_team and
+             self.turn_number >= 9))
         if 'touchdown' in data and data['touchdown']:
             if data['side'] == 'home':
                 self.home_score += 1
             else:
                 self.away_score += 1
             if data['side'] != self.current_side:
-                skip_turn = True
+                next_turn_number = True
             self.current_side = data['side']
             kicking_team = data['side']
         else:
             self.current_side = other_side(self.current_side)
-        next_turn_number = (
-            (self.current_side != self.first_kicking_team and 
-             self.turn_number <= 8) or
-            (self.current_side == self.first_kicking_team and
-             self.turn_number >= 9) or
-            skip_turn)
         end_of_half = False
         end_of_match = False
         if next_turn_number:
